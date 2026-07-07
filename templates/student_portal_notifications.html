@@ -1,0 +1,101 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'notifications' %}
+{% block title %}Thông báo học viên{% endblock %}
+
+{% block extra_css %}
+<style>
+.notification-list {
+    display: grid;
+    gap: 12px;
+}
+
+.notification-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 18px;
+    border: 1px solid #dbe7f5;
+    background: #fff;
+    padding: 16px;
+    box-shadow: 0 8px 20px rgba(15,23,42,.06);
+    transition: .16s ease;
+}
+
+.notification-card:hover {
+    transform: translateY(-1px);
+    border-color: #fbbf24;
+}
+
+.notification-card.unread {
+    background: linear-gradient(180deg, #fffdf3, #ffffff);
+    border-color: #facc15;
+}
+
+.notification-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notification-title {
+    font-size: 18px;
+    font-weight: 950;
+    color: #0f172a;
+    margin-bottom: 5px;
+}
+
+.notification-meta {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.notification-preview {
+    margin-top: 12px;
+    color: #334155;
+    line-height: 1.55;
+    font-weight: 650;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>🔔 Thông báo</h1>
+        <p>Các thông báo từ CLB gửi đến học viên.</p>
+    </div>
+    <span class="portal-pill {{ 'pill-danger' if unread_count else 'pill-ok' }}">
+        {{ unread_count }} chưa đọc
+    </span>
+</div>
+
+{% if notifications %}
+<div class="notification-list">
+    {% for n in notifications %}
+    <a class="notification-card {{ '' if n.is_read else 'unread' }}"
+       href="{{ url_for('student_portal_notification_detail', notification_id=n.id) }}">
+        <div class="notification-top">
+            <div>
+                <div class="notification-title">{{ n.title }}</div>
+                <div class="notification-meta">
+                    {{ n.created_at }} · {{ 'Đã đọc' if n.is_read else 'Chưa đọc' }}
+                </div>
+            </div>
+            <span class="portal-pill {{ 'pill-info' if n.is_read else 'pill-warn' }}">
+                {{ 'Đã đọc' if n.is_read else 'Mới' }}
+            </span>
+        </div>
+        <div class="notification-preview">{{ n.content }}</div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="portal-empty">Chưa có thông báo nào.</div>
+{% endif %}
+{% endblock %}

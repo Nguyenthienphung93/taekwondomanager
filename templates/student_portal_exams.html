@@ -1,0 +1,611 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'exams' %}
+{% block title %}Thi cấp học viên{% endblock %}
+
+{% block extra_css %}
+<style>
+.exam-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+    max-width: 100%;
+    width: 100%;
+}
+
+.exam-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.exam-section-title {
+    margin: 0;
+    font-size: 22px;
+    color: #0f172a;
+    font-weight: 950;
+}
+
+.exam-toggle-btn {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 1000;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(245,158,11,.28);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exam-toggle-btn span {
+    display: inline-block;
+    line-height: 1;
+    transition: transform .25s ease;
+}
+
+.portal-card.is-expanded .exam-toggle-btn span {
+    transform: rotate(180deg);
+}
+
+.next-exam-card {
+    position: relative;
+    width: min(430px, 100%);
+    min-height: 270px;
+    transition: width .28s ease, max-width .28s ease, box-shadow .28s ease;
+    background: linear-gradient(180deg, #fffdf3, #fff);
+    border-color: #facc15;
+    border-left: 7px solid #f59e0b;
+    overflow: hidden;
+}
+
+.next-exam-card.is-expanded {
+    width: min(980px, 100%);
+}
+
+.next-exam-card.is-not-registered {
+    background: linear-gradient(180deg, #fffdf3, #ffffff);
+    border-color: #facc15;
+    border-left-color: #f59e0b;
+}
+
+.next-exam-card.is-not-registered .next-exam-main {
+    background: #fff7d6;
+    border-color: #facc15;
+}
+
+.next-exam-card.is-not-registered .next-belt {
+    color: #b45309;
+}
+
+.next-exam-card.is-registered {
+    background: linear-gradient(180deg, #ecfdf5, #ffffff);
+    border-color: #86efac;
+    border-left-color: #16a34a;
+    box-shadow: 0 12px 28px rgba(22, 163, 74, .12);
+}
+
+.next-exam-card.is-registered .next-exam-main {
+    background: linear-gradient(180deg, #dcfce7, #f0fdf4);
+    border-color: #22c55e;
+}
+
+.next-exam-card.is-registered .next-belt {
+    color: #166534;
+}
+
+.next-exam-card.is-registered .exam-meta {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.next-exam-card.is-registered .exam-meta span {
+    color: #15803d;
+}
+
+.next-exam-card.is-registered .exam-meta b {
+    color: #14532d;
+}
+
+.next-exam-body {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+}
+
+.next-exam-main {
+    background: #fff7d6;
+    border: 1px solid #facc15;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.next-belt {
+    width: 100%;
+    text-align: center;
+    font-size: 52px;
+    font-weight: 1000;
+    color: #b45309;
+    margin: 14px 0 0;
+    line-height: 1.05;
+    letter-spacing: .5px;
+}
+
+.next-exam-card:not(.is-expanded) .next-exam-body {
+    grid-template-columns: 1fr;
+}
+
+.next-exam-card:not(.is-expanded) .exam-meta-grid {
+    display: none;
+}
+
+.next-exam-card::after {
+    content: "»";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    width: 25px;
+    height: 180px;
+    border-radius: 18px 0 0 18px;
+    background: linear-gradient(180deg, #facc15, #f59e0b);
+    color: #0f172a;
+    font-size: 25px;
+    font-weight: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: -5px 0 16px rgba(245,158,11,.28);
+    cursor: pointer;
+    z-index: 5;
+}
+
+.next-exam-card.is-expanded::after {
+    content: "«";
+}
+
+.exam-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.exam-meta {
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+}
+
+.exam-meta span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 4px;
+}
+
+.exam-meta b {
+    color: #0f172a;
+}
+
+.exam-history-card {
+    border-left: 7px solid #2563eb;
+    width: 100%;
+    max-width: 100%;
+    transition: max-height .28s ease, box-shadow .28s ease;
+}
+
+.exam-history-card.is-collapsed .exam-history-body {
+    display: none;
+}
+
+.exam-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 14px;
+    width: 100%;
+}
+
+.exam-mini-card {
+    border: 1px solid #dbe7f5;
+    border-left: 7px solid #2563eb;
+    border-radius: 18px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(15,23,42,.05);
+}
+
+.exam-mini-card.result-pass {
+    border-color: #86efac;
+    border-left-color: #16a34a;
+}
+
+.exam-mini-card.result-absent {
+    border-color: #fde68a;
+    border-left-color: #f59e0b;
+}
+
+.exam-mini-card.result-fail {
+    border-color: #fecaca;
+    border-left-color: #ef4444;
+}
+
+.exam-result-band {
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 1000;
+    letter-spacing: .4px;
+}
+
+.exam-result-band.result-pass {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #14532d;
+}
+
+.exam-result-band.result-absent {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+}
+
+.exam-result-band.result-fail {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #991b1b;
+}
+
+.exam-mini-info {
+    padding: 14px;
+}
+
+.exam-mini-top {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.exam-belt-name {
+    font-size: 24px;
+    color: #0f172a;
+    font-weight: 1000;
+    text-align: center;
+}
+
+.exam-empty-box {
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+    background: #f8fafc;
+    padding: 18px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 850;
+}
+
+@media(max-width: 900px) {
+    .next-exam-card,
+    .next-exam-card.is-expanded {
+        width: 100%;
+    }
+
+    .next-exam-body {
+        grid-template-columns: 1fr;
+    }
+
+    .exam-meta-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .exam-card-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media(max-width: 520px) {
+    .exam-layout {
+        max-width: 100%;
+    }
+
+    .next-belt {
+        font-size: 42px;
+    }
+
+    .exam-belt-name {
+        font-size: 21px;
+    }
+
+    .exam-meta {
+        padding: 9px;
+    }
+
+    .exam-result-band {
+        font-size: 21px;
+        padding: 10px 14px;
+    }
+}
+
+.next-exam-card:not(.is-expanded) {
+    width: min(400px, 100%);
+    min-height: 200px;
+    padding-right: 50px;
+}
+
+.next-exam-card:not(.is-expanded) .exam-section-head {
+    margin-bottom: 10px;
+}
+
+.next-exam-card:not(.is-expanded) .next-exam-main {
+    min-height: 128px;
+    padding: 14px;
+    align-items: center;
+    justify-content: center;
+}
+
+.next-exam-card:not(.is-expanded) .portal-pill {
+    width: 100%;
+    justify-content: center;
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.next-exam-card:not(.is-expanded) .next-belt {
+    font-size: 56px;
+    margin-top: 12px;
+    text-align: center;
+}
+
+.exam-mini-card {
+    cursor: pointer;
+    transition: transform .22s ease, box-shadow .22s ease, width .22s ease;
+}
+
+.exam-mini-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(15,23,42,.08);
+}
+
+.exam-result-band {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exam-result-band span {
+    flex: 1;
+    text-align: center;
+}
+
+.mini-expand-btn {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 31px;
+    height: 31px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255,255,255,.86);
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 1000;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.exam-mini-card:not(.is-expanded) .mini-expand-btn::before {
+    content: "⌄⌄";
+}
+
+.exam-mini-card.is-expanded .mini-expand-btn::before {
+    content: "⌃⌃";
+}
+
+.exam-mini-card:not(.is-expanded) .exam-mini-info {
+    display: none;
+}
+
+.exam-mini-card:not(.is-expanded) {
+    min-height: 88px;
+}
+
+.exam-mini-card.is-expanded {
+    grid-column: span 2;
+}
+
+.exam-mini-card.is-expanded .mini-expand-btn {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+@media(max-width: 900px) {
+    .exam-mini-card.is-expanded {
+        grid-column: span 1;
+    }
+}
+
+.exam-result-band {
+    min-height: 72px;
+    padding: 10px 48px 10px 16px;
+}
+
+.result-band-main {
+    width: 100%;
+    display: grid;
+    gap: 4px;
+    text-align: center;
+}
+
+.result-status-text {
+    font-size: 24px;
+    font-weight: 1000;
+    line-height: 1.05;
+}
+
+.result-belt-text {
+    font-size: 19px;
+    font-weight: 950;
+    line-height: 1.1;
+    color: #0f172a;
+}
+
+.exam-mini-card.result-pass .result-belt-text {
+    color: #14532d;
+}
+
+.exam-mini-card.result-absent .result-belt-text {
+    color: #92400e;
+}
+
+.exam-mini-card.result-fail .result-belt-text {
+    color: #991b1b;
+}
+
+.exam-mini-card:not(.is-expanded) {
+    min-height: 96px;
+}
+
+.exam-mini-card:not(.is-expanded) .exam-result-band {
+    border-radius: 0;
+}
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>🥇 Thi cấp</h1>
+        <p>Cấp dự thi tiếp theo và kết quả các kỳ thi cấp đã tham gia.</p>
+    </div>
+</div>
+
+<div class="exam-layout">
+    <!-- KHUNG TRÊN: CẤP DỰ THI TIẾP THEO -->
+    <section
+        id="nextExamCard"
+        class="portal-card next-exam-card {{ 'is-registered' if next_exam.status == 'Đã đăng ký thi' else 'is-not-registered' }}"
+        onclick="handleNextExamCardClick(event)"
+    >
+        <div class="exam-section-head">
+            <h2 class="exam-section-title">Cấp dự thi tiếp theo</h2>
+        </div>
+
+        <div class="next-exam-body">
+            <div class="next-exam-main">
+                {% set next_status_class = 'pill-ok' if next_exam.status == 'Đã đăng ký thi' else 'pill-warn' %}
+                <span class="portal-pill {{ next_status_class }}">{{ next_exam.status }}</span>
+                <div class="next-belt">{{ next_exam.cap_du_thi }}</div>
+            </div>
+
+            <div class="exam-meta-grid">
+                <div class="exam-meta"><span>Quý thi</span><b>{{ next_exam.quarter }}</b></div>
+                <div class="exam-meta"><span>Ngày thi</span><b>{{ next_exam.exam_date }}</b></div>
+                <div class="exam-meta"><span>Giờ thi</span><b>{{ next_exam.exam_time }}</b></div>
+                <div class="exam-meta"><span>Tại</span><b>{{ next_exam.venue }}</b></div>
+                <div class="exam-meta"><span>Giám sát</span><b>{{ next_exam.supervisor }}</b></div>
+                <div class="exam-meta"><span>Giám khảo</span><b>{{ next_exam.judges }}</b></div>
+                <div class="exam-meta"><span>Trạng thái</span><b>{{ next_exam.status }}</b></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- KHUNG DƯỚI: CẤP ĐÃ THI -->
+    <section id="examHistoryCard" class="portal-card exam-history-card">
+        <div class="exam-section-head">
+            <h2 class="exam-section-title">Cấp đã thi</h2>
+        </div>
+
+        <div class="exam-history-body">
+            {% if results %}
+            <div class="exam-card-list">
+                {% for r in results %}
+                {% set card_class = 'result-pass' if r.ket_qua == 'Đạt' else ('result-fail' if r.ket_qua == 'Không đạt' else 'result-absent') %}
+                {% set result_text = r.ket_qua or '—' %}
+
+                <div class="exam-mini-card {{ card_class }} {{ 'is-expanded' if loop.first else '' }}" onclick="toggleExamMiniCard(this)">
+                    <div class="exam-result-band {{ card_class }}">
+                        <div class="result-band-main">
+                            <div class="result-status-text">{{ result_text }}</div>
+                            <div class="result-belt-text">{{ r.cap_dai_thi }}</div>
+                        </div>
+
+                        <button type="button" class="mini-expand-btn" onclick="toggleExamMiniCard(this.closest('.exam-mini-card'), event)"></button>
+                    </div>
+
+                    <div class="exam-mini-info">
+                        <div class="exam-mini-top">
+                            <div class="exam-belt-name">Thông tin kỳ thi</div>
+                        </div>
+
+                        <div class="exam-meta-grid">
+                            <div class="exam-meta"><span>Kỳ thi</span><b>{{ r.ky_thi or '—' }}</b></div>
+                            <div class="exam-meta"><span>Số thi</span><b>{{ r.so_thi or '—' }}</b></div>
+                            <div class="exam-meta"><span>Ngày thi</span><b>{{ r.exam_date_text or 'Sẽ bổ sung' }}</b></div>
+                            <div class="exam-meta"><span>Giờ thi</span><b>{{ r.exam_time_text or 'Sẽ bổ sung' }}</b></div>
+                            <div class="exam-meta"><span>Tại</span><b>{{ r.venue_text or 'Sẽ bổ sung' }}</b></div>
+                            <div class="exam-meta"><span>Ghi chú</span><b>{{ r.ghi_chu or '—' }}</b></div>
+                            <div class="exam-meta"><span>Giám sát</span><b>{{ r.supervisor_text or 'Sẽ bổ sung' }}</b></div>
+                            <div class="exam-meta"><span>Giám khảo</span><b>{{ r.judges_text or 'Sẽ bổ sung' }}</b></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+                <div class="exam-empty-box">Chưa có kết quả thi cấp.</div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script>
+function toggleNextExam(event) {
+    if (event) event.stopPropagation();
+
+    const card = document.getElementById("nextExamCard");
+    if (!card) return;
+
+    card.classList.toggle("is-expanded");
+}
+
+function handleNextExamCardClick(event) {
+    const card = document.getElementById("nextExamCard");
+    if (!card) return;
+
+    const rect = card.getBoundingClientRect();
+    const clickX = event.clientX;
+
+    // Bấm vùng cạnh phải 48px thì mở / đóng
+    if (clickX >= rect.right - 48) {
+        card.classList.toggle("is-expanded");
+        return;
+    }
+
+    // Bấm vào khung khi đang thu gọn thì mở ra
+    if (!card.classList.contains("is-expanded")) {
+        card.classList.add("is-expanded");
+    }
+}
+
+function toggleExamMiniCard(card, event) {
+    if (event) event.stopPropagation();
+    if (!card) return;
+
+    card.classList.toggle("is-expanded");
+}
+
+</script>
+{% endblock %}

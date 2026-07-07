@@ -1,0 +1,1620 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="page-title-row">
+    <h1>Danh sách thi cấp</h1>
+
+    <div class="exam-title-actions">
+        <button type="button" class="sort-exam-btn" onclick="sortExamListTemp()">
+            🔃 Sort danh sách
+        </button>
+
+        <input
+            type="file"
+            id="examNumberExcelInput"
+            accept=".xlsx,.xlsm"
+            style="display:none;"
+            onchange="importExamNumbersFromExcel(this)"
+        >
+
+        <button type="button" class="import-exam-btn" onclick="document.getElementById('examNumberExcelInput').click()">
+            📥 Cập nhật số thi
+        </button>
+
+        <button type="button" class="exam-info-btn" onclick="openExamInfoModal()">
+            ℹ️ Thông tin kỳ thi
+        </button>
+
+        <button
+            type="button"
+            id="finalizeBtn"
+            class="finalize-btn disabled {% if all_saved %}is-saved{% endif %}"
+            onclick="confirmFinalizeResult()"
+            disabled
+        >
+            {% if all_saved %}
+                🔒 Đã lưu kết quả
+            {% else %}
+                ✅ Chốt kết quả
+            {% endif %}
+        </button>
+    </div>
+</div>
+
+<form method="get" class="exam-filter">
+    <input name="year" value="{{ year }}">
+    <select name="quarter">
+        <option value="Q1" {{ 'selected' if quarter=='Q1' }}>Q1</option>
+        <option value="Q2" {{ 'selected' if quarter=='Q2' }}>Q2</option>
+        <option value="Q3" {{ 'selected' if quarter=='Q3' }}>Q3</option>
+        <option value="Q4" {{ 'selected' if quarter=='Q4' }}>Q4</option>
+    </select>
+    <button>Lọc</button>
+</form>
+
+<form method="post" action="/exam-list/finalize" id="finalizeExamForm">
+    <input type="hidden" name="year" value="{{ year }}">
+    <input type="hidden" name="quarter" value="{{ quarter }}">
+    <input type="hidden" name="list_type" value="cap">
+    <input type="hidden" id="examDraftKey" value="exam_draft_{{ year }}_{{ quarter }}">
+
+    <input type="hidden" name="exam_date" id="examInfoDateHidden">
+    <input type="hidden" name="exam_time" id="examInfoTimeHidden">
+    <input type="hidden" name="venue" id="examInfoVenueHidden">
+    <input type="hidden" name="supervisor_name" id="examInfoSupervisorHidden">
+    <input type="hidden" name="supervisor_active" id="examInfoSupervisorActiveHidden" value="on">
+    <input type="hidden" name="judges_json" id="examInfoJudgesHidden" value="[]">
+
+    <table class="exam-list-table">
+        <thead>
+            <tr>
+                <th>Quý</th>
+                <th>Mã HV</th>
+                <th>Họ tên</th>
+                <th>Ngày sinh</th>
+                <th>Giới tính</th>
+                <th>Cấp hiện tại</th>
+                <th>Cấp dự thi</th>
+                <th>Số thi</th>
+                <th>Kết quả</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for r in rows %}
+            <tr
+                data-license="{{ r.license }}"
+                data-cap="{{ r.cap_du_thi }}"
+                data-gender="{{ r.gender }}"
+                data-birth="{{ r.birthdate }}"
+            >
+                <td>{{ quarter }}-{{ year }}</td>
+
+                <td>
+                    {{ r.license }}
+
+                    {% if not r.result_saved %}
+                    <input type="hidden" name="ma_hv" value="{{ r.license }}">
+                    <input type="hidden" name="name_{{ r.license }}" value="{{ r.name }}">
+                    <input type="hidden" name="cap_du_thi_{{ r.license }}" value="{{ r.cap_du_thi }}">
+                    {% endif %}
+                </td>
+
+                <td class="text-left student-name-cell">{{ r.name }}</td>
+                <td>{{ r.birthdate }}</td>
+                <td>{{ r.gender }}</td>
+                <td>{{ r.belt }}</td>
+                <td><b>{{ r.cap_du_thi }}</b></td>
+
+                <td>
+                    {% if r.result_saved %}
+                        <div class="saved-exam-number">
+                            {{ r.saved_so_thi or "—" }}
+                        </div>
+                    {% else %}
+                        <div class="exam-number-box">
+                            <span>{{ r.cap_du_thi }}_</span>
+                            <input
+                                type="number"
+                                name="so_thi_{{ r.license }}"
+                                class="exam-number-input"
+                                min="1"
+                                placeholder="Số"
+                                data-license="{{ r.license }}"
+                                oninput="saveExamDraft()"
+                            >
+                        </div>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if r.result_saved %}
+                        <div class="saved-result-badge
+                            {% if r.saved_ket_qua == 'Đạt' %}
+                                saved-pass
+                            {% elif r.saved_ket_qua == 'Không đạt' %}
+                                saved-fail
+                            {% elif r.saved_ket_qua == 'Vắng' %}
+                                saved-absent
+                            {% endif %}
+                        ">
+                            <b>✅ Đã lưu kết quả</b>
+                            <span>{{ r.saved_ket_qua or "Đã lưu" }}</span>
+                        </div>
+                    {% else %}
+                        <select
+                            name="ket_qua_{{ r.license }}"
+                            class="result-combo"
+                            data-license="{{ r.license }}"
+                            data-name="{{ r.name }}"
+                            onchange="updateResultStyle(this); saveExamDraft();"
+                        >
+                            <option value="Đạt" selected>Đạt</option>
+                            <option value="Không đạt">Không đạt</option>
+                            <option value="Vắng">Vắng</option>
+                        </select>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</form>
+
+
+<div id="examInfoModal" class="modal-bg">
+    <div class="modal-box exam-info-modal-box">
+        <div class="exam-info-modal-head">
+            <div>
+                <h2>Thông tin kỳ thi</h2>
+                <p>Ken cần nhập đủ thông tin này trước khi chốt danh sách.</p>
+            </div>
+            <button type="button" class="detail-close-btn" onclick="closeExamInfoModal()">×</button>
+        </div>
+
+        <div class="exam-info-grid">
+            <div class="exam-info-field readonly-field">
+                <label>Hiện kỳ thi</label>
+                <div class="exam-info-readonly">{{ ky_thi }}</div>
+            </div>
+
+            <div class="exam-info-field">
+                <label>Ngày thi <b>*</b></label>
+                <input type="date" id="examInfoDate" onchange="saveExamInfoDraft()">
+            </div>
+
+            <div class="exam-info-field">
+                <label>Giờ thi <b>*</b></label>
+                <input type="time" id="examInfoTime" onchange="saveExamInfoDraft()">
+            </div>
+
+            <div class="exam-info-field exam-info-wide">
+                <label>Tại <b>*</b></label>
+                <input id="examInfoVenue" placeholder="VD: Nhà thi đấu Quận 10" oninput="saveExamInfoDraft()">
+            </div>
+        </div>
+
+        <div class="exam-officials-box">
+            <div class="exam-official-title">Giám sát / Giám khảo</div>
+
+            <div class="official-row fixed-row">
+                <div class="official-label">Giám sát <b>*</b></div>
+                <input id="examSupervisorName" placeholder="Nhập tên giám sát" oninput="saveExamInfoDraft()">
+                <button type="button" id="supervisorToggle" class="status-toggle is-on" onclick="toggleSupervisorStatus()">
+                    <span class="toggle-knob"></span>
+                    <b>ON</b>
+                </button>
+            </div>
+
+            <div id="judgeRows" class="judge-rows"></div>
+
+            <button type="button" class="add-judge-btn" onclick="addJudgeRow()">
+                + Thêm giám khảo
+            </button>
+        </div>
+
+        <div id="examInfoWarning" class="exam-info-warning">
+            Ken cần nhập đủ: Ngày thi, Giờ thi, Địa điểm, Giám sát và Giám khảo 1.
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="cancel-btn" onclick="closeExamInfoModal()">Đóng</button>
+            <button type="button" id="saveExamInfoBtn" class="save-btn" onclick="saveExamInfoAndClose()">
+                💾 Lưu thông tin kỳ thi
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="finalizeModal" class="modal-bg">
+    <div class="modal-box finalize-modal-box">
+        <h2>Xác nhận chốt kết quả</h2>
+
+        <p class="confirm-warning">
+            Bạn có chắc chắn chốt kết quả kỳ thi <b>{{ ky_thi }}</b> không?
+        </p>
+
+        <div class="result-summary-grid">
+            <div class="result-summary-card pass">
+                <div class="summary-label">Đạt</div>
+                <div class="summary-number" id="passCount">0</div>
+            </div>
+
+            <div class="result-summary-card fail">
+                <div class="summary-label">Không đạt</div>
+                <div class="summary-number" id="failCount">0</div>
+            </div>
+
+            <div class="result-summary-card absent">
+                <div class="summary-label">Vắng</div>
+                <div class="summary-number" id="absentCount">0</div>
+            </div>
+        </div>
+
+        <div class="summary-list-box">
+            <h3>Danh sách không đạt</h3>
+            <div id="failList" class="summary-list empty-text">Không có</div>
+
+            <h3>Danh sách vắng</h3>
+            <div id="absentList" class="summary-list empty-text">Không có</div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="cancel-btn" onclick="closeFinalizeModal()">
+                Quay lại kiểm tra
+            </button>
+
+            <button type="button" class="save-btn" onclick="submitFinalizeResult()">
+                Đồng ý lưu
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if finalize_errors %}
+<div id="finalizeErrorModal" class="modal-bg" style="display:flex;">
+    <div class="modal-box finalize-error-box">
+        <div class="error-modal-header">
+            <div>
+                <h2>Không thể chốt kết quả</h2>
+                <p>Ken kiểm tra các lỗi bên dưới rồi xử lý trước khi chốt lại.</p>
+            </div>
+
+            <button type="button" class="detail-close-btn" onclick="closeFinalizeErrorModal()">×</button>
+        </div>
+
+        <div class="error-list-box">
+            {% for err in finalize_errors %}
+            <div class="error-item">
+                {{ err|safe }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="cancel-btn" onclick="closeFinalizeErrorModal()">
+                Đóng để kiểm tra
+            </button>
+
+            <a href="/results?year={{ year }}&quarter={{ quarter }}" class="go-result-btn">
+                Mở kết quả thi cấp
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<div id="importExamModal" class="modal-bg">
+    <div class="modal-box import-exam-modal-box">
+        <div class="import-exam-head">
+            <div>
+                <h2 id="importExamTitle">Cập nhật số thi</h2>
+                <p id="importExamSubtitle">Kiểm tra dữ liệu Excel trước khi cập nhật.</p>
+            </div>
+
+            <button type="button" class="detail-close-btn" onclick="closeImportExamModal()">×</button>
+        </div>
+
+        <div id="importExamSummary" class="import-exam-summary">
+            <div class="import-summary-card success">
+                <span>Hợp lệ</span>
+                <b id="importSuccessCount">0</b>
+            </div>
+
+            <div class="import-summary-card error">
+                <span>Lỗi</span>
+                <b id="importErrorCount">0</b>
+            </div>
+        </div>
+
+        <div id="importExamMessage" class="import-exam-message"></div>
+
+        <div id="importExamErrorBox" class="import-exam-error-box"></div>
+
+        <div class="modal-actions" id="importNormalActions">
+            <button type="button" class="save-btn" onclick="closeImportExamModal()">
+                Đã hiểu
+            </button>
+        </div>
+
+        <div class="modal-actions" id="importConfirmActions" style="display:none;">
+            <button type="button" class="cancel-btn" onclick="cancelApplyImportNumbers()">
+                Hủy
+            </button>
+
+            <button type="button" class="save-btn" onclick="confirmApplyImportNumbers()">
+                Vẫn cập nhật số thi
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+
+const SERVER_EXAM_INFO = {{ exam_info|default({})|tojson }};
+let supervisorActive = "on";
+let judgeIndex = 0;
+let pendingImportNumbers = null;
+const ALL_RESULT_SAVED = {{ all_saved|default(false)|tojson }};
+
+function getExamInfoStorageKey() {
+    return "exam_info_{{ ky_thi }}";
+}
+
+function normalizeExamInfo(raw) {
+    raw = raw || {};
+
+    let judges = raw.judges || [];
+
+    if (!Array.isArray(judges) && raw.judges_json) {
+        try {
+            judges = JSON.parse(raw.judges_json || "[]");
+        } catch (e) {
+            judges = [];
+        }
+    }
+
+    if (!Array.isArray(judges)) judges = [];
+
+    return {
+        exam_date: raw.exam_date || "",
+        exam_time: raw.exam_time || "",
+        venue: raw.venue || "",
+        supervisor_name: raw.supervisor_name || "",
+        supervisor_active: raw.supervisor_active || "on",
+        judges: judges.length ? judges : [{name: "", active: "on"}]
+    };
+}
+
+function getCurrentExamInfoFromForm() {
+    const judges = [];
+
+    document.querySelectorAll(".judge-row").forEach(row => {
+        const input = row.querySelector(".judge-name-input");
+        const toggle = row.querySelector(".judge-toggle");
+        const name = input ? input.value.trim() : "";
+        const active = toggle && toggle.classList.contains("is-off") ? "off" : "on";
+
+        if (name) {
+            judges.push({name, active});
+        }
+    });
+
+    return {
+        exam_date: document.getElementById("examInfoDate")?.value || "",
+        exam_time: document.getElementById("examInfoTime")?.value || "",
+        venue: document.getElementById("examInfoVenue")?.value.trim() || "",
+        supervisor_name: document.getElementById("examSupervisorName")?.value.trim() || "",
+        supervisor_active: supervisorActive,
+        judges: judges
+    };
+}
+
+function setStatusToggle(btn, status) {
+    if (!btn) return;
+
+    const value = status === "off" ? "off" : "on";
+    btn.classList.toggle("is-on", value === "on");
+    btn.classList.toggle("is-off", value === "off");
+    const label = btn.querySelector("b");
+    if (label) label.textContent = value.toUpperCase();
+}
+
+function toggleSupervisorStatus() {
+    supervisorActive = supervisorActive === "on" ? "off" : "on";
+    setStatusToggle(document.getElementById("supervisorToggle"), supervisorActive);
+    saveExamInfoDraft();
+}
+
+function toggleJudgeStatus(btn) {
+    const isOff = btn.classList.contains("is-off");
+    setStatusToggle(btn, isOff ? "on" : "off");
+    saveExamInfoDraft();
+}
+
+function refreshJudgeLabels() {
+    document.querySelectorAll(".judge-row").forEach((row, idx) => {
+        const label = row.querySelector(".official-label");
+        const removeBtn = row.querySelector(".remove-judge-btn");
+
+        if (label) label.innerHTML = `Giám khảo ${idx + 1}${idx === 0 ? " <b>*</b>" : ""}`;
+        if (removeBtn) removeBtn.style.display = idx === 0 ? "none" : "inline-flex";
+    });
+}
+
+function addJudgeRow(data) {
+    const box = document.getElementById("judgeRows");
+    if (!box) return;
+
+    judgeIndex += 1;
+    const row = document.createElement("div");
+    row.className = "official-row judge-row";
+    row.innerHTML = `
+        <div class="official-label">Giám khảo</div>
+        <input class="judge-name-input" placeholder="Nhập tên giám khảo" oninput="saveExamInfoDraft()">
+        <button type="button" class="status-toggle judge-toggle is-on" onclick="toggleJudgeStatus(this)">
+            <span class="toggle-knob"></span>
+            <b>ON</b>
+        </button>
+        <button type="button" class="remove-judge-btn" onclick="removeJudgeRow(this)">×</button>
+    `;
+
+    box.appendChild(row);
+
+    const input = row.querySelector(".judge-name-input");
+    const toggle = row.querySelector(".judge-toggle");
+
+    if (data && data.name) input.value = data.name;
+    setStatusToggle(toggle, data && data.active === "off" ? "off" : "on");
+
+    refreshJudgeLabels();
+    saveExamInfoDraft();
+}
+
+function removeJudgeRow(btn) {
+    const row = btn.closest(".judge-row");
+    if (row) row.remove();
+
+    if (!document.querySelector(".judge-row")) {
+        addJudgeRow({name: "", active: "on"});
+    }
+
+    refreshJudgeLabels();
+    saveExamInfoDraft();
+}
+
+function fillExamInfoForm(info) {
+    info = normalizeExamInfo(info);
+
+    document.getElementById("examInfoDate").value = info.exam_date || "";
+    document.getElementById("examInfoTime").value = info.exam_time || "";
+    document.getElementById("examInfoVenue").value = info.venue || "";
+    document.getElementById("examSupervisorName").value = info.supervisor_name || "";
+
+    supervisorActive = info.supervisor_active === "off" ? "off" : "on";
+    setStatusToggle(document.getElementById("supervisorToggle"), supervisorActive);
+
+    const box = document.getElementById("judgeRows");
+    if (box) box.innerHTML = "";
+    judgeIndex = 0;
+
+    (info.judges && info.judges.length ? info.judges : [{name: "", active: "on"}]).forEach(j => addJudgeRow(j));
+
+    syncExamInfoHiddenInputs();
+    updateFinalizeButtonState();
+}
+
+function saveExamInfoDraft() {
+    const info = getCurrentExamInfoFromForm();
+    localStorage.setItem(getExamInfoStorageKey(), JSON.stringify(info));
+    syncExamInfoHiddenInputs();
+    updateFinalizeButtonState();
+}
+
+function loadExamInfoDraft() {
+    let info = normalizeExamInfo(SERVER_EXAM_INFO);
+    const raw = localStorage.getItem(getExamInfoStorageKey());
+
+    if (raw) {
+        try {
+            const draft = JSON.parse(raw);
+            if (draft && Object.keys(draft).length) {
+                info = normalizeExamInfo({...info, ...draft});
+            }
+        } catch (e) {}
+    }
+
+    fillExamInfoForm(info);
+}
+
+function isExamInfoComplete() {
+    const info = getCurrentExamInfoFromForm();
+    return Boolean(
+        info.exam_date &&
+        info.exam_time &&
+        info.venue &&
+        info.supervisor_name &&
+        info.judges &&
+        info.judges.length >= 1 &&
+        info.judges[0].name
+    );
+}
+
+function syncExamInfoHiddenInputs() {
+    const info = getCurrentExamInfoFromForm();
+
+    document.getElementById("examInfoDateHidden").value = info.exam_date;
+    document.getElementById("examInfoTimeHidden").value = info.exam_time;
+    document.getElementById("examInfoVenueHidden").value = info.venue;
+    document.getElementById("examInfoSupervisorHidden").value = info.supervisor_name;
+    document.getElementById("examInfoSupervisorActiveHidden").value = info.supervisor_active;
+    document.getElementById("examInfoJudgesHidden").value = JSON.stringify(info.judges || []);
+}
+
+function updateFinalizeButtonState() {
+    const btn = document.getElementById("finalizeBtn");
+    const warning = document.getElementById("examInfoWarning");
+    const ok = isExamInfoComplete();
+    if (ALL_RESULT_SAVED) {
+        if (btn) {
+            btn.disabled = true;
+            btn.classList.add("disabled", "is-saved");
+            btn.innerHTML = "🔒 Đã lưu kết quả";
+        }
+
+        if (warning) {
+            warning.style.display = "none";
+        }
+
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = !ok;
+        btn.classList.toggle("disabled", !ok);
+    }
+
+    if (warning) {
+        warning.style.display = ok ? "none" : "block";
+    }
+}
+
+function openExamInfoModal() {
+    document.getElementById("examInfoModal").style.display = "flex";
+    setTimeout(() => {
+        const firstEmpty = document.querySelector("#examInfoModal input:not([value])");
+        const dateInput = document.getElementById("examInfoDate");
+        if (dateInput && !dateInput.value) dateInput.focus();
+    }, 80);
+}
+
+function closeExamInfoModal() {
+    document.getElementById("examInfoModal").style.display = "none";
+}
+
+async function saveExamInfoAndClose() {
+    saveExamInfoDraft();
+
+    if (!isExamInfoComplete()) {
+        alert("Ken cần nhập đủ: Ngày thi, Giờ thi, Địa điểm, Giám sát và Giám khảo 1.");
+        return;
+    }
+
+    const btn = document.getElementById("saveExamInfoBtn");
+    const oldText = btn ? btn.innerHTML : "";
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "⏳ Đang lưu...";
+    }
+
+    const info = getCurrentExamInfoFromForm();
+
+    try {
+        const res = await fetch("/exam-list/save-info", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                year: "{{ year }}",
+                quarter: "{{ quarter }}",
+                exam_date: info.exam_date,
+                exam_time: info.exam_time,
+                venue: info.venue,
+                supervisor_name: info.supervisor_name,
+                supervisor_active: info.supervisor_active,
+                judges: info.judges || []
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            const errors = data.errors && data.errors.length
+                ? "\n\n" + data.errors.map(x => "- " + x.replace(/<[^>]*>/g, "")).join("\n")
+                : "";
+
+            alert((data.message || "Không lưu được thông tin kỳ thi.") + errors);
+            return;
+        }
+
+        localStorage.removeItem(getExamInfoStorageKey());
+
+        alert("Đã lưu thông tin kỳ thi lên Supabase.");
+        closeExamInfoModal();
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi kết nối khi lưu thông tin kỳ thi.");
+
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = oldText;
+        }
+    }
+}
+
+function updateResultStyle(selectEl) {
+    selectEl.classList.remove("is-pass", "is-fail", "is-absent");
+
+    if (selectEl.value === "Đạt") {
+        selectEl.classList.add("is-pass");
+    } else if (selectEl.value === "Không đạt") {
+        selectEl.classList.add("is-fail");
+    } else if (selectEl.value === "Vắng") {
+        selectEl.classList.add("is-absent");
+    }
+}
+
+function getExamDraftKey() {
+    const keyInput = document.getElementById("examDraftKey");
+    return keyInput ? keyInput.value : "exam_draft_default";
+}
+
+function saveExamDraft() {
+    const draft = {};
+
+    document.querySelectorAll(".exam-number-input").forEach(input => {
+        const license = input.dataset.license || "";
+        if (!license) return;
+
+        if (!draft[license]) draft[license] = {};
+        draft[license].so_thi = input.value || "";
+    });
+
+    document.querySelectorAll(".result-combo").forEach(select => {
+        const license = select.dataset.license || "";
+        if (!license) return;
+
+        if (!draft[license]) draft[license] = {};
+        draft[license].ket_qua = select.value || "Đạt";
+    });
+
+    localStorage.setItem(getExamDraftKey(), JSON.stringify(draft));
+}
+
+function loadExamDraft() {
+    const raw = localStorage.getItem(getExamDraftKey());
+    if (!raw) return;
+
+    let draft = {};
+
+    try {
+        draft = JSON.parse(raw);
+    } catch (e) {
+        return;
+    }
+
+    document.querySelectorAll(".exam-number-input").forEach(input => {
+        const license = input.dataset.license || "";
+        if (draft[license] && draft[license].so_thi !== undefined) {
+            input.value = draft[license].so_thi;
+        }
+    });
+
+    document.querySelectorAll(".result-combo").forEach(select => {
+        const license = select.dataset.license || "";
+
+        if (draft[license] && draft[license].ket_qua) {
+            select.value = draft[license].ket_qua;
+        }
+
+        updateResultStyle(select);
+    });
+}
+
+function clearExamDraft() {
+    localStorage.removeItem(getExamDraftKey());
+}
+
+function confirmFinalizeResult() {
+    if (ALL_RESULT_SAVED) {
+        alert("Danh sách này đã được lưu kết quả rồi. Nếu Ken muốn làm lại, hãy qua tab Kết quả thi cấp để xóa kết quả cũ trước.");
+        return;
+    }
+    saveExamInfoDraft();
+
+    if (!isExamInfoComplete()) {
+        alert("Ken cần nhập đủ thông tin kỳ thi trước khi chốt danh sách.");
+        openExamInfoModal();
+        return;
+    }
+
+    saveExamDraft();
+
+    const selects = document.querySelectorAll(".result-combo");
+
+    let passCount = 0;
+    let failCount = 0;
+    let absentCount = 0;
+
+    let failList = [];
+    let absentList = [];
+
+    selects.forEach(sel => {
+        const license = sel.dataset.license || "";
+        const name = sel.dataset.name || "";
+
+        if (sel.value === "Đạt") {
+            passCount++;
+        } else if (sel.value === "Không đạt") {
+            failCount++;
+            failList.push(`${license} - ${name}`);
+        } else if (sel.value === "Vắng") {
+            absentCount++;
+            absentList.push(`${license} - ${name}`);
+        }
+    });
+
+    document.getElementById("passCount").textContent = passCount;
+    document.getElementById("failCount").textContent = failCount;
+    document.getElementById("absentCount").textContent = absentCount;
+
+    document.getElementById("failList").innerHTML = failList.length
+        ? failList.map(x => `<div>• ${x}</div>`).join("")
+        : "Không có";
+
+    document.getElementById("absentList").innerHTML = absentList.length
+        ? absentList.map(x => `<div>• ${x}</div>`).join("")
+        : "Không có";
+
+    document.getElementById("finalizeModal").style.display = "flex";
+}
+
+function closeFinalizeModal() {
+    document.getElementById("finalizeModal").style.display = "none";
+}
+
+function submitFinalizeResult() {
+    clearExamDraft();
+    clearExamSortOrder();
+    document.getElementById("finalizeExamForm").submit();
+}
+
+function getExamSortKey() {
+    return getExamDraftKey() + "_sort_order";
+}
+
+function getBeltSortValue(cap) {
+    cap = String(cap || "").trim();
+
+    const capMatch = cap.match(/Cấp\s*(\d+)/i);
+    if (capMatch) {
+        const n = parseInt(capMatch[1] || "99");
+
+        // Cấp 9 trước Cấp 8 ... Cấp 1
+        // Cấp 10 cho xuống sau Cấp 1 nếu có
+        if (n === 10) return 99;
+
+        return 10 - n;
+    }
+
+    const danMatch = cap.match(/(\d+)\s*Đẳng/i);
+    if (danMatch) {
+        const n = parseInt(danMatch[1] || "1");
+        return 100 + n;
+    }
+
+    return 999;
+}
+
+function getGenderSortValue(gender) {
+    gender = String(gender || "").trim().toLowerCase();
+
+    if (gender === "nữ" || gender === "nu") return 0;
+    if (gender === "nam") return 1;
+
+    return 9;
+}
+
+function getBirthDateSortValue(birthdate) {
+    const s = String(birthdate || "").trim();
+
+    // Dạng dd/mm/yyyy
+    const parts = s.split("/");
+    if (parts.length === 3) {
+        const day = parseInt(parts[0] || "0", 10);
+        const month = parseInt(parts[1] || "0", 10);
+        const year = parseInt(parts[2] || "0", 10);
+
+        if (!day || !month || !year) return 0;
+
+        // Trả về yyyymmdd để so sánh trọn ngày sinh.
+        // Số lớn hơn = sinh sau = nhỏ tuổi hơn.
+        return year * 10000 + month * 100 + day;
+    }
+
+    return 0;
+}
+
+function autoRenumberExamNumbers() {
+    const rows = document.querySelectorAll(".exam-list-table tbody tr");
+
+    rows.forEach((row, index) => {
+        const input = row.querySelector(".exam-number-input");
+        if (input) {
+            input.value = index + 1;
+        }
+    });
+
+    saveExamDraft();
+}
+
+function sortExamListTemp() {
+    saveExamDraft();
+
+    const tbody = document.querySelector(".exam-list-table tbody");
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    rows.sort((a, b) => {
+        // 1. Cấp dự thi: Cấp 9 -> Cấp 8 -> ... -> Cấp 1 -> 1 Đẳng...
+        const capA = getBeltSortValue(a.dataset.cap);
+        const capB = getBeltSortValue(b.dataset.cap);
+
+        if (capA !== capB) return capA - capB;
+
+        // 2. Giới tính: Nữ trước, Nam sau
+        const genderA = getGenderSortValue(a.dataset.gender);
+        const genderB = getGenderSortValue(b.dataset.gender);
+
+        if (genderA !== genderB) return genderA - genderB;
+
+        // 3. Ngày sinh đầy đủ: nhỏ tuổi hơn trước
+        // VD:
+        // 20/05/2018 đứng trước 08/01/2018
+        // vì sinh sau nên nhỏ tuổi hơn.
+        const birthA = getBirthDateSortValue(a.dataset.birth);
+        const birthB = getBirthDateSortValue(b.dataset.birth);
+
+        if (birthA !== birthB) return birthB - birthA;
+
+        // 4. Nếu trùng cả ngày sinh thì sắp theo họ tên
+        const nameA = a.querySelector(".student-name-cell")?.textContent.trim() || "";
+        const nameB = b.querySelector(".student-name-cell")?.textContent.trim() || "";
+
+        const nameCompare = nameA.localeCompare(nameB, "vi");
+        if (nameCompare !== 0) return nameCompare;
+
+        // 5. Nếu vẫn trùng thì sắp theo mã HV cho ổn định
+        return String(a.dataset.license || "").localeCompare(String(b.dataset.license || ""));
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+
+    // Lưu thứ tự đã sort
+    const order = rows.map(row => row.dataset.license || "").filter(Boolean);
+    localStorage.setItem(getExamSortKey(), JSON.stringify(order));
+
+    // Quan trọng: tự đánh lại số thi 1,2,3...
+    autoRenumberExamNumbers();
+
+    saveExamDraft();
+}
+
+function getSavedExamNumberSortValue(row) {
+    const numberBox = row.querySelector(".saved-exam-number");
+    const text = numberBox ? numberBox.textContent.trim() : "";
+
+    const nums = text.match(/\d+/g);
+
+    if (!nums || !nums.length) {
+        return 999999;
+    }
+
+    return parseInt(nums[nums.length - 1], 10) || 999999;
+}
+
+function sortSavedResultRowsByExamNumber() {
+    const tbody = document.querySelector(".exam-list-table tbody");
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    rows.sort((a, b) => {
+        const capA = getBeltSortValue(a.dataset.cap);
+        const capB = getBeltSortValue(b.dataset.cap);
+
+        if (capA !== capB) return capA - capB;
+
+        const numberA = getSavedExamNumberSortValue(a);
+        const numberB = getSavedExamNumberSortValue(b);
+
+        if (numberA !== numberB) return numberA - numberB;
+
+        return String(a.dataset.license || "").localeCompare(String(b.dataset.license || ""));
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function loadExamSortOrder() {
+    if (ALL_RESULT_SAVED) {
+        sortSavedResultRowsByExamNumber();
+        return;
+    }
+    const raw = localStorage.getItem(getExamSortKey());
+    if (!raw) return;
+
+    let order = [];
+
+    try {
+        order = JSON.parse(raw);
+    } catch (e) {
+        return;
+    }
+
+    if (!Array.isArray(order) || !order.length) return;
+
+    const tbody = document.querySelector(".exam-list-table tbody");
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    const rowMap = {};
+
+    rows.forEach(row => {
+        const license = row.dataset.license || "";
+        if (license) rowMap[license] = row;
+    });
+
+    order.forEach(license => {
+        if (rowMap[license]) {
+            tbody.appendChild(rowMap[license]);
+            delete rowMap[license];
+        }
+    });
+
+    Object.values(rowMap).forEach(row => tbody.appendChild(row));
+}
+
+function clearExamSortOrder() {
+    localStorage.removeItem(getExamSortKey());
+}
+
+function applyImportedExamNumbers(numbers) {
+    numbers = numbers || {};
+
+    let updated = 0;
+
+    Object.keys(numbers).forEach(license => {
+        const input = document.querySelector(`.exam-number-input[data-license="${license}"]`);
+
+        if (input) {
+            input.value = numbers[license];
+            updated++;
+        }
+    });
+
+    saveExamDraft();
+
+    return updated;
+}
+
+function confirmApplyImportNumbers() {
+    if (!pendingImportNumbers) return;
+
+    const updated = applyImportedExamNumbers(pendingImportNumbers.numbers || {});
+
+    showImportExamModal({
+        ok: true,
+        message: `Đã cập nhật ${updated} số thi vào danh sách hiện tại.`,
+        successCount: updated,
+        errors: []
+    });
+
+    pendingImportNumbers = null;
+}
+
+function cancelApplyImportNumbers() {
+    pendingImportNumbers = null;
+
+    showImportExamModal({
+        ok: false,
+        message: "Ken đã hủy cập nhật số thi.",
+        successCount: 0,
+        errors: []
+    });
+}
+
+async function importExamNumbersFromExcel(fileInput) {
+    const file = fileInput.files && fileInput.files[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("excel_file", file);
+    formData.append("year", "{{ year }}");
+    formData.append("quarter", "{{ quarter }}");
+    formData.append("list_type", "cap");
+
+    try {
+        const res = await fetch("/exam-list/import-numbers", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = {};
+
+        try {
+            data = await res.json();
+        } catch (e) {
+            data = {
+                ok: false,
+                message: "Server trả về lỗi nhưng không phải dạng JSON. Ken kiểm tra terminal Flask để xem lỗi chi tiết.",
+                errors: []
+            };
+        }
+
+        if (!res.ok || !data.ok) {
+            const errors = [
+                ...(data.errors || []),
+                ...(data.skipped || [])
+            ].filter(Boolean);
+
+            showImportExamModal({
+                ok: false,
+                message: data.message || "Không cập nhật được số thi.",
+                successCount: 0,
+                errors: errors
+            });
+
+            fileInput.value = "";
+            return;
+        }
+
+        const numbers = data.numbers || {};
+        const outsideStudents = data.outside_students || [];
+
+        if (data.require_confirm && outsideStudents.length) {
+            pendingImportNumbers = {
+                numbers: numbers
+            };
+
+            showImportExamModal({
+                ok: false,
+                confirm: true,
+                message: `Có ${outsideStudents.length} mã HV không nằm trong danh sách hiện tại. Ken kiểm tra lại, nếu đúng là VĐV/CLB khác thi chung thì bấm "Vẫn cập nhật số thi".`,
+                successCount: Object.keys(numbers).length,
+                errors: outsideStudents
+            });
+
+            return;
+        }
+
+        const updated = applyImportedExamNumbers(numbers);
+
+        showImportExamModal({
+            ok: true,
+            message: `Đã cập nhật ${updated} số thi vào danh sách hiện tại.`,
+            successCount: updated,
+            errors: []
+        });
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi kết nối khi upload Excel.");
+
+    } finally {
+        fileInput.value = "";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    loadExamInfoDraft();
+    loadExamDraft();
+    loadExamSortOrder();
+
+    document.querySelectorAll(".exam-number-input").forEach(input => {
+        input.addEventListener("blur", saveExamDraft);
+        input.addEventListener("change", saveExamDraft);
+        input.addEventListener("input", saveExamDraft);
+    });
+
+    document.querySelectorAll(".result-combo").forEach(select => {
+        updateResultStyle(select);
+        select.addEventListener("change", function () {
+            updateResultStyle(this);
+            saveExamDraft();
+        });
+    });
+});
+
+function closeFinalizeErrorModal() {
+    const modal = document.getElementById("finalizeErrorModal");
+    if (modal) modal.style.display = "none";
+}
+
+function closeImportExamModal() {
+    const modal = document.getElementById("importExamModal");
+    if (modal) modal.style.display = "none";
+}
+
+function showImportExamModal(options) {
+    options = options || {};
+
+    const modal = document.getElementById("importExamModal");
+    const title = document.getElementById("importExamTitle");
+    const subtitle = document.getElementById("importExamSubtitle");
+    const message = document.getElementById("importExamMessage");
+    const errorBox = document.getElementById("importExamErrorBox");
+    const successCount = document.getElementById("importSuccessCount");
+    const errorCount = document.getElementById("importErrorCount");
+    const normalActions = document.getElementById("importNormalActions");
+    const confirmActions = document.getElementById("importConfirmActions");
+
+    if (!modal) return;
+
+    const isOk = options.ok === true;
+    const errors = options.errors || [];
+
+    title.textContent = isOk ? "Cập nhật số thi thành công" : "Không thể cập nhật số thi";
+    subtitle.textContent = isOk
+        ? "Dữ liệu Excel đã khớp với danh sách hiện tại."
+        : "Ken kiểm tra lại các dòng lỗi bên dưới rồi upload lại.";
+
+    message.className = isOk ? "import-exam-message is-success" : "import-exam-message is-error";
+    message.textContent = options.message || "";
+
+    successCount.textContent = options.successCount || 0;
+    errorCount.textContent = errors.length || 0;
+
+    if (errors.length) {
+        errorBox.innerHTML = errors.map(x => `<div class="import-error-item">• ${x}</div>`).join("");
+        errorBox.style.display = "block";
+    } else {
+        errorBox.innerHTML = "";
+        errorBox.style.display = "none";
+    }
+    if (normalActions && confirmActions) {
+        if (options.confirm === true) {
+            normalActions.style.display = "none";
+            confirmActions.style.display = "flex";
+        } else {
+            normalActions.style.display = "flex";
+            confirmActions.style.display = "none";
+        }
+    }
+
+    modal.style.display = "flex";
+}
+</script>
+
+
+<style>
+.exam-title-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.exam-info-btn {
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    color: white;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, .25);
+}
+
+.finalize-btn.disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    filter: grayscale(.25);
+}
+
+.exam-info-modal-box {
+    max-width: 880px;
+}
+
+.exam-info-modal-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.exam-info-modal-head h2 {
+    margin: 0 0 4px;
+}
+
+.exam-info-modal-head p {
+    margin: 0;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.exam-info-grid {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr .9fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.exam-info-wide {
+    grid-column: 1 / -1;
+}
+
+.exam-info-field label,
+.official-label {
+    display: block;
+    color: #334155;
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.exam-info-field label b,
+.official-label b {
+    color: #ef4444;
+}
+
+.exam-info-field input,
+.official-row input,
+.exam-info-readonly {
+    width: 100%;
+    height: 40px;
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    background: #f8fafc;
+    box-sizing: border-box;
+    padding: 0 12px;
+    font-weight: 800;
+    outline: none;
+}
+
+.exam-info-field input:focus,
+.official-row input:focus {
+    border-color: #fbbf24;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(251,191,36,.18);
+}
+
+.exam-info-readonly {
+    display: flex;
+    align-items: center;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.exam-officials-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px;
+}
+
+.exam-official-title {
+    font-size: 17px;
+    font-weight: 950;
+    color: #0f172a;
+    margin-bottom: 12px;
+}
+
+.official-row {
+    display: grid;
+    grid-template-columns: 140px minmax(220px, 1fr) 94px 36px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.fixed-row {
+    grid-template-columns: 140px minmax(220px, 1fr) 94px;
+}
+
+.status-toggle {
+    height: 36px;
+    border: none;
+    border-radius: 999px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    color: white;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.status-toggle.is-on {
+    background: #16a34a;
+}
+
+.status-toggle.is-off {
+    background: #ef4444;
+}
+
+.toggle-knob {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    display: inline-block;
+}
+
+.remove-judge-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    background: #ef4444;
+    color: white;
+    font-size: 22px;
+    font-weight: 900;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-judge-btn {
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: #ffc526;
+    color: #0f2a4a;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.exam-info-warning {
+    margin-top: 12px;
+    padding: 11px 14px;
+    background: #fff7d6;
+    border: 1px solid #facc15;
+    color: #7c4a03;
+    border-radius: 12px;
+    font-weight: 900;
+}
+
+@media(max-width: 820px) {
+    .exam-title-actions {
+        flex-wrap: wrap;
+    }
+
+    .exam-info-grid,
+    .official-row,
+    .fixed-row {
+        grid-template-columns: 1fr;
+    }
+
+    .exam-info-wide {
+        grid-column: auto;
+    }
+}
+
+.import-exam-btn {
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(22, 163, 74, .22);
+}
+
+.import-exam-modal-box {
+    max-width: 760px;
+}
+
+.import-exam-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.import-exam-head h2 {
+    margin: 0 0 4px;
+    color: #0f172a;
+}
+
+.import-exam-head p {
+    margin: 0;
+    color: #64748b;
+    font-weight: 800;
+}
+
+.import-exam-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.import-summary-card {
+    border-radius: 16px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+}
+
+.import-summary-card span {
+    display: block;
+    font-weight: 900;
+    color: #475569;
+    margin-bottom: 4px;
+}
+
+.import-summary-card b {
+    font-size: 28px;
+    font-weight: 950;
+}
+
+.import-summary-card.success {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.import-summary-card.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.import-exam-message {
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-weight: 900;
+    margin-bottom: 12px;
+}
+
+.import-exam-message.is-success {
+    background: #ecfdf5;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.import-exam-message.is-error {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+}
+
+.import-exam-error-box {
+    max-height: 320px;
+    overflow-y: auto;
+    background: #0f172a;
+    color: #fff;
+    border-radius: 14px;
+    padding: 12px;
+    font-weight: 800;
+    line-height: 1.55;
+}
+
+.import-error-item {
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.import-error-item:last-child {
+    border-bottom: none;
+}
+
+@media(max-width: 720px) {
+    .import-exam-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+.saved-result-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 132px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    border: 1px solid #86efac;
+    color: #166534;
+    font-weight: 950;
+    line-height: 1.2;
+}
+
+.saved-result-badge b {
+    font-size: 13px;
+}
+
+.saved-result-badge span {
+    font-size: 12px;
+    opacity: .85;
+    margin-top: 2px;
+}
+
+.saved-exam-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 112px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-weight: 950;
+}
+
+.finalize-btn.is-saved {
+    background: linear-gradient(135deg, #64748b, #334155) !important;
+    box-shadow: none !important;
+    opacity: .75 !important;
+    cursor: not-allowed !important;
+}
+
+.saved-result-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 132px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-weight: 950;
+    line-height: 1.2;
+}
+
+.saved-result-badge b {
+    font-size: 13px;
+}
+
+.saved-result-badge span {
+    font-size: 12px;
+    opacity: .9;
+    margin-top: 2px;
+}
+
+/* Đạt - xanh */
+.saved-result-badge.saved-pass {
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    color: #166534;
+}
+
+/* Không đạt - đỏ */
+.saved-result-badge.saved-fail {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+}
+
+/* Vắng - vàng */
+.saved-result-badge.saved-absent {
+    background: #fef3c7;
+    border: 1px solid #facc15;
+    color: #92400e;
+}
+</style>
+
+{% endblock %}

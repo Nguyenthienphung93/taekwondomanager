@@ -1,0 +1,1093 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-title-row">
+    <h1>Hoạt động</h1>
+
+    <button type="button" class="add-activity-btn" onclick="openActivityModal()">
+        + Thêm hoạt động
+    </button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Mã HV</th>
+            <th>Họ tên</th>
+            <th>Hoạt động</th>
+            <th>Thời gian</th>
+            <th>Địa điểm</th>
+            <th>Nội dung</th>
+            <th>Kết quả</th>
+            <th class="action-col">Thao tác</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            <td>{{ r.ma_hv }}</td>
+            <td>{{ r.ho_ten }}</td>
+            <td>{{ r.hoat_dong }}</td>
+            <td>{{ r.thoi_gian }}</td>
+            <td>{{ r.dia_diem }}</td>
+            <td>{{ r.noi_dung }}</td>
+            <td>{{ r.ket_qua }}</td>
+            <td class="activity-table-actions">
+                <button
+                    type="button"
+                    class="mini-action-btn edit"
+                    title="Sửa hoạt động"
+                    onclick='openEditActivityModal({
+                        id: {{ r.id|tojson }},
+                        ma_hv: {{ r.ma_hv|tojson }},
+                        ho_ten: {{ r.ho_ten|tojson }},
+                        hoat_dong: {{ r.hoat_dong|tojson }},
+                        thoi_gian: {{ r.thoi_gian|tojson }},
+                        dia_diem: {{ r.dia_diem|tojson }},
+                        noi_dung: {{ r.noi_dung|tojson }},
+                        ket_qua: {{ r.ket_qua|tojson }}
+                    })'
+                >✏️</button>
+
+                <form
+                    method="post"
+                    action="/activities/delete/{{ r.id }}"
+                    class="inline-delete-form"
+                    onsubmit="return confirm('Ken chắc chắn muốn xóa hoạt động này không?');"
+                >
+                    <button type="submit" class="mini-action-btn delete" title="Xóa hoạt động">🗑️</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<div id="activityModal" class="activity-modal">
+    <div class="activity-modal-inner">
+
+        <div class="activity-modal-head">
+            <h2>Thêm hoạt động</h2>
+            <button type="button" onclick="closeActivityModal()">×</button>
+        </div>
+
+        <form method="post" action="/activities/add" class="activity-form" onsubmit="return checkActivityStudentBeforeSubmit()">
+
+            <div class="activity-grid">
+
+                <!-- KHUNG 1 -->
+                <section class="activity-box">
+                    <div class="activity-box-title">1. Chọn hội viên</div>
+
+                    <div class="field-box">
+                        <label>Mã hội viên / Họ tên</label>
+
+                        <input
+                            type="text"
+                            id="activityStudentSearch"
+                            placeholder="Dán mã HV hoặc nhập tên hội viên..."
+                            autocomplete="off"
+                            oninput="searchActivityStudent()"
+                        >
+
+                        <input type="hidden" name="ma_hv" id="activityStudentLicense" required>
+
+                        <div id="activityStudentStatus" class="student-search-status">
+                            Dán mã HV hoặc nhập tên/mã HV để tìm hội viên.
+                        </div>
+
+                        <div id="activityStudentResults" class="student-search-results"></div>
+                    </div>
+
+                    <script id="activityStudentsData" type="application/json">
+                    [
+                        {% for s in students %}
+                        {
+                            "license": {{ s.license|tojson }},
+                            "name": {{ s.name|tojson }},
+                            "birthdate": {{ s.birthdate|tojson }},
+                            "gender": {{ s.gender|tojson }},
+                            "classroom": {{ s.classroom|tojson }},
+                            "timeclass": {{ s.timeclass|tojson }},
+                            "phone": {{ s.phonenumber|tojson }},
+                            "belt": {{ s.belt|tojson }},
+                            "family": {{ s.family|tojson }},
+                            "active": {{ s.active|tojson }}
+                        }{{ "," if not loop.last }}
+                        {% endfor %}
+                    ]
+                    </script>
+                </section>
+
+
+                <!-- KHUNG 2 -->
+                <section class="activity-box">
+                    <div class="activity-box-title">2. Thông tin cá nhân</div>
+
+                    <div class="student-info-grid">
+                        <div>
+                            <span>Mã HV</span>
+                            <b id="infoLicense">...</b>
+                        </div>
+
+                        <div>
+                            <span>Họ tên</span>
+                            <b id="infoName">...</b>
+                        </div>
+
+                        <div>
+                            <span>Ngày sinh</span>
+                            <b id="infoBirthdate">...</b>
+                        </div>
+
+                        <div>
+                            <span>Giới tính</span>
+                            <b id="infoGender">...</b>
+                        </div>
+
+                        <div>
+                            <span>Lớp</span>
+                            <b id="infoClassroom">...</b>
+                        </div>
+
+                        <div>
+                            <span>Ca</span>
+                            <b id="infoTimeclass">...</b>
+                        </div>
+
+                        <div>
+                            <span>SĐT</span>
+                            <b id="infoPhone">...</b>
+                        </div>
+
+                        <div>
+                            <span>Cấp đai</span>
+                            <b id="infoBelt">...</b>
+                        </div>
+
+                        <div>
+                            <span>Gia đình</span>
+                            <b id="infoFamily">...</b>
+                        </div>
+
+                        <div>
+                            <span>Trạng thái</span>
+                            <b id="infoActive">...</b>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- KHUNG 3 -->
+                <section class="activity-box activity-box-full">
+                    <div class="activity-box-title">3. Nội dung hoạt động</div>
+
+                    <div class="activity-input-grid">
+                        <div class="field-box">
+                            <label>Hoạt động</label>
+                            <input
+                                name="hoat_dong"
+                                required
+                                placeholder="VD: Thi đấu, biểu diễn, tập huấn..."
+                            >
+                        </div>
+
+                        <div class="field-box">
+                            <label>Từ ngày</label>
+                            <input type="date" name="start_date" required>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Đến ngày</label>
+                            <input type="date" name="end_date" required>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Địa điểm</label>
+                            <input
+                                name="dia_diem"
+                                placeholder="VD: Nhà thi đấu Quận 10"
+                            >
+                        </div>
+
+                        <div class="field-box activity-wide">
+                            <label>Nội dung</label>
+                            <textarea
+                                name="noi_dung"
+                                rows="3"
+                                placeholder="Nội dung hoạt động"
+                            ></textarea>
+                        </div>
+
+                        <div class="field-box activity-wide">
+                            <label>Kết quả</label>
+                            <textarea
+                                name="ket_qua"
+                                rows="3"
+                                placeholder="VD: HCV, HCĐ, hoàn thành, đạt..."
+                            ></textarea>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="activity-actions">
+                <button type="button" class="cancel-btn" onclick="closeActivityModal()">
+                    Hủy
+                </button>
+
+                <button type="submit" class="save-btn">
+                    💾 Lưu hoạt động
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+
+<div id="editActivityModal" class="activity-modal">
+    <div class="activity-modal-inner edit-activity-inner">
+
+        <div class="activity-modal-head">
+            <h2>Sửa hoạt động</h2>
+            <button type="button" onclick="closeEditActivityModal()">×</button>
+        </div>
+
+        <form method="post" id="editActivityForm" class="activity-form" onsubmit="return checkEditActivityBeforeSubmit()">
+            <input type="hidden" name="ma_hv" id="editActivityMaHv" required>
+
+            <div class="activity-grid edit-activity-grid">
+
+                <section class="activity-box">
+                    <div class="activity-box-title">1. Hội viên</div>
+
+                    <div class="field-box">
+                        <label>Mã hội viên / Họ tên</label>
+                        <input
+                            type="text"
+                            id="editActivityStudentSearch"
+                            placeholder="Dán mã HV hoặc nhập tên hội viên..."
+                            autocomplete="off"
+                            oninput="searchEditActivityStudent()"
+                        >
+
+                        <div id="editActivityStudentStatus" class="student-search-status">
+                            Dán mã HV hoặc nhập tên/mã HV để đổi hội viên.
+                        </div>
+
+                        <div id="editActivityStudentResults" class="student-search-results"></div>
+                    </div>
+                </section>
+
+                <section class="activity-box">
+                    <div class="activity-box-title">2. Thông tin hoạt động</div>
+
+                    <div class="activity-input-grid edit-input-grid">
+                        <div class="field-box">
+                            <label>Hoạt động</label>
+                            <input name="hoat_dong" id="editHoatDong" required>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Thời gian</label>
+                            <input name="thoi_gian" id="editThoiGian" placeholder="VD: 23 - 17/07/2026" required>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Địa điểm</label>
+                            <input name="dia_diem" id="editDiaDiem">
+                        </div>
+
+                        <div class="field-box activity-wide">
+                            <label>Nội dung</label>
+                            <textarea name="noi_dung" id="editNoiDung" rows="3"></textarea>
+                        </div>
+
+                        <div class="field-box activity-wide">
+                            <label>Kết quả</label>
+                            <textarea name="ket_qua" id="editKetQua" rows="3"></textarea>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="activity-actions">
+                <button type="button" class="cancel-btn" onclick="closeEditActivityModal()">
+                    Hủy
+                </button>
+
+                <button type="submit" class="save-btn">
+                    💾 Cập nhật
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+function openActivityModal() {
+    document.getElementById("activityModal").style.display = "flex";
+    setActivityStatus("Dán mã HV hoặc nhập tên/mã HV để tìm hội viên.", "");
+    setTimeout(() => {
+        document.getElementById("activityStudentSearch").focus();
+    }, 100);
+}
+
+function closeActivityModal() {
+    document.getElementById("activityModal").style.display = "none";
+}
+
+function setInfo(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.textContent = value || "...";
+    }
+}
+
+function setActivityStatus(text, type) {
+    const el = document.getElementById("activityStudentStatus");
+    if (!el) return;
+
+    el.textContent = text || "";
+    el.className = "student-search-status";
+
+    if (type) {
+        el.classList.add(type);
+    }
+}
+
+function getActivityStudents() {
+    const el = document.getElementById("activityStudentsData");
+    if (!el) return [];
+
+    try {
+        return JSON.parse(el.textContent || "[]");
+    } catch (e) {
+        console.error("Không đọc được danh sách hội viên:", e);
+        return [];
+    }
+}
+
+function normalizeSearchText(text) {
+    return String(text || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+}
+
+function clearStudentResults() {
+    const box = document.getElementById("activityStudentResults");
+    if (box) {
+        box.innerHTML = "";
+    }
+}
+
+function clearStudentInfo() {
+    document.getElementById("activityStudentLicense").value = "";
+
+    setInfo("infoLicense", "");
+    setInfo("infoName", "");
+    setInfo("infoBirthdate", "");
+    setInfo("infoGender", "");
+    setInfo("infoClassroom", "");
+    setInfo("infoTimeclass", "");
+    setInfo("infoPhone", "");
+    setInfo("infoBelt", "");
+    setInfo("infoFamily", "");
+    setInfo("infoActive", "");
+}
+
+function applyActivityStudent(student) {
+    document.getElementById("activityStudentLicense").value = student.license || "";
+
+    setInfo("infoLicense", student.license);
+    setInfo("infoName", student.name);
+    setInfo("infoBirthdate", student.birthdate);
+    setInfo("infoGender", student.gender);
+    setInfo("infoClassroom", student.classroom);
+    setInfo("infoTimeclass", student.timeclass);
+    setInfo("infoPhone", student.phone);
+    setInfo("infoBelt", student.belt);
+    setInfo("infoFamily", student.family);
+    setInfo("infoActive", student.active);
+
+    document.getElementById("activityStudentSearch").value =
+        (student.license || "") + " - " + (student.name || "");
+
+    clearStudentResults();
+
+    setActivityStatus(
+        "Đã chọn: " + (student.license || "") + " - " + (student.name || ""),
+        "ok"
+    );
+}
+
+function renderStudentChoices(students) {
+    const box = document.getElementById("activityStudentResults");
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    students.forEach((student, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "student-choice-btn";
+
+        btn.innerHTML = `
+            <b>${student.name || ""}</b>
+            <span>${student.gender || "..."} - ${student.birthdate || "..."} - ${student.license || ""}</span>
+        `;
+
+        btn.addEventListener("click", function () {
+            applyActivityStudent(student);
+        });
+
+        box.appendChild(btn);
+    });
+}
+
+function searchActivityStudent() {
+    const input = document.getElementById("activityStudentSearch");
+    const keyword = normalizeSearchText(input.value);
+
+    clearStudentResults();
+
+    if (!keyword) {
+        clearStudentInfo();
+        setActivityStatus("Dán mã HV hoặc nhập tên/mã HV để tìm hội viên.", "");
+        return;
+    }
+
+    const students = getActivityStudents();
+
+    // 1. Nếu nhập/dán đúng mã HV thì chọn luôn, vì mã là duy nhất
+    const exactLicense = students.find(s =>
+        normalizeSearchText(s.license) === keyword
+    );
+
+    if (exactLicense) {
+        applyActivityStudent(exactLicense);
+        return;
+    }
+
+    // 2. Nếu nhập đúng tên và chỉ có 1 người thì chọn luôn
+    const exactNameMatches = students.filter(s =>
+        normalizeSearchText(s.name) === keyword
+    );
+
+    if (exactNameMatches.length === 1) {
+        applyActivityStudent(exactNameMatches[0]);
+        return;
+    }
+
+    if (exactNameMatches.length > 1) {
+        clearStudentInfo();
+        renderStudentChoices(exactNameMatches);
+        setActivityStatus("Có nhiều hội viên trùng tên. Ken chọn đúng người bên dưới.", "warning");
+        return;
+    }
+
+    // 3. Nếu nhập gần đúng tên/mã thì hiện danh sách để chọn
+    const nearMatches = students.filter(s =>
+        normalizeSearchText(s.license).includes(keyword) ||
+        normalizeSearchText(s.name).includes(keyword)
+    ).slice(0, 10);
+
+    if (nearMatches.length === 1) {
+        applyActivityStudent(nearMatches[0]);
+        return;
+    }
+
+    if (nearMatches.length > 1) {
+        clearStudentInfo();
+        renderStudentChoices(nearMatches);
+        setActivityStatus("Tìm thấy nhiều hội viên phù hợp. Ken chọn đúng người bên dưới.", "warning");
+        return;
+    }
+
+    clearStudentInfo();
+    setActivityStatus("Chưa tìm thấy hội viên phù hợp.", "error");
+}
+
+function applyEditActivityStudent(student) {
+    document.getElementById("editActivityMaHv").value = student.license || "";
+    document.getElementById("editActivityStudentSearch").value =
+        (student.license || "") + " - " + (student.name || "");
+
+    const box = document.getElementById("editActivityStudentResults");
+    if (box) box.innerHTML = "";
+
+    const status = document.getElementById("editActivityStudentStatus");
+    if (status) {
+        status.textContent = "Đã chọn: " + (student.license || "") + " - " + (student.name || "");
+        status.className = "student-search-status ok";
+    }
+}
+
+function renderEditStudentChoices(students) {
+    const box = document.getElementById("editActivityStudentResults");
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    students.forEach((student) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "student-choice-btn";
+
+        btn.innerHTML = `
+            <b>${student.name || ""}</b>
+            <span>${student.gender || "..."} - ${student.birthdate || "..."} - ${student.license || ""}</span>
+        `;
+
+        btn.addEventListener("click", function () {
+            applyEditActivityStudent(student);
+        });
+
+        box.appendChild(btn);
+    });
+}
+
+function searchEditActivityStudent() {
+    const input = document.getElementById("editActivityStudentSearch");
+    const keyword = normalizeSearchText(input.value);
+    const status = document.getElementById("editActivityStudentStatus");
+    const box = document.getElementById("editActivityStudentResults");
+
+    if (box) box.innerHTML = "";
+
+    if (!keyword) {
+        document.getElementById("editActivityMaHv").value = "";
+        if (status) {
+            status.textContent = "Dán mã HV hoặc nhập tên/mã HV để đổi hội viên.";
+            status.className = "student-search-status";
+        }
+        return;
+    }
+
+    const students = getActivityStudents();
+
+    const exactLicense = students.find(s => normalizeSearchText(s.license) === keyword);
+    if (exactLicense) {
+        applyEditActivityStudent(exactLicense);
+        return;
+    }
+
+    const exactNameMatches = students.filter(s => normalizeSearchText(s.name) === keyword);
+    if (exactNameMatches.length === 1) {
+        applyEditActivityStudent(exactNameMatches[0]);
+        return;
+    }
+
+    const nearMatches = (exactNameMatches.length > 1 ? exactNameMatches : students.filter(s =>
+        normalizeSearchText(s.license).includes(keyword) ||
+        normalizeSearchText(s.name).includes(keyword)
+    )).slice(0, 10);
+
+    if (nearMatches.length > 0) {
+        document.getElementById("editActivityMaHv").value = "";
+        renderEditStudentChoices(nearMatches);
+        if (status) {
+            status.textContent = "Tìm thấy nhiều hội viên phù hợp. Ken chọn đúng người bên dưới.";
+            status.className = "student-search-status warning";
+        }
+        return;
+    }
+
+    document.getElementById("editActivityMaHv").value = "";
+    if (status) {
+        status.textContent = "Chưa tìm thấy hội viên phù hợp.";
+        status.className = "student-search-status error";
+    }
+}
+
+function openEditActivityModal(row) {
+    if (!row || !row.id) {
+        alert("Không tìm thấy ID hoạt động để sửa.");
+        return;
+    }
+
+    document.getElementById("editActivityForm").action = "/activities/update/" + row.id;
+    document.getElementById("editActivityMaHv").value = row.ma_hv || "";
+    document.getElementById("editActivityStudentSearch").value =
+        (row.ma_hv || "") + " - " + (row.ho_ten || "");
+
+    document.getElementById("editHoatDong").value = row.hoat_dong || "";
+    document.getElementById("editThoiGian").value = row.thoi_gian || "";
+    document.getElementById("editDiaDiem").value = row.dia_diem || "";
+    document.getElementById("editNoiDung").value = row.noi_dung || "";
+    document.getElementById("editKetQua").value = row.ket_qua || "";
+
+    const results = document.getElementById("editActivityStudentResults");
+    if (results) results.innerHTML = "";
+
+    const status = document.getElementById("editActivityStudentStatus");
+    if (status) {
+        status.textContent = "Đang sửa: " + (row.ma_hv || "") + " - " + (row.ho_ten || "");
+        status.className = "student-search-status ok";
+    }
+
+    document.getElementById("editActivityModal").style.display = "flex";
+}
+
+function closeEditActivityModal() {
+    document.getElementById("editActivityModal").style.display = "none";
+}
+
+function checkEditActivityBeforeSubmit() {
+    const license = document.getElementById("editActivityMaHv").value.trim();
+
+    if (!license) {
+        alert("Ken chưa chọn đúng hội viên cho hoạt động này.");
+        document.getElementById("editActivityStudentSearch").focus();
+        return false;
+    }
+
+    return true;
+}
+
+function checkActivityStudentBeforeSubmit() {
+    const license = document.getElementById("activityStudentLicense").value.trim();
+
+    if (!license) {
+        alert("Ken chưa chọn đúng hội viên. Hãy dán mã HV hoặc nhập tên/mã HV chính xác.");
+        document.getElementById("activityStudentSearch").focus();
+        return false;
+    }
+
+    return true;
+}
+
+document.addEventListener("click", function(e) {
+    const modal = document.getElementById("activityModal");
+    const editModal = document.getElementById("editActivityModal");
+
+    if (e.target === modal) {
+        closeActivityModal();
+    }
+
+    if (e.target === editModal) {
+        closeEditActivityModal();
+    }
+});
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        closeActivityModal();
+        closeEditActivityModal();
+    }
+});
+</script>
+
+
+<style>
+.page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.page-title-row h1 {
+    margin: 0;
+}
+
+.add-activity-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #ffd24a, #f3a400);
+    color: #111;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+.add-activity-btn:hover {
+    filter: brightness(0.97);
+}
+
+.activity-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+}
+
+.activity-modal-inner {
+    width: min(1200px, 96vw);
+    height: min(850px, 94vh);
+    max-height: 94vh;
+    overflow: auto;
+    background: #f5f7fb;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.35);
+}
+
+.activity-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.activity-modal-head h2 {
+    margin: 0;
+}
+
+.activity-modal-head button {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.4fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.activity-box {
+    background: #fff;
+    border: 1px solid #dfe6f0;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.05);
+}
+
+.activity-box-full {
+    grid-column: 1 / -1;
+}
+
+.activity-box-title {
+    font-weight: 900;
+    color: #0f2745;
+    border-bottom: 1px solid #e4e9f2;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.activity-box .field-box {
+    margin: 0;
+}
+
+.activity-box label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 800;
+    color: #26354d;
+}
+
+.activity-box input,
+.activity-box select,
+.activity-box textarea {
+    width: 100%;
+    border: 1px solid #cfd8e3;
+    border-radius: 9px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    outline: none;
+    background: #fff;
+    font-weight: 600;
+}
+
+.activity-box textarea {
+    resize: vertical;
+}
+
+.activity-box input:focus,
+.activity-box select:focus,
+.activity-box textarea:focus {
+    border-color: #f5b400;
+    box-shadow: 0 0 0 3px rgba(245, 180, 0, 0.16);
+}
+
+#activityStudentSearch {
+    height: 42px;
+}
+
+.student-search-status {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.student-search-status.ok {
+    color: #15803d;
+}
+
+.student-search-status.error {
+    color: #dc2626;
+}
+
+.student-search-status.warning {
+    color: #b45309;
+}
+
+.student-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.student-info-grid div {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 9px 10px;
+}
+
+.student-info-grid span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 3px;
+}
+
+.student-info-grid b {
+    color: #111827;
+    font-size: 14px;
+}
+
+.activity-input-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.activity-wide {
+    grid-column: span 2;
+}
+
+.activity-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.activity-actions button {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: #6b7280;
+    color: #fff;
+}
+
+.save-btn {
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+    color: #fff;
+}
+
+@media (max-width: 900px) {
+    .activity-grid,
+    .activity-input-grid,
+    .student-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-wide {
+        grid-column: auto;
+    }
+
+    .page-title-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+.student-search-results {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+/* Thanh cuộn gọn đẹp */
+.student-search-results::-webkit-scrollbar {
+    width: 7px;
+}
+
+.student-search-results::-webkit-scrollbar-track {
+    background: #eef2f7;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb {
+    background: #c4ccd8;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.student-choice-btn {
+    width: 100%;
+    border: 1px solid #d7dee9;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.student-choice-btn:hover {
+    background: #fff7d6;
+    border-color: #f3b600;
+    transform: translateY(-1px);
+}
+
+.student-choice-btn b {
+    display: block;
+    color: #0f172a;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.student-choice-btn span {
+    display: block;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.activity-grid > .activity-box:nth-child(1),
+.activity-grid > .activity-box:nth-child(2) {
+    min-height: 360px;
+}
+
+.student-search-results {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.student-search-results::-webkit-scrollbar {
+    width: 7px;
+}
+
+.student-search-results::-webkit-scrollbar-track {
+    background: #eef2f7;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb {
+    background: #c4ccd8;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.action-col {
+    width: 100px;
+}
+
+.activity-table-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.inline-delete-form {
+    display: inline;
+    margin: 0;
+}
+
+.mini-action-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 900;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.12);
+    transition: 0.15s ease;
+}
+
+.mini-action-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.98);
+}
+
+.mini-action-btn.edit {
+    background: linear-gradient(180deg, #38bdf8, #0284c7);
+    color: #fff;
+}
+
+.mini-action-btn.delete {
+    background: linear-gradient(180deg, #fb7185, #dc2626);
+    color: #fff;
+}
+
+.edit-activity-inner {
+    height: auto;
+    max-height: 90vh;
+}
+
+.edit-activity-grid {
+    grid-template-columns: 0.9fr 1.6fr;
+}
+
+.edit-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    .activity-table-actions {
+        justify-content: flex-start;
+    }
+
+    .edit-activity-grid,
+    .edit-input-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+</style>
+
+{% endblock %}

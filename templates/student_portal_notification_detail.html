@@ -1,0 +1,106 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'notifications' %}
+{% block title %}Chi tiết thông báo{% endblock %}
+
+{% block extra_css %}
+<style>
+.notification-detail {
+    max-width: 920px;
+}
+
+.notification-detail h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.notification-date {
+    color: #64748b;
+    font-weight: 800;
+    margin-bottom: 18px;
+}
+
+.notification-body {
+    white-space: pre-wrap;
+    line-height: 1.75;
+    font-size: 16px;
+    font-weight: 650;
+    color: #334155;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 18px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    text-decoration: none;
+    color: #1d4ed8;
+    font-weight: 950;
+}
+
+.notification-content-box {
+    background: #f8fafc;
+    border: 1px solid #dbe7f5;
+    border-radius: 14px;
+    padding: 16px;
+    line-height: 1.7;
+    font-size: 15px;
+    font-weight: 650;
+    color: #0f172a;
+}
+
+.notification-normal-line {
+    margin-bottom: 4px;
+}
+
+.notification-space {
+    height: 10px;
+}
+
+.notification-contact-line {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff7d6;
+    border: 1px solid #facc15;
+    color: #7c4a03;
+    font-weight: 900;
+}
+</style>
+
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>📩 Chi tiết thông báo</h1>
+        <p>Nội dung thông báo từ CLB.</p>
+    </div>
+</div>
+
+<section class="portal-card notification-detail">
+    <h2>{{ notification.title }}</h2>
+    <div class="notification-date">{{ notification.created_at }}</div>
+    <div class="notification-content-box">
+        {% set lines = notification.content.split('\n') %}
+        {% for line in lines %}
+            {% if '0963830315' in line %}
+                <div class="notification-contact-line">
+                    📞 {{ line }}
+                </div>
+            {% elif line.strip() %}
+                <div class="notification-normal-line">
+                    {{ line }}
+                </div>
+            {% else %}
+                <div class="notification-space"></div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <a class="back-link" href="{{ url_for('student_portal_notifications') }}">← Quay lại danh sách thông báo</a>
+</section>
+{% endblock %}

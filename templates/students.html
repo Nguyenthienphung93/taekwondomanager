@@ -1,0 +1,1732 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Thông tin hội viên</h1>
+
+
+<form method="post" action="/students/add" class="card student-add-card">
+    <div class="student-split-form">
+
+        <div class="student-info-panel">
+            <div class="panel-title">
+                <span class="panel-icon">👤</span>
+                <div>
+                    <h3>Thông tin hội viên</h3>
+                    <p>Thông tin cá nhân và liên hệ</p>
+                </div>
+            </div>
+
+            <div class="student-panel-grid">
+                <div class="field-box field-wide">
+                    <label>Họ tên <b>*</b></label>
+                    <input name="name" id="nameInput" placeholder="Nhập họ tên" required>
+                </div>
+
+                <div class="field-box">
+                    <label>Ngày sinh <b>*</b></label>
+                    <div class="date-wrap">
+                        <input name="birthdate" id="birthInput" placeholder="dd/mm/yyyy" maxlength="10" required>
+                        <button type="button" class="calendar-btn" onclick="openHiddenDate()">📅</button>
+                        <input
+                            type="date"
+                            id="hiddenDate"
+                            onchange="pickDateValue()"
+                            formnovalidate
+                        >
+                    </div>
+                </div>
+
+                <div class="field-box">
+                    <label>Giới tính</label>
+                    <select name="gender">
+                        <option>Nam</option>
+                        <option>Nữ</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Số điện thoại</label>
+                    <input name="phonenumber" placeholder="Số điện thoại">
+                </div>
+
+                <div class="field-box">
+                    <label>ID Telegram</label>
+                    <input name="telegram_id" placeholder="Telegram ID">
+                </div>
+
+                <div class="field-box field-wide">
+                    <label>Địa chỉ</label>
+                    <input name="address" placeholder="Nhập địa chỉ hội viên">
+                </div>
+            </div>
+        </div>
+
+        <div class="student-info-panel class-info-panel">
+            <div class="panel-title">
+                <span class="panel-icon">🥋</span>
+                <div>
+                    <h3>Thông tin lớp học</h3>
+                    <p>Mã hội viên, cấp đai và tình trạng tập</p>
+                </div>
+            </div>
+
+            <div class="student-panel-grid">
+                <div class="field-box field-wide">
+                    <label>Mã HV <span>(tự động)</span></label>
+                    <div class="readonly-code" id="licensePreview">Mã HV tự sinh</div>
+                    <input type="hidden" name="license" id="licenseInput">
+                </div>
+
+                <div class="field-box">
+                    <label>Cấp đai</label>
+                    <select name="belt">
+                        <option>Cấp 10</option>
+                        <option>Cấp 9</option>
+                        <option>Cấp 8</option>
+                        <option>Cấp 7</option>
+                        <option>Cấp 6</option>
+                        <option>Cấp 5</option>
+                        <option>Cấp 4</option>
+                        <option>Cấp 3</option>
+                        <option>Cấp 2</option>
+                        <option>Cấp 1</option>
+                        <option>1 Đẳng</option>
+                        <option>2 Đẳng</option>
+                        <option>3 Đẳng</option>
+                        <option>4 Đẳng</option>
+                        <option>5 Đẳng</option>
+                        <option>6 Đẳng</option>
+                        <option>7 Đẳng</option>
+                        <option>8 Đẳng</option>
+                        <option>9 Đẳng</option>
+                        <option>10 Đẳng</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Lớp <b>*</b></label>
+                    <select name="classroom" required>
+                        <option value="">Chọn lớp</option>
+                        {% for item in class_options.classrooms %}
+                        <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Ca <b>*</b></label>
+                    <select name="timeclass" required>
+                        <option value="">Chọn ca</option>
+                        {% for item in class_options.timeclasses %}
+                        <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>CLB</label>
+                    <select name="clup">
+                        <option value="">Chọn CLB</option>
+                        {% for item in class_options.clubs %}
+                        <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Gia đình</label>
+                    <select name="family">
+                        <option>Không</option>
+                        <option>Có</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Hoạt động</label>
+                    <select name="active">
+                        <option>Có</option>
+                        <option>Không</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="add-btn student-add-submit">➕ Thêm hội viên</button>
+    </div>
+</form>
+
+<div class="list-toolbar">
+<form method="get" action="/students" class="list-search-form">
+    <div class="list-search-input-wrap">
+        <span class="list-search-icon">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
+
+        <input
+            type="text"
+            name="q"
+            value="{{ q or '' }}"
+            placeholder="Tìm mã HV, họ tên hoặc số điện thoại"
+        >
+    </div>
+
+    <button type="submit" class="list-search-btn">Tìm</button>
+</form>
+
+    <div class="pagination-control" data-pagination="studentsTable">
+        <label>Hiển thị</label>
+        <select class="page-size-select" onchange="setTablePageSize('studentsTable', this.value)">
+            <option value="50">50 HV</option>
+            <option value="100">100 HV</option>
+            <option value="150">150 HV</option>
+            <option value="200">200 HV</option>
+        </select>
+        <button type="button" class="page-nav-btn" onclick="changeTablePage('studentsTable', -1)">&lt;&lt;</button>
+        <span class="page-info" id="studentsTablePageInfo">1 / 1</span>
+        <button type="button" class="page-nav-btn" onclick="changeTablePage('studentsTable', 1)">&gt;&gt;</button>
+    </div>
+</div>
+
+<table class="student-table" data-paginated-table="studentsTable">
+
+    <colgroup>
+        <col style="width:140px">  <!-- Mã HV -->
+        <col style="width:220px">  <!-- Họ tên -->
+        <col style="width:120px">  <!-- Ngày sinh -->
+        <col style="width:70px">   <!-- GT -->
+        <col style="width:120px">  <!-- Lớp -->
+        <col style="width:100px">  <!-- Ca -->
+        <col style="width:180px">  <!-- CLB -->
+        <col style="width:130px">  <!-- SĐT -->
+        <col style="width:100px">  <!-- Đai -->
+        <col style="width:70px">   <!-- GĐ -->
+        <col style="width:70px">   <!-- HĐ -->
+        <col style="width:110px">  <!-- Thao tác -->
+    </colgroup>
+    <thead>
+        <tr>
+            <th>Mã HV</th>
+            <th>Họ tên</th>
+            <th>Ngày sinh</th>
+            <th>GT</th>
+            <th>Lớp</th>
+            <th>Ca</th>
+            <th>CLB</th>
+            <th>SĐT</th>
+            <th>Đai</th>
+            <th>GĐ</th>
+            <th>HĐ</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr class="
+                {{ '' if r.active|string|lower in ['có','1','true','yes'] else 'inactive-row' }}
+                {{ 'new-student-row' if new_license and r.license == new_license else '' }}
+            "
+            oncontextmenu="openStudentMenu(event, '{{ r.license }}')">
+            <td>{{ r.license }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.birthdate }}</td>
+            <td>{{ r.gender }}</td>
+            <td>{{ r.classroom }}</td>
+            <td>{{ r.timeclass }}</td>
+            <td>{{ r.clup }}</td>
+            <td>{{ r.phonenumber }}</td>
+            <td>{{ r.belt }}</td>
+            <td>{{ '✓' if r.family|string|lower in ['có','1','true','yes'] else '' }}</td>
+            <td>{{ '✓' if r.active|string|lower in ['có','1','true','yes'] else '' }}</td>
+            
+            <td class="action-cell">
+
+                <button type="button"
+                    class="icon-btn edit-btn"
+                    onclick="openEditModal(
+                        '{{ r.license }}',
+                        '{{ r.name }}',
+                        '{{ r.birthdate }}',
+                        '{{ r.gender }}',
+                        '{{ r.classroom }}',
+                        '{{ r.timeclass }}',
+                        '{{ r.clup }}',
+                        '{{ r.phonenumber }}',
+                        '{{ r.address }}',
+                        '{{ r.belt }}',
+                        '{{ r.family }}',
+                        '{{ r.active }}',
+                        '{{ r.telegram_id }}'
+                    )">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+
+                <form method="post"
+                      action="/students/{{ r.license }}/delete"
+                      onsubmit="return confirm('Xoá học viên này?')">
+
+                    <button type="submit"
+                            class="icon-btn delete-btn">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+
+                </form>
+
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div id="editModal" class="modal-bg">
+    <div class="modal-box">
+        <h2>Chỉnh sửa hội viên</h2>
+
+        <form id="editForm" method="post">
+            <div class="student-form-grid">
+                <div class="field-box">
+                    <label>Mã HV</label>
+                    <input id="edit_license" readonly>
+                </div>
+
+                <div class="field-box">
+                    <label>Họ tên</label>
+                    <input name="name" id="edit_name">
+                </div>
+
+                <div class="field-box">
+                    <label>Ngày sinh</label>
+                    <input name="birthdate" id="edit_birthdate">
+                </div>
+
+                <div class="field-box">
+                    <label>Giới tính</label>
+                    <select name="gender" id="edit_gender">
+                        <option>Nam</option>
+                        <option>Nữ</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Lớp</label>
+                    <select name="classroom" id="edit_classroom">
+                        {% for item in class_options.classrooms %}
+                        <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Ca</label>
+                    <select name="timeclass" id="edit_timeclass">
+                        {% for item in class_options.timeclasses %}
+                        <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>CLB</label>
+                    <select name="clup" id="edit_clup">
+                        <option value="">Chọn CLB</option>
+                        {% for item in class_options.clubs %}
+                        <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>SĐT</label>
+                    <input name="phonenumber" id="edit_phonenumber">
+                </div>
+
+                <div class="field-box">
+                    <label>Địa chỉ</label>
+                    <input name="address" id="edit_address">
+                </div>
+
+                <div class="field-box">
+                    <label>Cấp đai</label>
+                    <select name="belt" id="edit_belt">
+                        <option>Cấp 10</option>
+                        <option>Cấp 9</option>
+                        <option>Cấp 8</option>
+                        <option>Cấp 7</option>
+                        <option>Cấp 6</option>
+                        <option>Cấp 5</option>
+                        <option>Cấp 4</option>
+                        <option>Cấp 3</option>
+                        <option>Cấp 2</option>
+                        <option>Cấp 1</option>
+                        <option>1 Đẳng</option>
+                        <option>2 Đẳng</option>
+                        <option>3 Đẳng</option>
+                        <option>4 Đẳng</option>
+                        <option>5 Đẳng</option>
+                        <option>6 Đẳng</option>
+                        <option>7 Đẳng</option>
+                        <option>8 Đẳng</option>
+                        <option>9 Đẳng</option>
+                        <option>10 Đẳng</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Gia đình</label>
+                    <select name="family" id="edit_family">
+                        <option>Không</option>
+                        <option>Có</option>
+                        <option>1</option>
+                        <option>0</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Tình trạng</label>
+                    <select name="active" id="edit_active">
+                        <option>Có</option>
+                        <option>Không</option>
+                    </select>
+                </div>
+
+                <div class="field-box">
+                    <label>Telegram ID</label>
+                    <input name="telegram_id" id="edit_telegram_id">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" onclick="closeEditModal()">Đóng</button>
+                <button type="submit" class="save-btn">💾 Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="studentContextMenu" class="context-menu">
+    <div onclick="openStudentDetail()">👤 Thông tin chi tiết</div>
+    <div onclick="goStudentFee()">💰 Đóng phí</div>
+</div>
+
+<div id="quickEditModal" class="modal-bg">
+    <div class="quick-edit-box">
+        <div class="quick-edit-head">
+            <div>
+                <h2 id="quickEditTitle">Chỉnh sửa thông tin</h2>
+                <p id="quickEditSub">Cập nhật thông tin học viên</p>
+            </div>
+            <button type="button" class="quick-edit-close" onclick="closeQuickEditModal()">×</button>
+        </div>
+
+        <div class="quick-edit-body">
+            <label id="quickEditLabel">Thông tin</label>
+            <input id="quickEditInput" autocomplete="off">
+
+            <div id="quickEditHint" class="quick-edit-hint"></div>
+        </div>
+
+        <div class="quick-edit-actions">
+            <button type="button" class="quick-edit-cancel" onclick="closeQuickEditModal()">Đóng</button>
+            <button type="button" class="quick-edit-save" onclick="saveQuickEditValue()">💾 Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<div id="studentDetailModal" class="modal-bg">
+    <div class="modal-box student-detail-modal">
+        <div class="detail-header">
+            <div>
+                <h2>Thông tin chi tiết</h2>
+                <div id="detailStudentName" class="detail-student-name">---</div>
+            </div>
+
+            <button type="button" class="detail-close-btn" onclick="closeStudentDetail()">×</button>
+        </div>
+
+        <div class="detail-section-title">Thông tin cá nhân</div>
+
+        <div class="detail-photo-card">
+            <div class="student-photo-frame">
+                <img id="studentDetailPhoto" src="" alt="Ảnh đại diện">
+                <div id="studentPhotoEmpty" class="student-photo-empty">Chưa có ảnh</div>
+            </div>
+
+            <div class="student-photo-actions">
+                <div class="student-photo-title">Ảnh đại diện 3x4</div>
+                <div class="student-photo-note">Ảnh sẽ lưu trên Supabase Storage: <b>student-photos</b></div>
+
+                <label class="student-photo-upload-btn">
+                    📷 Upload hình
+                    <input
+                        type="file"
+                        id="studentPhotoInput"
+                        accept="image/png,image/jpeg,image/webp"
+                        onchange="uploadStudentPhoto()"
+                        hidden
+                    >
+                </label>
+            </div>
+        </div>
+
+        <div class="detail-top-grid">
+            <div class="detail-card">
+                <h3>Thông tin cá nhân</h3>
+                <div id="personalInfoBox"></div>
+            </div>
+
+            <div class="detail-card">
+                <h3>Thông tin CLB</h3>
+                <div id="clubInfoBox"></div>
+            </div>
+        </div>
+
+        <div class="detail-section-title">Hoạt động</div>
+
+        <div class="detail-bottom-grid">
+            <div class="detail-card">
+                <h3>Thi cấp</h3>
+                <div id="examHistoryBox" class="history-grid"></div>
+            </div>
+
+            <div class="detail-card">
+                <h3>Hoạt động</h3>
+                <div id="activityHistoryBox" class="history-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function removeAccents(str) {
+    return (str || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+}
+
+function normalizeBirth(raw) {
+    let s = (raw || "").replace(/\D/g, "");
+
+    if (s.length === 8) {
+        return `${s.slice(0, 2)}/${s.slice(2, 4)}/${s.slice(4, 8)}`;
+    }
+
+    if (s.length === 6) {
+        let yy = s.slice(4, 6);
+        let yyyy = parseInt(yy) >= 30 ? "19" + yy : "20" + yy;
+        return `${s.slice(0, 2)}/${s.slice(2, 4)}/${yyyy}`;
+    }
+
+    return raw;
+}
+
+function buildHVCode() {
+    const nameInput = document.getElementById("nameInput");
+    const birthInput = document.getElementById("birthInput");
+    const licensePreview = document.getElementById("licensePreview");
+    const licenseInput = document.getElementById("licenseInput");
+
+    let name = removeAccents(nameInput.value).toLowerCase().trim();
+    let birth = normalizeBirth(birthInput.value);
+    let parts = name.split(/\s+/).filter(Boolean);
+    let birthDigits = birth.replace(/\D/g, "");
+
+    if (parts.length < 1 || birthDigits.length !== 8) {
+        licensePreview.textContent = "Mã HV tự sinh";
+        licenseInput.value = "";
+        return;
+    }
+
+    let ten = parts[parts.length - 1];
+    let initials = parts.slice(0, -1).map(p => p[0]).join("");
+
+    let code = `HV_${ten}${initials}_${birthDigits.slice(0,2)}${birthDigits.slice(2,4)}${birthDigits.slice(6,8)}`;
+
+    licensePreview.textContent = code;
+    licenseInput.value = code;
+}
+
+function openHiddenDate() {
+    const hidden = document.getElementById("hiddenDate");
+
+    hidden.value = "";
+
+    if (hidden.showPicker) {
+        hidden.showPicker();
+    } else {
+        hidden.click();
+    }
+}
+
+function pickDateValue() {
+    const v = document.getElementById("hiddenDate").value;
+    if (!v) return;
+
+    const [y, m, d] = v.split("-");
+    document.getElementById("birthInput").value = `${d}/${m}/${y}`;
+    buildHVCode();
+}
+
+let hvTimer = null;
+
+function debounceBuildHVCode() {
+    clearTimeout(hvTimer);
+    hvTimer = setTimeout(buildHVCode, 180);
+}
+
+document.getElementById("nameInput").addEventListener("input", debounceBuildHVCode);
+
+document.getElementById("birthInput").addEventListener("input", function () {
+    this.value = this.value.replace(/[^\d\/]/g, "");
+    debounceBuildHVCode();
+});
+
+document.getElementById("birthInput").addEventListener("blur", function () {
+    this.value = normalizeBirth(this.value);
+    buildHVCode();
+});
+
+function openEditModal(license, name, birthdate, gender, classroom, timeclass, clup, phone, address, belt, family, active, telegramId) {
+    document.getElementById("editForm").action = `/students/${license}/update`;
+
+    document.getElementById("edit_license").value = license || "";
+    document.getElementById("edit_name").value = name || "";
+    document.getElementById("edit_birthdate").value = birthdate || "";
+    document.getElementById("edit_gender").value = gender || "Nam";
+    document.getElementById("edit_classroom").value = classroom || "";
+    document.getElementById("edit_timeclass").value = timeclass || "";
+    document.getElementById("edit_clup").value = clup || "";
+    document.getElementById("edit_phonenumber").value = phone || "";
+    document.getElementById("edit_address").value = address || "";
+    document.getElementById("edit_belt").value = belt || "Cấp 10";
+
+    let fam = (family || "").toLowerCase();
+    document.getElementById("edit_family").value = ["1", "có", "true", "yes"].includes(fam) ? "Có" : "Không";
+
+    let act = (active || "").toLowerCase();
+    document.getElementById("edit_active").value = ["1", "có", "true", "yes"].includes(act) ? "Có" : "Không";
+
+    document.getElementById("edit_telegram_id").value = telegramId || "";
+
+    document.getElementById("editModal").style.display = "flex";
+}
+
+function closeEditModal() {
+    document.getElementById("editModal").style.display = "none";
+}
+
+let selectedStudentLicense = "";
+
+function openStudentMenu(e, license) {
+    e.preventDefault();
+
+    selectedStudentLicense = license;
+
+    const menu = document.getElementById("studentContextMenu");
+    menu.style.display = "block";
+    menu.style.left = e.pageX + "px";
+    menu.style.top = e.pageY + "px";
+}
+
+function goStudentFee() {
+    if (!selectedStudentLicense) return;
+    window.location.href = "/fees?ma_hv=" + encodeURIComponent(selectedStudentLicense);
+}
+
+document.addEventListener("click", function () {
+    const menu = document.getElementById("studentContextMenu");
+    if (menu) menu.style.display = "none";
+});
+
+function safeText(v) {
+    return (v === null || v === undefined || v === "") ? "—" : String(v);
+}
+
+function escAttr(v) {
+    return String(v ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function detailRow(label, field, value, license) {
+    return `
+        <div class="detail-row">
+            <div class="detail-label">${safeText(label)}</div>
+            <div class="detail-value" id="detail_${field}">${safeText(value)}</div>
+
+            <button type="button"
+                    class="detail-edit-btn js-detail-edit"
+                    data-license="${escAttr(license)}"
+                    data-field="${escAttr(field)}"
+                    data-label="${escAttr(label)}"
+                    data-value="${escAttr(value || "")}">
+                <i class="fa-solid fa-pen"></i>
+            </button>
+        </div>
+    `;
+}
+async function openStudentDetail() {
+    if (!selectedStudentLicense) return;
+
+    const modal = document.getElementById("studentDetailModal");
+    modal.style.display = "flex";
+
+    document.getElementById("detailStudentName").textContent = "Đang tải...";
+    document.getElementById("personalInfoBox").innerHTML = "";
+    document.getElementById("clubInfoBox").innerHTML = "";
+    document.getElementById("examHistoryBox").innerHTML = "";
+    document.getElementById("activityHistoryBox").innerHTML = "";
+
+    try {
+        const res = await fetch("/api/student-detail/" + encodeURIComponent(selectedStudentLicense));
+        const data = await res.json();
+
+        const s = data.student || {};
+        const results = data.results || [];
+        const activities = data.activities || [];
+        const photoUrl = data.photo_url || "";
+
+        renderStudentPhoto(photoUrl);
+
+        const license = s.license || selectedStudentLicense;
+
+        document.getElementById("detailStudentName").textContent =
+            `${safeText(s.name)} - ${safeText(s.birthdate)}`;
+
+        document.getElementById("personalInfoBox").innerHTML = `
+            ${detailRow("Họ tên", "name", s.name, license)}
+            ${detailRow("Ngày tháng năm sinh", "birthdate", s.birthdate, license)}
+            ${detailRow("Giới tính", "gender", s.gender, license)}
+            ${detailRow("SĐT", "phonenumber", s.phonenumber, license)}
+            ${detailRow("Địa chỉ", "address", s.address, license)}
+            ${detailRow("Telegram ID", "telegram_id", s.telegram_id, license)}
+        `;
+
+        document.getElementById("clubInfoBox").innerHTML = `
+            ${detailRow("Mã hội viên", "license", s.license, license)}
+            ${detailRow("Lớp", "classroom", s.classroom, license)}
+            ${detailRow("Ca", "timeclass", s.timeclass, license)}
+            ${detailRow("CLB", "clup", s.clup, license)}
+        `;
+
+        renderExamHistory(results);
+        renderActivityHistory(activities);
+        bindDetailEditButtons();
+
+    } catch (err) {
+        document.getElementById("detailStudentName").textContent = "Lỗi tải dữ liệu";
+        console.error(err);
+    }
+}
+
+function closeStudentDetail() {
+    document.getElementById("studentDetailModal").style.display = "none";
+}
+
+function renderExamHistory(results) {
+    const box = document.getElementById("examHistoryBox");
+
+    if (!results.length) {
+        box.innerHTML = `<div class="empty-history">Chưa có kết quả thi cấp</div>`;
+        return;
+    }
+
+    box.innerHTML = results.map(r => {
+        const status = r.ket_qua || "";
+        let cls = "exam-card";
+
+        if (status === "Đạt") cls += " pass";
+        else if (status === "Không đạt") cls += " fail";
+        else if (status === "Vắng") cls += " absent";
+
+        return `
+            <div class="${cls}">
+                <div class="exam-card-top">
+                    <div class="exam-belt">${safeText(r.cap_dai_thi)}</div>
+                    <div class="exam-status">${safeText(r.ket_qua)}</div>
+                </div>
+
+                <div class="exam-meta">
+                    <div><b>Kỳ thi:</b> ${safeText(r.ky_thi)}</div>
+                    <div><b>Số thi:</b> ${safeText(r.so_thi)}</div>
+                    <div><b>Ghi chú:</b> ${safeText(r.ghi_chu)}</div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function renderActivityHistory(activities) {
+    const box = document.getElementById("activityHistoryBox");
+
+    if (!activities.length) {
+        box.innerHTML = `<div class="empty-history">Chưa có hoạt động</div>`;
+        return;
+    }
+
+    box.innerHTML = activities.map(a => {
+        return `
+            <div class="activity-card">
+                <div class="activity-title">${safeText(a.hoat_dong)}</div>
+
+                <div class="activity-meta">
+                    <div><b>Thời gian:</b> ${safeText(a.thoi_gian)}</div>
+                    <div><b>Địa điểm:</b> ${safeText(a.dia_diem)}</div>
+                    <div><b>Nội dung:</b> ${safeText(a.noi_dung)}</div>
+                    <div><b>Kết quả:</b> ${safeText(a.ket_qua)}</div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function bindDetailEditButtons() {
+    document.querySelectorAll(".js-detail-edit").forEach(btn => {
+        btn.onclick = function () {
+            editStudentField(
+                this.dataset.license || "",
+                this.dataset.field || "",
+                this.dataset.label || "",
+                this.dataset.value || ""
+            );
+        };
+    });
+}
+
+let quickEditState = {
+    license: "",
+    field: "",
+    label: "",
+    oldValue: ""
+};
+
+function editStudentField(license, field, label, oldValue) {
+    if (!license || !field) {
+        alert("Thiếu thông tin cần sửa");
+        return;
+    }
+
+    quickEditState = {
+        license: license,
+        field: field,
+        label: label,
+        oldValue: oldValue || ""
+    };
+
+    const modal = document.getElementById("quickEditModal");
+    const title = document.getElementById("quickEditTitle");
+    const sub = document.getElementById("quickEditSub");
+    const labelEl = document.getElementById("quickEditLabel");
+    const input = document.getElementById("quickEditInput");
+    const hint = document.getElementById("quickEditHint");
+
+    title.textContent = "Chỉnh sửa " + label;
+    sub.textContent = "Học viên: " + license;
+    labelEl.textContent = label;
+    input.value = oldValue || "";
+
+    if (field === "license") {
+        hint.innerHTML = `
+            Khi đổi Mã HV, hệ thống sẽ đổi đồng bộ dữ liệu học phí, thi cấp,
+            hoạt động và tài khoản portal liên quan.
+        `;
+    } else {
+        hint.textContent = "Nhập nội dung mới rồi bấm Lưu thay đổi.";
+    }
+
+    modal.style.display = "flex";
+    modal.style.zIndex = "20000";
+
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 80);
+}
+
+function closeQuickEditModal() {
+    const modal = document.getElementById("quickEditModal");
+
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+async function saveQuickEditValue() {
+    const input = document.getElementById("quickEditInput");
+    const newValue = (input.value || "").trim();
+
+    const license = quickEditState.license;
+    const field = quickEditState.field;
+    const label = quickEditState.label;
+
+    if (!license || !field) {
+        alert("Thiếu thông tin cần sửa");
+        return;
+    }
+
+    if (field === "license" && !newValue) {
+        alert("Mã hội viên không được để trống");
+        input.focus();
+        return;
+    }
+
+    const saveBtn = document.querySelector(".quick-edit-save");
+    const oldBtnText = saveBtn ? saveBtn.innerHTML : "";
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = "Đang lưu...";
+    }
+
+    try {
+        const res = await fetch("/api/student-field-update", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                license: license,
+                field: field,
+                value: newValue
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            alert(data.message || "Không lưu được thông tin");
+            return;
+        }
+
+        if (field === "license" && data.new_license) {
+            selectedStudentLicense = data.new_license;
+        }
+
+        closeQuickEditModal();
+        await openStudentDetail();
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi lưu thông tin. Ken kiểm tra lại route /api/student-field-update trong app.py");
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = oldBtnText || "💾 Lưu thay đổi";
+        }
+    }
+}
+
+function renderStudentPhoto(photoUrl) {
+    const img = document.getElementById("studentDetailPhoto");
+    const empty = document.getElementById("studentPhotoEmpty");
+
+    if (!img || !empty) return;
+
+    if (photoUrl) {
+        img.src = photoUrl + "?t=" + Date.now();
+        img.style.display = "block";
+        empty.style.display = "none";
+    } else {
+        img.src = "";
+        img.style.display = "none";
+        empty.style.display = "flex";
+    }
+}
+
+async function uploadStudentPhoto() {
+    if (!selectedStudentLicense) {
+        alert("Chưa chọn học viên");
+        return;
+    }
+
+    const input = document.getElementById("studentPhotoInput");
+
+    if (!input || !input.files || !input.files[0]) {
+        alert("Ken chưa chọn hình");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", input.files[0]);
+
+    try {
+        const res = await fetch("/api/student-photo-upload/" + encodeURIComponent(selectedStudentLicense), {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            alert(data.message || "Không upload được hình");
+            return;
+        }
+
+        renderStudentPhoto(data.photo_url || "");
+
+        input.value = "";
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi upload hình");
+    }
+}
+
+/* =========================
+   PHÂN TRANG DANH SÁCH
+========================= */
+const tablePaginationState = {};
+
+function getPaginatedRows(tableId) {
+    const table = document.querySelector(`[data-paginated-table="${tableId}"]`);
+    if (!table) return [];
+
+    const tbody = table.querySelector("tbody");
+    if (!tbody) return [];
+
+    return Array.from(tbody.querySelectorAll("tr"));
+}
+
+function initTablePagination(tableId) {
+    const rows = getPaginatedRows(tableId);
+
+    tablePaginationState[tableId] = {
+        page: 1,
+        pageSize: 50,
+        totalRows: rows.length
+    };
+
+    applyTablePagination(tableId);
+}
+
+function setTablePageSize(tableId, value) {
+    const state = tablePaginationState[tableId] || {
+        page: 1,
+        pageSize: 50,
+        totalRows: 0
+    };
+
+    state.pageSize = parseInt(value || "50", 10) || 50;
+    state.page = 1;
+
+    tablePaginationState[tableId] = state;
+    applyTablePagination(tableId);
+}
+
+function changeTablePage(tableId, direction) {
+    const state = tablePaginationState[tableId];
+    if (!state) return;
+
+    const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+    state.page += direction;
+
+    if (state.page < 1) state.page = 1;
+    if (state.page > totalPages) state.page = totalPages;
+
+    applyTablePagination(tableId);
+}
+
+function applyTablePagination(tableId) {
+    const rows = getPaginatedRows(tableId);
+    const state = tablePaginationState[tableId] || {
+        page: 1,
+        pageSize: 50,
+        totalRows: rows.length
+    };
+
+    state.totalRows = rows.length;
+
+    const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+
+    if (state.page > totalPages) state.page = totalPages;
+    if (state.page < 1) state.page = 1;
+
+    const start = (state.page - 1) * state.pageSize;
+    const end = start + state.pageSize;
+
+    rows.forEach((row, index) => {
+        row.style.display = (index >= start && index < end) ? "" : "none";
+    });
+
+    const info = document.getElementById(`${tableId}PageInfo`);
+    if (info) {
+        info.textContent = `${state.page} / ${totalPages}`;
+    }
+
+    const control = document.querySelector(`[data-pagination="${tableId}"]`);
+    if (control) {
+        const buttons = control.querySelectorAll(".page-nav-btn");
+        buttons.forEach((btn, idx) => {
+            if (idx === 0) btn.disabled = state.page <= 1;
+            if (idx === 1) btn.disabled = state.page >= totalPages;
+        });
+    }
+
+    tablePaginationState[tableId] = state;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-paginated-table]").forEach(table => {
+        initTablePagination(table.dataset.paginatedTable);
+    });
+});
+
+
+document.addEventListener("keydown", function(e) {
+    const modal = document.getElementById("quickEditModal");
+
+    if (!modal || modal.style.display !== "flex") {
+        return;
+    }
+
+    if (e.key === "Escape") {
+        closeQuickEditModal();
+    }
+
+    if (e.key === "Enter") {
+        e.preventDefault();
+        saveQuickEditValue();
+    }
+});
+
+document.addEventListener("click", function(e) {
+    const modal = document.getElementById("quickEditModal");
+
+    if (modal && e.target === modal) {
+        closeQuickEditModal();
+    }
+});
+</script>
+
+
+<style>
+/* =========================
+   STUDENT ADD FORM LAYOUT
+========================= */
+
+.student-add-card {
+    padding: 16px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #dbe7f5;
+    box-shadow: 0 10px 24px rgba(15, 42, 74, 0.08);
+}
+
+.student-split-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.student-info-panel {
+    background: #ffffff;
+    border: 1px solid #d8e4f2;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 6px 18px rgba(15, 42, 74, 0.06);
+}
+
+.class-info-panel {
+    background: linear-gradient(180deg, #fffdf4 0%, #ffffff 100%);
+    border-color: #f0d270;
+}
+
+/* =========================
+   PANEL TITLE
+========================= */
+
+.panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.panel-icon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #0f2a4a;
+    color: #ffffff;
+    font-size: 18px;
+    box-shadow: 0 6px 14px rgba(15, 42, 74, 0.18);
+    flex-shrink: 0;
+}
+
+.panel-title h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f2a4a;
+    line-height: 1.1;
+}
+
+.panel-title p {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* =========================
+   FIELD GRID
+========================= */
+
+.student-panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+}
+
+.student-panel-grid .field-wide {
+    grid-column: 1 / -1;
+}
+
+.student-info-panel .field-box {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.student-info-panel .field-box label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.student-info-panel .field-box label b {
+    color: #ef4444;
+}
+
+.student-info-panel .field-box label span {
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* =========================
+   INPUT / SELECT STYLE
+========================= */
+
+.student-info-panel input,
+.student-info-panel select,
+.student-info-panel .readonly-code {
+    width: 100%;
+    height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+    outline: none;
+    box-sizing: border-box;
+    transition: 0.18s ease;
+}
+
+.student-info-panel input::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.student-info-panel input:focus,
+.student-info-panel select:focus {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.22);
+}
+
+.student-info-panel select {
+    cursor: pointer;
+}
+
+.student-info-panel .readonly-code {
+    display: flex;
+    align-items: center;
+    background: #fff2bf;
+    border-color: #f3c94a;
+    color: #b45309;
+    font-weight: 800;
+}
+
+/* =========================
+   DATE INPUT
+========================= */
+
+.student-info-panel .date-wrap {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.student-info-panel .date-wrap input[name="birthdate"] {
+    padding-right: 42px;
+}
+
+.student-info-panel .calendar-btn {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 7px;
+    background: #ffc526;
+    color: #0f2a4a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.student-info-panel .calendar-btn:hover {
+    filter: brightness(0.96);
+}
+
+.student-info-panel #hiddenDate {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
+
+/* =========================
+   SUBMIT BUTTON
+========================= */
+
+.student-add-submit {
+    grid-column: 1 / -1;
+    height: 38px;
+    border: none;
+    border-radius: 10px;
+    background: #ffc526;
+    color: #0f2a4a;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.18s ease;
+}
+
+.student-add-submit:hover {
+    filter: brightness(0.97);
+    transform: translateY(-1px);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 980px) {
+    .student-split-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .student-panel-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.new-student-row td {
+    background: #fff7cc !important;
+}
+
+.new-student-row {
+    animation: none !important;
+}
+
+/* =========================
+   FIX LAG COMBOBOX STUDENTS
+========================= */
+
+.student-info-panel,
+.student-add-card,
+.student-panel-grid,
+.student-table,
+.student-table tr,
+.student-table td,
+.student-table th {
+    will-change: auto !important;
+}
+
+.student-info-panel input,
+.student-info-panel select,
+.student-info-panel .readonly-code,
+.student-add-submit,
+.calendar-btn {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+}
+
+.student-info-panel input:focus,
+.student-info-panel select:focus {
+    box-shadow: none !important;
+    border-color: #fbbf24 !important;
+}
+
+.student-add-submit:hover,
+.student-info-panel .calendar-btn:hover {
+    transform: none !important;
+    filter: none !important;
+}
+
+.student-info-panel select {
+    background-color: #ffffff !important;
+    cursor: pointer;
+}
+
+/* =========================
+   THANH LỌC + PHÂN TRANG
+========================= */
+.list-toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 8px;
+}
+
+.list-toolbar .search-row,
+.list-toolbar .tracking-filter {
+    margin: 0;
+}
+
+.pagination-control {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    padding: 7px 8px;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
+    white-space: nowrap;
+}
+
+.pagination-control label {
+    font-size: 12px;
+    font-weight: 900;
+    color: #475569;
+}
+
+.page-size-select {
+    height: 34px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #f8fafc;
+    padding: 0 9px;
+    font-weight: 900;
+    color: #0f172a;
+    outline: none;
+}
+
+.page-nav-btn {
+    height: 34px;
+    min-width: 38px;
+    border: none;
+    border-radius: 9px;
+    background: #0f2a4a;
+    color: #ffffff;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.page-nav-btn:disabled {
+    background: #cbd5e1;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.page-info {
+    min-width: 58px;
+    text-align: center;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+@media (max-width: 760px) {
+    .list-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pagination-control {
+        width: 100%;
+        justify-content: flex-end;
+        box-sizing: border-box;
+    }
+}
+
+/* =========================
+   Ô TÌM KIẾM DANH SÁCH
+========================= */
+.list-search-form{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.list-search-input-wrap{
+    position:relative;
+    width:320px;
+    max-width:100%;
+}
+
+.list-search-icon{
+    position:absolute;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#64748b;
+    font-size:14px;
+    pointer-events:none;
+}
+
+.list-search-input-wrap input{
+    width:100%;
+    height:42px;
+    box-sizing:border-box;
+    border:1px solid #cfe0f5;
+    border-radius:14px;
+    background:#fff;
+    padding:0 14px 0 40px;
+    font-size:14px;
+    font-weight:700;
+    color:#0f172a;
+    outline:none;
+    box-shadow:0 6px 16px rgba(15,23,42,.04);
+    transition:.18s ease;
+}
+
+.list-search-input-wrap input::placeholder{
+    color:#94a3b8;
+    font-weight:650;
+}
+
+.list-search-input-wrap input:focus{
+    border-color:#60a5fa;
+    box-shadow:0 0 0 4px rgba(96,165,250,.14);
+}
+
+.list-search-btn{
+    height:42px;
+    min-width:66px;
+    border:0;
+    border-radius:12px;
+    background:linear-gradient(135deg,#facc15,#f59e0b);
+    color:#111827;
+    font-weight:900;
+    padding:0 18px;
+    cursor:pointer;
+    box-shadow:0 8px 18px rgba(245,158,11,.18);
+    transition:.18s ease;
+}
+
+.list-search-btn:hover{
+    transform:translateY(-1px);
+    filter:brightness(.98);
+}
+
+@media(max-width:760px){
+    .list-search-form{
+        width:100%;
+    }
+
+    .list-search-input-wrap{
+        width:100%;
+    }
+
+    .list-search-btn{
+        width:100%;
+    }
+}
+
+/* =========================
+   POPUP SỬA NHANH THÔNG TIN
+========================= */
+.quick-edit-box {
+    width: min(460px, 94vw);
+    background: #ffffff;
+    border-radius: 22px;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .34);
+    border: 1px solid #dbe7f5;
+    overflow: hidden;
+    animation: quickEditPop .16s ease-out;
+}
+
+@keyframes quickEditPop {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.quick-edit-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px 20px;
+    background:
+        radial-gradient(circle at top right, rgba(250, 204, 21, .32), transparent 32%),
+        linear-gradient(135deg, #0f2a4a, #123a66);
+    color: #ffffff;
+}
+
+.quick-edit-head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 950;
+    color: #ffffff;
+}
+
+.quick-edit-head p {
+    margin: 5px 0 0;
+    color: #dbeafe;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.quick-edit-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .16);
+    color: #ffffff;
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.quick-edit-close:hover {
+    background: rgba(255, 255, 255, .24);
+}
+
+.quick-edit-body {
+    padding: 20px;
+}
+
+.quick-edit-body label {
+    display: block;
+    margin-bottom: 8px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.quick-edit-body input {
+    width: 100%;
+    height: 46px;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 850;
+    padding: 0 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.quick-edit-body input:focus {
+    border-color: #facc15;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(250, 204, 21, .22);
+}
+
+.quick-edit-hint {
+    margin-top: 9px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+.quick-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px 18px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.quick-edit-actions button {
+    height: 40px;
+    border: 0;
+    border-radius: 12px;
+    padding: 0 16px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.quick-edit-cancel {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.quick-edit-save {
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #0f172a;
+    box-shadow: 0 8px 18px rgba(245, 158, 11, .22);
+}
+
+.quick-edit-actions button:hover {
+    filter: brightness(.97);
+}
+
+@media(max-width: 520px) {
+    .quick-edit-actions {
+        flex-direction: column-reverse;
+    }
+
+    .quick-edit-actions button {
+        width: 100%;
+    }
+}
+
+/* =========================
+   FIX POPUP SỬA NHANH NẰM TRÊN POPUP CHI TIẾT
+========================= */
+#studentDetailModal {
+    z-index: 9000;
+}
+
+#quickEditModal {
+    position: fixed;
+    inset: 0;
+    z-index: 20000 !important;
+    background: rgba(15, 23, 42, .58);
+    backdrop-filter: blur(3px);
+    align-items: center;
+    justify-content: center;
+}
+
+#quickEditModal .quick-edit-box {
+    position: relative;
+    z-index: 20001;
+}
+</style>
+
+{% endblock %}

@@ -1,0 +1,572 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Danh sách chưa đóng phí</h1>
+
+
+
+<div class="unpaid-summary-row">
+    <div class="unpaid-stat-card stat-total">
+        <div class="stat-label">Tổng</div>
+        <div class="stat-value">{{ summary.total }}</div>
+    </div>
+
+    <div class="unpaid-stat-card stat-vang-lai">
+        <div class="stat-label">HV vãng lai</div>
+        <div class="stat-value">{{ summary.vang_lai }}</div>
+    </div>
+
+    <div class="unpaid-stat-card stat-not-due">
+        <div class="stat-label">HV chưa đến hạn</div>
+        <div class="stat-value">{{ summary.not_due }}</div>
+    </div>
+
+    <div class="unpaid-stat-card stat-yellow">
+        <div class="stat-label">HV gần đến hạn 7-4 ngày</div>
+        <div class="stat-value">{{ summary.near_7_4 }}</div>
+    </div>
+
+    <div class="unpaid-stat-card stat-orange">
+        <div class="stat-label">HV gần đến hạn 3-0 ngày</div>
+        <div class="stat-value">{{ summary.near_3_0 }}</div>
+    </div>
+
+    <div class="unpaid-stat-card stat-red">
+        <div class="stat-label">HV quá hạn</div>
+        <div class="stat-value">{{ summary.overdue }}</div>
+    </div>
+
+    <div class="unpaid-stat-card stat-temp-leave">
+        <div class="stat-label">HV tạm nghỉ</div>
+        <div class="stat-value">{{ summary.temp_leave }}</div>
+    </div>
+</div>
+
+<div class="list-toolbar">
+<form method="get" class="tracking-filter">
+    <div class="field-box">
+        <label>Tháng</label>
+        <select name="month">
+            {% for m in range(1,13) %}
+            <option value="{{ m }}" {{ 'selected' if m|string == month|string }}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="field-box">
+        <label>Năm</label>
+        <select name="year">
+            {% for y in range(current_year - 2, current_year + 6) %}
+            <option value="{{ y }}" {{ 'selected' if y|string == year|string }}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button>Lọc</button>
+</form>
+
+    <div class="pagination-control" data-pagination="unpaidTable">
+        <label>Hiển thị</label>
+        <select class="page-size-select" onchange="setTablePageSize('unpaidTable', this.value)">
+            <option value="50">50 HV</option>
+            <option value="100">100 HV</option>
+            <option value="150">150 HV</option>
+            <option value="200">200 HV</option>
+        </select>
+        <button type="button" class="page-nav-btn" onclick="changeTablePage('unpaidTable', -1)">&lt;&lt;</button>
+        <span class="page-info" id="unpaidTablePageInfo">1 / 1</span>
+        <button type="button" class="page-nav-btn" onclick="changeTablePage('unpaidTable', 1)">&gt;&gt;</button>
+    </div>
+</div>
+
+<table class="unpaid-table" data-paginated-table="unpaidTable">
+    <thead>
+        <tr>
+            <th>Mã HV</th>
+            <th>Họ tên</th>
+            <th>Ngày sinh</th>
+            <th>Giới tính</th>
+            <th>SĐT</th>
+            <th>Lớp</th>
+            <th>Ca</th>
+            <th>Hạn đóng</th>
+            <th>Còn lại</th>
+            <th>Trạng thái</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr class="{{ r.fee_row_class }}"
+            oncontextmenu="openUnpaidMenu(event, '{{ r.license }}', '{{ r.fee_status }}')">
+            <td>{{ r.license }}</td>
+            <td><b>{{ r.name }}</b></td>
+            <td>{{ r.birthdate }}</td>
+            <td>{{ r.gender }}</td>
+            <td>{{ r.phonenumber }}</td>
+            <td>{{ r.classroom }}</td>
+            <td>{{ r.timeclass }}</td>
+            <td>{{ r.fee_due_date }}</td>
+            <td>
+                {% if r.fee_days_left == '—' %}
+                    —
+                {% elif r.fee_days_left < 0 %}
+                    Quá {{ 0 - r.fee_days_left }} ngày
+                {% else %}
+                    {{ r.fee_days_left }} ngày
+                {% endif %}
+            </td>
+            <td>
+                <span class="fee-status-pill {{ r.fee_status }}">
+                    {{ r.fee_status_label }}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div id="unpaidMenu" class="context-menu">
+    <div onclick="goPayFee()">💰 Đóng phí</div>
+    <div id="tempLeaveAction" onclick="submitTempLeave()">🌙 Tạm nghỉ 1 tháng</div>
+</div>
+
+<form id="tempLeaveForm" method="post" style="display:none;">
+    <input type="hidden" name="license" id="tempLeaveLicense">
+    <input type="hidden" name="month" value="{{ month }}">
+    <input type="hidden" name="year" value="{{ year }}">
+</form>
+
+<script>
+let selectedUnpaidLicense = "";
+let selectedUnpaidStatus = "";
+
+function openUnpaidMenu(e, license, status) {
+    e.preventDefault();
+
+    selectedUnpaidLicense = license;
+    selectedUnpaidStatus = status || "";
+
+    const menu = document.getElementById("unpaidMenu");
+    const tempLeaveAction = document.getElementById("tempLeaveAction");
+
+    if (tempLeaveAction) {
+        if (selectedUnpaidStatus === "temp_leave") {
+            tempLeaveAction.innerHTML = "↩️ Hủy tạm nghỉ";
+        } else {
+            tempLeaveAction.innerHTML = "🌙 Tạm nghỉ 1 tháng";
+        }
+    }
+
+    menu.style.display = "block";
+
+    const menuWidth = 190;
+    const menuHeight = 92;
+
+    let left = e.pageX;
+    let top = e.pageY;
+
+    if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth - 12;
+    }
+
+    if (top + menuHeight > window.innerHeight + window.scrollY) {
+        top = window.innerHeight + window.scrollY - menuHeight - 12;
+    }
+
+    menu.style.left = left + "px";
+    menu.style.top = top + "px";
+}
+
+function goPayFee() {
+    if (!selectedUnpaidLicense) return;
+    window.location.href = "/fees?ma_hv=" + encodeURIComponent(selectedUnpaidLicense);
+}
+
+function submitTempLeave() {
+    if (!selectedUnpaidLicense) return;
+
+    const form = document.getElementById("tempLeaveForm");
+    const licenseInput = document.getElementById("tempLeaveLicense");
+
+    licenseInput.value = selectedUnpaidLicense;
+
+    if (selectedUnpaidStatus === "temp_leave") {
+        form.action = "/unpaid/temp-leave-cancel";
+    } else {
+        form.action = "/unpaid/temp-leave";
+    }
+
+    form.submit();
+}
+
+document.addEventListener("click", function () {
+    const menu = document.getElementById("unpaidMenu");
+    if (menu) menu.style.display = "none";
+});
+
+/* =========================
+   PHÂN TRANG DANH SÁCH
+========================= */
+const tablePaginationState = {};
+
+function getPaginatedRows(tableId) {
+    const table = document.querySelector(`[data-paginated-table="${tableId}"]`);
+    if (!table) return [];
+
+    const tbody = table.querySelector("tbody");
+    if (!tbody) return [];
+
+    return Array.from(tbody.querySelectorAll("tr"));
+}
+
+function initTablePagination(tableId) {
+    const rows = getPaginatedRows(tableId);
+
+    tablePaginationState[tableId] = {
+        page: 1,
+        pageSize: 50,
+        totalRows: rows.length
+    };
+
+    applyTablePagination(tableId);
+}
+
+function setTablePageSize(tableId, value) {
+    const state = tablePaginationState[tableId] || {
+        page: 1,
+        pageSize: 50,
+        totalRows: 0
+    };
+
+    state.pageSize = parseInt(value || "50", 10) || 50;
+    state.page = 1;
+
+    tablePaginationState[tableId] = state;
+    applyTablePagination(tableId);
+}
+
+function changeTablePage(tableId, direction) {
+    const state = tablePaginationState[tableId];
+    if (!state) return;
+
+    const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+    state.page += direction;
+
+    if (state.page < 1) state.page = 1;
+    if (state.page > totalPages) state.page = totalPages;
+
+    applyTablePagination(tableId);
+}
+
+function applyTablePagination(tableId) {
+    const rows = getPaginatedRows(tableId);
+    const state = tablePaginationState[tableId] || {
+        page: 1,
+        pageSize: 50,
+        totalRows: rows.length
+    };
+
+    state.totalRows = rows.length;
+
+    const totalPages = Math.max(1, Math.ceil(state.totalRows / state.pageSize));
+
+    if (state.page > totalPages) state.page = totalPages;
+    if (state.page < 1) state.page = 1;
+
+    const start = (state.page - 1) * state.pageSize;
+    const end = start + state.pageSize;
+
+    rows.forEach((row, index) => {
+        row.style.display = (index >= start && index < end) ? "" : "none";
+    });
+
+    const info = document.getElementById(`${tableId}PageInfo`);
+    if (info) {
+        info.textContent = `${state.page} / ${totalPages}`;
+    }
+
+    const control = document.querySelector(`[data-pagination="${tableId}"]`);
+    if (control) {
+        const buttons = control.querySelectorAll(".page-nav-btn");
+        buttons.forEach((btn, idx) => {
+            if (idx === 0) btn.disabled = state.page <= 1;
+            if (idx === 1) btn.disabled = state.page >= totalPages;
+        });
+    }
+
+    tablePaginationState[tableId] = state;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-paginated-table]").forEach(table => {
+        initTablePagination(table.dataset.paginatedTable);
+    });
+});
+
+</script>
+
+<style>
+.unpaid-note {
+    background: #f8fafc;
+    border: 1px solid #dbe3ef;
+    border-left: 5px solid #2563eb;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 8px 0 12px;
+    color: #334155;
+    font-weight: 700;
+}
+
+.unpaid-summary-row {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    margin: 10px 0 14px;
+}
+
+.unpaid-stat-card {
+    min-height: 72px;
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+    border: 1px solid rgba(15, 23, 42, .08);
+}
+
+.unpaid-stat-card .stat-label {
+    font-size: 13px;
+    font-weight: 900;
+    color: #334155;
+}
+
+.unpaid-stat-card .stat-value {
+    margin-top: 6px;
+    font-size: 24px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.stat-total {
+    background: #ffffff;
+}
+
+.stat-vang-lai {
+    background: #f1f5f9;
+}
+
+.stat-not-due {
+    background: #ecfdf5;
+}
+
+.stat-yellow {
+    background: #fef9c3;
+}
+
+.stat-orange {
+    background: #ffedd5;
+}
+
+.stat-red {
+    background: #fee2e2;
+}
+
+.stat-temp-leave {
+    background: #ede9fe;
+}
+
+.unpaid-table tr.fee-row-vang-lai td {
+    background: #f8fafc !important;
+}
+
+.unpaid-table tr.fee-row-not-due td {
+    background: #f0fdf4 !important;
+}
+
+.unpaid-table tr.fee-row-near-yellow td {
+    background: #fef9c3 !important;
+}
+
+.unpaid-table tr.fee-row-near-orange td {
+    background: #ffedd5 !important;
+}
+
+.unpaid-table tr.fee-row-overdue td {
+    background: #fee2e2 !important;
+    color: #7f1d1d;
+    font-weight: 800;
+}
+
+.unpaid-table tr.fee-row-temp-leave td {
+    background: #f5f3ff !important;
+    color: #4c1d95;
+    font-weight: 800;
+}
+
+.fee-status-pill {
+    display: inline-flex;
+    min-width: 120px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    border: 1px solid transparent;
+}
+
+.fee-status-pill.vang_lai {
+    background: #e2e8f0;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+.fee-status-pill.not_due {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.fee-status-pill.near_7_4 {
+    background: #fef08a;
+    color: #854d0e;
+    border-color: #fde047;
+}
+
+.fee-status-pill.near_3_0 {
+    background: #fed7aa;
+    color: #9a3412;
+    border-color: #fb923c;
+}
+
+.fee-status-pill.overdue {
+    background: #fecaca;
+    color: #991b1b;
+    border-color: #f87171;
+}
+
+.fee-status-pill.temp_leave {
+    background: #ddd6fe;
+    color: #4c1d95;
+    border-color: #a78bfa;
+}
+
+@media (max-width: 1400px) {
+    .unpaid-summary-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1200px) {
+    .unpaid-summary-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .unpaid-summary-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .unpaid-summary-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================
+   THANH LỌC + PHÂN TRANG
+========================= */
+.list-toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 8px;
+}
+
+.list-toolbar .search-row,
+.list-toolbar .tracking-filter {
+    margin: 0;
+}
+
+.pagination-control {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    padding: 7px 8px;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
+    white-space: nowrap;
+}
+
+.pagination-control label {
+    font-size: 12px;
+    font-weight: 900;
+    color: #475569;
+}
+
+.page-size-select {
+    height: 34px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #f8fafc;
+    padding: 0 9px;
+    font-weight: 900;
+    color: #0f172a;
+    outline: none;
+}
+
+.page-nav-btn {
+    height: 34px;
+    min-width: 38px;
+    border: none;
+    border-radius: 9px;
+    background: #0f2a4a;
+    color: #ffffff;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.page-nav-btn:disabled {
+    background: #cbd5e1;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.page-info {
+    min-width: 58px;
+    text-align: center;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+@media (max-width: 760px) {
+    .list-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pagination-control {
+        width: 100%;
+        justify-content: flex-end;
+        box-sizing: border-box;
+    }
+}
+
+.unpaid-table th:nth-child(2),
+.unpaid-table td:nth-child(2) {
+    width: 280px;
+    min-width: 280px;
+    max-width: 320px;
+}
+
+.unpaid-table td:nth-child(2) {
+    white-space: normal;
+    line-height: 1.35;
+}
+</style>
+{% endblock %}

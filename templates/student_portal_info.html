@@ -1,0 +1,181 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'info' %}
+{% block title %}Thông tin học viên{% endblock %}
+
+{% block extra_css %}
+<style>
+.info-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.photo-card {
+    text-align: center;
+}
+
+.student-photo {
+    width: 260px;
+    height: 335px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: #f1f5f9;
+    border: 1px solid #dbe7f5;
+    box-shadow: 0 10px 24px rgba(15,23,42,.12);
+}
+
+.no-photo {
+    width: 210px;
+    height: 280px;
+    border-radius: 18px;
+    margin: 0 auto;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-weight: 900;
+}
+
+.info-name {
+    margin-top: 14px;
+    font-size: 22px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.info-code {
+    margin-top: 4px;
+    color: #3C85FFFF;
+    font-weight: 850;
+}
+
+.info-section-title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.info-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 13px;
+}
+
+.info-item span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 5px;
+}
+
+.info-item b {
+    color: #0f172a;
+    font-size: 15px;
+}
+
+@media(max-width: 860px) {
+    .info-layout { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>👤 Thông tin học viên</h1>
+        <p>Thông tin cá nhân, liên hệ và lớp học hiện tại.</p>
+    </div>
+</div>
+
+<div class="info-layout">
+    <section class="portal-card photo-card">
+        {% if photo_url %}
+            <img class="student-photo" src="{{ photo_url }}" alt="Ảnh học viên">
+        {% else %}
+            <div class="no-photo">Chưa có ảnh</div>
+        {% endif %}
+        <div class="info-name">{{ student.name }}</div>
+        <div class="info-code">{{ student.license }}</div>
+    </section>
+
+    <div class="portal-grid-2">
+        <section class="portal-card">
+            <h2 class="info-section-title">Thông tin cá nhân</h2>
+            <div class="info-grid">
+                <div class="info-item"><span>Họ tên</span><b>{{ student.name or '—' }}</b></div>
+                <div class="info-item"><span>Ngày sinh</span><b>{{ student.birthdate or '—' }}</b></div>
+                <div class="info-item"><span>Giới tính</span><b>{{ student.gender or '—' }}</b></div>
+                <div class="info-item"><span>Số điện thoại</span><b>{{ student.phonenumber or '—' }}</b></div>
+                <div class="info-item"><span>Địa chỉ</span><b>{{ student.address or '—' }}</b></div>
+                <div class="info-item"><span>Telegram ID</span><b>{{ student.telegram_id or '—' }}</b></div>
+            </div>
+        </section>
+
+        <section class="portal-card info-class-card">
+            <h2>Thông tin lớp học</h2>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span>Mã HV</span>
+                    <b>{{ student.license or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Cấp đai</span>
+                    <b>{{ student.belt or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Lớp</span>
+                    <b>{{ student.classroom or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Ca</span>
+                    <b>{{ student.timeclass or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>CLB</span>
+                    <b>{{ student.clup or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Gia đình tập chung</span>
+                    <b>
+                        {% if student.family|string|lower in ['có', '1', 'true', 'yes'] %}
+                            Có
+                        {% else %}
+                            Không
+                        {% endif %}
+                    </b>
+                </div>
+
+                <div class="info-item">
+                    <span>Tình trạng</span>
+                    <b>
+                        {% if student.active|string|lower in ['có', '1', 'true', 'yes'] %}
+                            Có
+                        {% else %}
+                            Không
+                        {% endif %}
+                    </b>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

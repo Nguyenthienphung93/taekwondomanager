@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập Admin - Quản lý hội viên</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root{
+            --blue:#0a58ca;
+            --blue-dark:#062f70;
+            --yellow:#facc15;
+            --red:#ef4444;
+            --ink:#0f172a;
+            --muted:#64748b;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            min-height:100vh;
+            font-family:Arial, Helvetica, sans-serif;
+            color:var(--ink);
+            background:
+                radial-gradient(circle at 18% 18%, rgba(250,204,21,.34) 0 10%, transparent 25%),
+                radial-gradient(circle at 82% 20%, rgba(239,68,68,.22) 0 8%, transparent 23%),
+                linear-gradient(135deg,#041b3d 0%,#0a58ca 48%,#07111f 100%);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:22px;
+            overflow-x:hidden;
+        }
+        body::before{
+            content:"";
+            position:fixed;
+            inset:-80px;
+            background:
+                linear-gradient(120deg, transparent 0 46%, rgba(255,255,255,.08) 46% 47%, transparent 47% 100%),
+                linear-gradient(60deg, transparent 0 52%, rgba(250,204,21,.12) 52% 53%, transparent 53% 100%);
+            transform:rotate(-6deg);
+            pointer-events:none;
+        }
+        .login-shell{
+            width:min(1040px,100%);
+            display:grid;
+            grid-template-columns:1.05fr .95fr;
+            background:rgba(255,255,255,.14);
+            border:1px solid rgba(255,255,255,.22);
+            border-radius:30px;
+            box-shadow:0 30px 80px rgba(0,0,0,.35);
+            overflow:hidden;
+            backdrop-filter:blur(18px);
+            position:relative;
+        }
+        .brand-panel{
+            padding:42px;
+            color:#fff;
+            position:relative;
+            min-height:560px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+            background:linear-gradient(145deg,rgba(5,20,45,.84),rgba(10,88,202,.38));
+        }
+        .brand-mark{
+            width:76px;height:76px;border-radius:22px;
+            display:flex;align-items:center;justify-content:center;
+            background:#fff;color:var(--blue);font-size:38px;
+            box-shadow:0 18px 36px rgba(0,0,0,.28);
+        }
+        .brand-panel h1{
+            margin:26px 0 12px;
+            font-size:44px;
+            line-height:1.02;
+            letter-spacing:-1px;
+            text-transform:uppercase;
+        }
+        .brand-panel p{
+            margin:0;
+            max-width:440px;
+            color:#dbeafe;
+            font-size:16px;
+            line-height:1.65;
+            font-weight:700;
+        }
+        .feature-list{display:grid;gap:12px;margin-top:26px;max-width:430px;}
+        .feature-item{
+            display:flex;align-items:center;gap:10px;
+            padding:12px 14px;border-radius:16px;
+            background:rgba(255,255,255,.11);
+            border:1px solid rgba(255,255,255,.16);
+            font-weight:850;
+        }
+        .feature-item i{color:var(--yellow);width:20px;text-align:center;}
+        .brand-footer{
+            color:#bfdbfe;
+            font-weight:850;
+            display:flex;
+            gap:10px;
+            align-items:center;
+        }
+        .login-panel{
+            background:rgba(255,255,255,.96);
+            padding:42px;
+            display:flex;
+            align-items:center;
+        }
+        .login-card{width:100%;}
+        .login-kicker{
+            display:inline-flex;align-items:center;gap:8px;
+            color:#854d0e;background:#fef3c7;border:1px solid #fde68a;
+            border-radius:999px;padding:8px 12px;font-weight:950;font-size:13px;
+        }
+        .login-card h2{margin:18px 0 8px;font-size:34px;letter-spacing:-.5px;}
+        .login-card .sub{margin:0 0 24px;color:var(--muted);font-weight:750;line-height:1.55;}
+        .toast-login{
+            margin:0 0 16px;
+            border-radius:16px;
+            padding:12px 14px;
+            background:#fee2e2;
+            border:1px solid #fecaca;
+            color:#991b1b;
+            font-weight:900;
+        }
+        .form-group{margin-bottom:14px;}
+        .form-group label{display:block;margin-bottom:8px;font-size:14px;font-weight:950;color:#1e293b;}
+        .input-wrap{position:relative;}
+        .input-wrap i{
+            position:absolute;left:15px;top:50%;transform:translateY(-50%);
+            color:#64748b;
+        }
+        .input-wrap input{
+            width:100%;height:52px;border:1px solid #cbd5e1;border-radius:16px;
+            padding:0 48px 0 44px;font-size:15px;font-weight:800;
+            outline:none;background:#f8fafc;color:#0f172a;
+            transition:.18s ease;
+        }
+        .input-wrap input:focus{
+            background:#fff;border-color:var(--blue);
+            box-shadow:0 0 0 4px rgba(10,88,202,.12);
+        }
+        .toggle-pass{
+            position:absolute;right:10px;top:50%;transform:translateY(-50%);
+            border:0;background:transparent;color:#475569;
+            width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:15px;
+        }
+        .toggle-pass:hover{background:#e2e8f0;}
+        .form-row{display:flex;justify-content:space-between;align-items:center;margin:4px 0 18px;gap:10px;}
+        .remember{display:flex;align-items:center;gap:8px;color:#334155;font-weight:850;font-size:14px;}
+        .remember input{width:17px;height:17px;accent-color:var(--blue);}
+        .login-btn{
+            width:100%;height:52px;border:0;border-radius:16px;
+            background:linear-gradient(135deg,var(--yellow),#f59e0b 48%,#ef4444 115%);
+            color:#111827;font-size:16px;font-weight:1000;cursor:pointer;
+            box-shadow:0 16px 30px rgba(245,158,11,.28);
+        }
+        .login-btn:hover{filter:brightness(.98);transform:translateY(-1px);}
+        .security-note{
+            margin-top:18px;
+            padding:13px 14px;
+            border-radius:16px;
+            background:#eff6ff;
+            border:1px solid #bfdbfe;
+            color:#1e3a8a;
+            font-size:13px;
+            line-height:1.55;
+            font-weight:800;
+        }
+        @media(max-width:860px){
+            body{padding:14px;align-items:flex-start;}
+            .login-shell{grid-template-columns:1fr;border-radius:24px;}
+            .brand-panel{min-height:auto;padding:28px;}
+            .brand-panel h1{font-size:32px;}
+            .login-panel{padding:28px;}
+            .login-card h2{font-size:28px;}
+        }
+    </style>
+</head>
+<body>
+    <main class="login-shell">
+        <section class="brand-panel">
+            <div>
+                <div class="brand-mark">🥋</div>
+                <h1>Admin<br>Quản lý hội viên</h1>
+                <p>Bộ quản trị dành riêng cho CLB Taekwondo: hội viên, học phí, thi cấp, hoạt động và thông báo.</p>
+
+                <div class="feature-list">
+                    <div class="feature-item"><i class="fa-solid fa-user-shield"></i> Khóa riêng khu vực quản lý admin</div>
+                    <div class="feature-item"><i class="fa-solid fa-database"></i> Bảo vệ các trang dữ liệu CLB</div>
+                    <div class="feature-item"><i class="fa-solid fa-bell"></i> Tách biệt với bộ đăng nhập học viên</div>
+                </div>
+            </div>
+
+            <div class="brand-footer">
+                <i class="fa-solid fa-sun"></i>
+                <span>Hoa Hướng Dương Taekwondo System</span>
+            </div>
+        </section>
+
+        <section class="login-panel">
+            <form class="login-card" method="post" action="{{ url_for('admin_login') }}" autocomplete="on">
+                <input type="hidden" name="next" value="{{ next_url }}">
+
+                <div class="login-kicker">
+                    <i class="fa-solid fa-lock"></i>
+                    ADMIN ACCESS
+                </div>
+
+                <h2>Đăng nhập quản trị</h2>
+                <p class="sub">Ken nhập ID và mật khẩu admin để sử dụng các trang quản lý.</p>
+
+                {% with messages=get_flashed_messages() %}
+                    {% if messages %}
+                    <div class="toast-login">{{ messages[0] }}</div>
+                    {% endif %}
+                {% endwith %}
+
+                <div class="form-group">
+                    <label>ID Admin</label>
+                    <div class="input-wrap">
+                        <i class="fa-solid fa-user"></i>
+                        <input name="username" placeholder="Nhập ID admin" required autofocus>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Mật khẩu</label>
+                    <div class="input-wrap">
+                        <i class="fa-solid fa-key"></i>
+                        <input id="adminPassword" type="password" name="password" placeholder="Nhập mật khẩu" required>
+                        <button type="button" class="toggle-pass" onclick="toggleAdminPassword()" aria-label="Ẩn hiện mật khẩu">
+                            <i id="passIcon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="remember">
+                        <input type="checkbox" name="remember">
+                        <span>Ghi nhớ đăng nhập</span>
+                    </label>
+                </div>
+
+                <button class="login-btn" type="submit">
+                    Đăng nhập Admin <i class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <div class="security-note">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Tài khoản học viên vẫn dùng bộ đăng nhập riêng. Trang này chỉ dùng cho khu vực quản lý admin.
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        function toggleAdminPassword(){
+            const input = document.getElementById("adminPassword");
+            const icon = document.getElementById("passIcon");
+            const isPassword = input.type === "password";
+
+            input.type = isPassword ? "text" : "password";
+            icon.className = isPassword ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
+        }
+    </script>
+</body>
+</html>

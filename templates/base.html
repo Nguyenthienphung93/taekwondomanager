@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>Quản lý hội viên Taekwondo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+    /* =========================
+       ADMIN FOOTER TRONG SIDEBAR
+    ========================= */
+    .sidebar-admin-divider{
+        height:1px;
+        margin:14px 12px 12px;
+        background:linear-gradient(
+            90deg,
+            transparent,
+            rgba(148,163,184,.45),
+            transparent
+        );
+    }
+
+    .sidebar-admin-footer{
+        margin:0 10px 12px;
+        padding:10px;
+        border-radius:16px;
+        background:rgba(15,23,42,.72);
+        border:1px solid rgba(148,163,184,.22);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+    }
+
+    .sidebar-admin-user{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        min-width:0;
+    }
+
+    .sidebar-admin-avatar{
+        width:34px;
+        height:34px;
+        border-radius:12px;
+        background:linear-gradient(135deg,#0a58ca,#1d4ed8);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex:0 0 auto;
+        box-shadow:0 8px 16px rgba(37,99,235,.24);
+    }
+
+    .sidebar-admin-text{
+        min-width:0;
+        line-height:1.15;
+    }
+
+    .sidebar-admin-text span{
+        display:block;
+        font-size:10px;
+        font-weight:950;
+        color:#facc15;
+        letter-spacing:.7px;
+    }
+
+    .sidebar-admin-text b{
+        display:block;
+        max-width:112px;
+        margin-top:3px;
+        color:#e5e7eb;
+        font-size:12px;
+        font-weight:900;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    .sidebar-power-btn{
+        width:38px;
+        height:38px;
+        border-radius:14px;
+        background:linear-gradient(135deg,#ef4444,#b91c1c);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-decoration:none;
+        flex:0 0 auto;
+        box-shadow:0 10px 20px rgba(239,68,68,.28);
+        transition:.16s ease;
+    }
+
+    .sidebar-power-btn i{
+        font-size:16px;
+    }
+
+    .sidebar-power-btn:hover{
+        transform:translateY(-1px);
+        filter:brightness(1.03);
+    }
+
+    /* Khi sidebar thu gọn */
+    .sidebar.collapsed .sidebar-admin-divider{
+        margin:12px 8px;
+    }
+
+    .sidebar.collapsed .sidebar-admin-footer{
+        margin:0 7px 12px;
+        padding:8px 6px;
+        flex-direction:column;
+        gap:8px;
+    }
+
+    .sidebar.collapsed .sidebar-admin-user{
+        justify-content:center;
+    }
+
+    .sidebar.collapsed .sidebar-admin-text{
+        display:none;
+    }
+
+    .sidebar.collapsed .sidebar-admin-avatar,
+    .sidebar.collapsed .sidebar-power-btn{
+        width:34px;
+        height:34px;
+        border-radius:12px;
+    }
+    </style>
+</head>
+<body>
+
+<header class="top-header">
+    <div class="logo-box">
+        <img src="{{ app_settings.header.logo_url }}" alt="Logo CLB">
+    </div>
+
+    <div class="club-title-wrap">
+        <div class="club-title">
+            {{ app_settings.header.club_small_title }}
+        </div>
+
+        <div class="club-subtitle">
+            {{ app_settings.header.club_name }}
+        </div>
+    </div>
+
+    <div class="header-clock-box">
+        <div id="headerClockTime" class="header-clock-time">--:--:--</div>
+        <div id="headerClockDate" class="header-clock-date">--/--/----</div>
+    </div>
+</header>
+
+<div class="layout">
+    <aside id="sidebar" class="sidebar">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+        
+        <a href="/students"><span class="mi">👤</span><span>Hội viên</span></a>
+        <a href="/fees"><span class="mi">💰</span><span>Nhập học phí</span></a>
+        <a href="/tracking"><span class="mi">📈</span><span>Theo dõi học phí</span></a>
+        <a href="/unpaid"><span class="mi">📋</span><span>Chưa đóng phí</span></a>
+        <a href="/exam-tracking"><span class="mi">⭐</span><span>Theo dõi thi cấp đẳng</span></a>
+        <a href="/exam-list"><span class="mi">🗓️</span><span>Danh sách thi cấp</span></a>
+        <a href="/dan-list"><span class="mi">🥋</span><span>Danh sách thi đẳng</span></a>
+        <a href="/results"><span class="mi">🏅</span><span>Kết quả thi cấp</span></a>
+        <a href="/activities"><span class="mi">📅</span><span>Hoạt động</span></a>
+        <a href="/notifications"><span class="mi">🔔</span><span>Thông báo</span></a>
+
+        <div class="sidebar-section"></div>
+        <a href="#"><span class="mi">📁</span><span>File</span></a>
+        <a href="#"><span class="mi">⬇️</span><span>Import</span></a>
+        <a href="/setup"><span class="mi">⚙️</span><span>Setup</span></a>
+        <a href="/information"><span class="mi">ℹ️</span><span>Information</span></a>
+
+        {% if admin_logged_in %}
+        <div class="sidebar-admin-divider"></div>
+
+        <div class="sidebar-admin-footer">
+            <div class="sidebar-admin-user">
+                <div class="sidebar-admin-avatar">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+
+                <div class="sidebar-admin-text">
+                    <span>ADMIN</span>
+                    <b>{{ admin_username }}</b>
+                </div>
+            </div>
+
+            <a href="{{ url_for('admin_logout') }}"
+               class="sidebar-power-btn"
+               title="Đăng xuất Admin">
+                <i class="fa-solid fa-power-off"></i>
+            </a>
+        </div>
+        {% endif %}
+    </aside>
+
+    <main id="content" class="content">
+        {% with messages=get_flashed_messages() %}
+            {% if messages %}
+                <div id="toastPopup" class="toast-popup">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<script>
+function toggleSidebar() {
+    const layout = document.querySelector(".layout");
+    const sidebar = document.getElementById("sidebar");
+
+    requestAnimationFrame(() => {
+        layout.classList.toggle("collapsed");
+        sidebar.classList.toggle("collapsed");
+    });
+}
+setTimeout(() => {
+    const toast = document.getElementById("toastPopup");
+    if (toast) {
+        toast.classList.add("hide");
+        setTimeout(() => toast.remove(), 400);
+    }
+}, 3000);
+
+let headerClockTimer = null;
+let lastClockTimeText = "";
+let lastClockDateText = "";
+
+function updateHeaderClock() {
+    const timeEl = document.getElementById("headerClockTime");
+    const dateEl = document.getElementById("headerClockDate");
+
+    if (!timeEl || !dateEl) return;
+
+    const now = new Date();
+
+    const days = [
+        "Chủ Nhật",
+        "Thứ Hai",
+        "Thứ Ba",
+        "Thứ Tư",
+        "Thứ Năm",
+        "Thứ Sáu",
+        "Thứ Bảy"
+    ];
+
+    const pad = n => String(n).padStart(2, "0");
+
+    const timeText =
+        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+    const dateText =
+        `${days[now.getDay()]}, ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+
+    // Chỉ cập nhật DOM khi nội dung thật sự đổi
+    if (timeText !== lastClockTimeText) {
+        timeEl.textContent = timeText;
+        lastClockTimeText = timeText;
+    }
+
+    if (dateText !== lastClockDateText) {
+        dateEl.textContent = dateText;
+        lastClockDateText = dateText;
+    }
+}
+
+function scheduleHeaderClock() {
+    clearTimeout(headerClockTimer);
+
+    if (document.hidden) {
+        return;
+    }
+
+    updateHeaderClock();
+
+    // Canh đúng nhịp sang giây tiếp theo, tránh lệch nhịp và tránh chạy dồn
+    const now = new Date();
+    const delay = 1000 - now.getMilliseconds() + 20;
+
+    headerClockTimer = setTimeout(scheduleHeaderClock, delay);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    scheduleHeaderClock();
+});
+
+document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+        clearTimeout(headerClockTimer);
+    } else {
+        scheduleHeaderClock();
+    }
+});
+</script>
+</body>
+</html>

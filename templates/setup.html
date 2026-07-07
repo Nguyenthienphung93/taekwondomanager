@@ -1,0 +1,650 @@
+{% extends "base.html" %}
+{% block content %}
+{% macro class_option_manager(option_type, title, placeholder, values) %}
+<div class="class-option-card">
+    <div class="class-option-head">
+        <div>
+            <h3>{{ title }}</h3>
+            <p>Danh sách dùng cho combobox {{ title }}</p>
+        </div>
+        <button type="button"
+                class="mini-add-btn"
+                onclick="openClassOptionModal('{{ option_type }}', '{{ title }}')">
+            + Thêm
+        </button>
+    </div>
+
+    <div class="setup-combobox">
+        <button type="button" class="setup-combobox-btn" onclick="toggleSetupCombo('{{ option_type }}')">
+            <span>{{ placeholder }}</span>
+            <b>▾</b>
+        </button>
+
+        <div id="combo_{{ option_type }}" class="setup-combobox-menu">
+            {% for item in values %}
+            <div class="setup-combo-item">
+                <span>{{ item }}</span>
+
+                <form method="post"
+                      action="{{ url_for('setup_class_options_delete') }}"
+                      onsubmit="return confirm('Ken có muốn xóa {{ title }}: {{ item }} không?')">
+                    <input type="hidden" name="option_type" value="{{ option_type }}">
+                    <input type="hidden" name="value" value="{{ item }}">
+                    <button type="submit" class="combo-trash-btn" title="Xóa">🗑️</button>
+                </form>
+            </div>
+            {% endfor %}
+
+            <button type="button"
+                    class="setup-combo-add-row"
+                    onclick="openClassOptionModal('{{ option_type }}', '{{ title }}')">
+                + Thêm {{ title }}
+            </button>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<section class="setup-page">
+    <div class="setup-head">
+        <div>
+            <h1>Setup hệ thống</h1>
+            <p>Chỉnh các thông tin đang set cứng: header, học phí và thi cấp.</p>
+        </div>
+    </div>
+
+    <div class="setup-tabs">
+        <a class="setup-tab {{ 'active' if active_tab == 'header' else '' }}" href="{{ url_for('setup', tab='header') }}">Header</a>
+        <a href="/setup?tab=fees" class="setup-tab {{ 'active' if active_tab == 'fees' else '' }}">Biểu phí</a>
+        <a class="setup-tab {{ 'active' if active_tab == 'exam' else '' }}" href="{{ url_for('setup', tab='exam') }}">Thi cấp</a>
+        <a class="setup-tab {{ 'active' if active_tab == 'classes' else '' }}" href="{{ url_for('setup', tab='classes') }}">Lớp học</a>
+        <a class="setup-tab {{ 'active' if active_tab == 'payment' else '' }}" href="{{ url_for('setup', tab='payment') }}">Thông tin thanh toán</a>
+    </div>
+
+    {% if active_tab == 'header' %}
+    <form class="setup-card" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="active_tab" value="header">
+        <h2>🖼️ Header</h2>
+
+        <div class="logo-preview-box">
+            <img src="{{ settings.header.logo_url }}" alt="Logo hiện tại">
+            <div>
+                <b>Logo hiện tại</b>
+                <p>Ken có thể upload logo mới. File nhận: jpg, jpeg, png, webp.</p>
+            </div>
+        </div>
+
+        <label>Logo mới</label>
+        <input type="file" name="logo_file" accept="image/png,image/jpeg,image/webp">
+
+        <label>Dòng tiêu đề nhỏ</label>
+        <input type="text" name="club_small_title" value="{{ settings.header.club_small_title }}" placeholder="VD: CÂU LẠC BỘ TAEKWONDO">
+
+        <label>Tên CLB</label>
+        <input type="text" name="club_name" value="{{ settings.header.club_name }}" placeholder="VD: HOA HƯỚNG DƯƠNG">
+
+        <button class="save-btn" type="submit">💾 Lưu Header</button>
+    </form>
+    {% endif %}
+
+    {% if active_tab == 'fees' %}
+    <form method="post" class="setup-card">
+        <input type="hidden" name="active_tab" value="fees">
+        <h2>💵 Biểu phí</h2>
+
+        <div class="setup-grid-2">
+            <div class="field-box">
+                <label>Học phí tháng</label>
+                <input type="text" name="tuition_fee" value="{{ settings.fees.tuition_fee|money }}">
+            </div>
+
+            <div class="field-box">
+                <label>Phí thi cấp</label>
+                <input type="text" name="exam_fee" value="{{ settings.fees.exam_fee|money }}">
+            </div>
+        </div>
+
+        <div class="setup-subtitle">Phí thi đẳng</div>
+
+        <div class="setup-grid-2">
+            {% for dan_name, dan_price in settings.fees.dan_fees.items() %}
+            <div class="field-box">
+                <label>{{ dan_name }}</label>
+                <input type="text" name="dan_fee_{{ dan_name.replace(' ', '_') }}" value="{{ dan_price|money }}">
+            </div>
+            {% endfor %}
+        </div>
+
+        <button class="save-btn" type="submit">💾 Lưu Biểu phí</button>
+    </form>
+    {% endif %}
+
+    {% if active_tab == 'exam' %}
+    <form class="setup-card" method="post">
+        <input type="hidden" name="active_tab" value="exam">
+        <h2>🥇 Thi cấp</h2>
+
+        <label>Tiền tố số thi</label>
+        <input type="text" name="exam_number_prefix" value="{{ settings.exam.exam_number_prefix }}" placeholder="Cấp_">
+
+        <div class="setup-note">
+            Ví dụ: nhập <b>Cấp_</b> và ô số thi nhập <b>01</b> thì kết quả là <b>Cấp_01</b>.<br>
+            Có thể dùng <b>{cap}_</b> để tự lấy cấp dự thi, ví dụ <b>Cấp 5_01</b>. Nếu không muốn tiền tố thì để trống.
+        </div>
+
+        <button class="save-btn" type="submit">💾 Lưu thi cấp</button>
+    </form>
+    {% endif %}
+
+    {% if active_tab == 'payment' %}
+    <form method="post" class="setup-card payment-setup-card">
+        <input type="hidden" name="active_tab" value="payment">
+
+        <h2>🏦 Thông tin thanh toán</h2>
+
+        <p class="payment-setup-desc">
+            Thông tin này sẽ hiện ở trang học phí của phụ huynh và võ sinh để chuyển khoản nhanh.
+        </p>
+
+        <div class="setup-grid-2">
+            <div class="field-box">
+                <label>Họ tên / Chủ tài khoản</label>
+                <input
+                    type="text"
+                    name="account_name"
+                    value="{{ payment_settings.account_name }}"
+                    placeholder="VD: CONG TY CO PHAN TDTT HOA HUONG DUONG"
+                >
+            </div>
+
+            <div class="field-box">
+                <label>Số tài khoản</label>
+                <input
+                    type="text"
+                    name="account_number"
+                    value="{{ payment_settings.account_number }}"
+                    placeholder="Nhập số tài khoản"
+                >
+            </div>
+        </div>
+
+        <div class="setup-grid-2">
+            <div class="field-box">
+                <label>Ngân hàng</label>
+                <select name="bank_code" class="setup-select">
+                    {% set current_bank = payment_settings.bank_code %}
+                    <option value="VCB" {{ 'selected' if current_bank == 'VCB' }}>Vietcombank</option>
+                    <option value="TCB" {{ 'selected' if current_bank == 'TCB' }}>Techcombank</option>
+                    <option value="MB" {{ 'selected' if current_bank == 'MB' }}>MB Bank</option>
+                    <option value="ACB" {{ 'selected' if current_bank == 'ACB' }}>ACB</option>
+                    <option value="BIDV" {{ 'selected' if current_bank == 'BIDV' }}>BIDV</option>
+                    <option value="VTB" {{ 'selected' if current_bank == 'VTB' }}>VietinBank</option>
+                    <option value="VPB" {{ 'selected' if current_bank == 'VPB' }}>VPBank</option>
+                    <option value="TPB" {{ 'selected' if current_bank == 'TPB' }}>TPBank</option>
+                    <option value="VIB" {{ 'selected' if current_bank == 'VIB' }}>VIB</option>
+                    <option value="OCB" {{ 'selected' if current_bank == 'OCB' }}>OCB</option>
+                    <option value="STB" {{ 'selected' if current_bank == 'STB' }}>Sacombank</option>
+                    <option value="HDB" {{ 'selected' if current_bank == 'HDB' }}>HDBank</option>
+                    <option value="SHB" {{ 'selected' if current_bank == 'SHB' }}>SHB</option>
+                    <option value="EIB" {{ 'selected' if current_bank == 'EIB' }}>Eximbank</option>
+                    <option value="MSB" {{ 'selected' if current_bank == 'MSB' }}>MSB</option>
+                    <option value="BAB" {{ 'selected' if current_bank == 'BAB' }}>Bac A Bank</option>
+                    <option value="SEAB" {{ 'selected' if current_bank == 'SEAB' }}>SeABank</option>
+                    <option value="LPB" {{ 'selected' if current_bank == 'LPB' }}>LPBank</option>
+                    <option value="VAB" {{ 'selected' if current_bank == 'VAB' }}>VietABank</option>
+                    <option value="ABB" {{ 'selected' if current_bank == 'ABB' }}>ABBank</option>
+                    <option value="NAB" {{ 'selected' if current_bank == 'NAB' }}>Nam A Bank</option>
+                    <option value="PGB" {{ 'selected' if current_bank == 'PGB' }}>PGBank</option>
+                    <option value="PVCB" {{ 'selected' if current_bank == 'PVCB' }}>PVcomBank</option>
+                </select>
+            </div>
+
+            <div class="field-box">
+                <label>Ghi chú chuyển khoản</label>
+                <input
+                    type="text"
+                    name="transfer_note"
+                    value="{{ payment_settings.transfer_note or '{student_name}' }}"
+                    placeholder="{student_name}"
+                >
+            </div>
+        </div>
+
+        <div class="setup-note">
+            Có thể dùng mã tự động:
+            <b>{student_name}</b> = tên học viên,
+            <b>{student_license}</b> = mã hội viên.
+            <br>
+            Nếu để trống, hệ thống tự dùng tên học viên.
+        </div>
+
+        <button class="save-btn" type="submit">💾 Lưu thông tin thanh toán</button>
+    </form>
+    {% endif %}
+
+    {% if active_tab == 'classes' %}
+    <div class="setup-card class-setup-card">
+        <h2>🥋 Lớp học</h2>
+        <p class="class-setup-desc">
+            Quản lý các danh sách dùng cho combobox ở trang Hội viên: Lớp, Ca và CLB.
+        </p>
+
+        <div class="class-options-grid">
+            {{ class_option_manager("classrooms", "Lớp", "Chọn lớp", settings.class_options.classrooms) }}
+            {{ class_option_manager("timeclasses", "Ca", "Chọn ca", settings.class_options.timeclasses) }}
+            {{ class_option_manager("clubs", "CLB", "Chọn CLB", settings.class_options.clubs) }}
+        </div>
+    </div>
+
+
+
+    <div id="classOptionModal" class="setup-modal-bg">
+        <div class="setup-modal-box">
+            <div class="setup-modal-head">
+                <h3 id="classOptionModalTitle">Thêm thông tin</h3>
+                <button type="button" onclick="closeClassOptionModal()">×</button>
+            </div>
+
+            <form method="post" action="{{ url_for('setup_class_options_add') }}">
+                <input type="hidden" name="option_type" id="classOptionType">
+                <label id="classOptionLabel">Tên</label>
+                <input type="text" name="value" id="classOptionInput" placeholder="Nhập thông tin mới" required>
+
+                <div class="setup-modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeClassOptionModal()">Đóng</button>
+                    <button type="submit" class="save-btn">💾 Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+</section>
+
+<style>
+.setup-page{padding:22px 26px 50px;color:#07111f;}
+.setup-head{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:18px 20px;box-shadow:0 10px 24px rgba(15,23,42,.07);margin-bottom:14px;}
+.setup-head h1{margin:0 0 4px;font-size:30px;}
+.setup-head p{margin:0;color:#64748b;font-weight:700;}
+.setup-tabs{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.setup-tab{text-decoration:none;color:#0f172a;background:#fff;border:1px solid #d9e2ef;border-radius:14px;padding:11px 18px;font-weight:900;box-shadow:0 8px 18px rgba(15,23,42,.07);}
+.setup-tab.active{background:#0a58ca;color:#fff;border-color:#0a58ca;}
+.setup-card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:22px;box-shadow:0 12px 28px rgba(15,23,42,.08);max-width:780px;}
+.setup-card h2{margin:0 0 18px;font-size:24px;}
+.setup-card label{display:block;margin:15px 0 7px;font-weight:900;}
+.setup-card input[type="text"],.setup-card input[type="file"]{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:12px 13px;font-size:15px;font-weight:750;background:#f8fafc;}
+.logo-preview-box{display:flex;align-items:center;gap:14px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:16px;padding:14px;margin-bottom:10px;}
+.logo-preview-box img{width:86px;height:86px;object-fit:contain;background:white;border-radius:14px;padding:8px;}
+.logo-preview-box p{margin:4px 0 0;color:#64748b;font-weight:650;}
+.setup-note{background:#fff7d6;border:1px solid #ffe08a;color:#6b4e00;border-radius:14px;padding:13px 15px;margin:16px 0;font-weight:700;line-height:1.6;}
+.save-btn{border:0;border-radius:14px;background:#16a34a;color:white;font-weight:950;padding:12px 20px;cursor:pointer;box-shadow:0 10px 22px rgba(22,163,74,.25);}
+@media(max-width:760px){.setup-page{padding:16px}.logo-preview-box{align-items:flex-start;flex-direction:column}.setup-head h1{font-size:26px}}
+
+.setup-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.setup-subtitle {
+    margin: 18px 0 10px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.setup-card .field-box {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.setup-card .field-box label {
+    margin: 0;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.setup-card .field-box input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 13px;
+    font-size: 15px;
+    font-weight: 750;
+    background: #f8fafc;
+}
+
+.setup-card .field-box input:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+.setup-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.setup-subtitle {
+    margin: 20px 0 12px;
+    font-size: 19px;
+    font-weight: 900;
+    color: #0f172a;
+    padding-left: 10px;
+    border-left: 5px solid #fbbf24;
+}
+
+@media(max-width:760px) {
+    .setup-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================
+   CLASS OPTIONS SETUP
+========================= */
+.class-setup-card {
+    max-width: 1120px;
+}
+
+.class-setup-desc {
+    margin: -8px 0 18px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.class-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.class-option-card {
+    border: 1px solid #dbe7f5;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    padding: 14px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
+}
+
+.class-option-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.class-option-head h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.class-option-head p {
+    margin: 3px 0 0;
+    color: #64748b;
+    font-weight: 650;
+    font-size: 12px;
+}
+
+.mini-add-btn {
+    border: 0;
+    border-radius: 10px;
+    background: #ffc526;
+    color: #0f2a4a;
+    padding: 8px 10px;
+    font-weight: 950;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.setup-combobox {
+    position: relative;
+}
+
+.setup-combobox-btn {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #0f172a;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.setup-combobox-menu {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    max-height: 260px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+    border-radius: 14px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, .16);
+    padding: 8px;
+}
+
+.setup-combobox-menu.open {
+    display: block;
+}
+
+.setup-combo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 38px;
+    padding: 7px 8px 7px 10px;
+    border-radius: 10px;
+    color: #0f172a;
+    font-weight: 750;
+}
+
+.setup-combo-item:hover {
+    background: #f1f5f9;
+}
+
+.combo-trash-btn {
+    border: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: #fee2e2;
+    color: #b91c1c;
+    cursor: pointer;
+}
+
+.setup-combo-add-row {
+    width: 100%;
+    margin-top: 6px;
+    height: 38px;
+    border: 1px dashed #f59e0b;
+    border-radius: 10px;
+    background: #fff7d6;
+    color: #92400e;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.setup-modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+.setup-modal-box {
+    width: min(440px, 96vw);
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .30);
+}
+
+.setup-modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.setup-modal-head h3 {
+    margin: 0;
+    font-size: 22px;
+    color: #0f172a;
+}
+
+.setup-modal-head button {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 10px;
+    background: #e2e8f0;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.setup-modal-box label {
+    display: block;
+    margin: 0 0 7px;
+    font-weight: 900;
+}
+
+.setup-modal-box input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    height: 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 12px;
+    font-size: 15px;
+    font-weight: 750;
+}
+
+.setup-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.cancel-btn {
+    border: 0;
+    border-radius: 12px;
+    background: #e2e8f0;
+    color: #0f172a;
+    font-weight: 900;
+    padding: 11px 16px;
+    cursor: pointer;
+}
+
+@media(max-width:900px) {
+    .class-options-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.payment-setup-card {
+    max-width: 980px;
+}
+
+.payment-setup-desc {
+    margin: -8px 0 18px;
+    color: #64748b;
+    font-weight: 750;
+}
+
+.setup-select {
+    width: 100%;
+    box-sizing: border-box;
+    height: 45px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 12px;
+    background: #f8fafc;
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    outline: none;
+}
+
+.setup-select:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+</style>
+
+<script>
+function toggleSetupCombo(type) {
+    const target = document.getElementById("combo_" + type);
+    if (!target) return;
+
+    document.querySelectorAll(".setup-combobox-menu").forEach(menu => {
+        if (menu !== target) menu.classList.remove("open");
+    });
+
+    target.classList.toggle("open");
+}
+
+function openClassOptionModal(type, title) {
+    const modal = document.getElementById("classOptionModal");
+    const typeInput = document.getElementById("classOptionType");
+    const valueInput = document.getElementById("classOptionInput");
+    const modalTitle = document.getElementById("classOptionModalTitle");
+    const label = document.getElementById("classOptionLabel");
+
+    if (!modal || !typeInput || !valueInput) return;
+
+    typeInput.value = type;
+    valueInput.value = "";
+    modalTitle.textContent = "Thêm " + title;
+    label.textContent = "Tên " + title;
+    valueInput.placeholder = "Nhập " + title + " mới";
+
+    modal.style.display = "flex";
+    setTimeout(() => valueInput.focus(), 80);
+
+    document.querySelectorAll(".setup-combobox-menu").forEach(menu => {
+        menu.classList.remove("open");
+    });
+}
+
+function closeClassOptionModal() {
+    const modal = document.getElementById("classOptionModal");
+    if (modal) modal.style.display = "none";
+}
+
+document.addEventListener("click", function(e) {
+    if (!e.target.closest(".setup-combobox")) {
+        document.querySelectorAll(".setup-combobox-menu").forEach(menu => {
+            menu.classList.remove("open");
+        });
+    }
+
+    if (e.target.id === "classOptionModal") {
+        closeClassOptionModal();
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,716 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Thông báo</h1>
+
+<section class="notify-page-grid">
+    <form class="notify-card notify-compose-card" method="post" action="{{ url_for('notifications') }}">
+        <div class="notify-card-head">
+            <div>
+                <h2>📢 Gửi thông báo</h2>
+                <p>Gửi cho tất cả học viên hoặc chọn riêng từng học viên.</p>
+            </div>
+        </div>
+
+        <div class="notify-recipient-row">
+            <div class="notify-field">
+                <label>Gửi cho</label>
+                <select name="target_mode" id="notifyTargetMode" onchange="changeNotifyTargetMode()">
+                    <option value="all">Tất cả</option>
+                    <option value="custom">Tùy chọn</option>
+                </select>
+            </div>
+
+            <div class="notify-field notify-search-field">
+                <label>Nhập người nhận</label>
+                <input
+                    type="text"
+                    id="notifyStudentSearch"
+                    placeholder="Nhập tên, mã HV hoặc SĐT..."
+                    autocomplete="off"
+                    oninput="renderNotifySearchResults()"
+                    onfocus="renderNotifySearchResults()"
+                >
+
+                <div id="notifySearchResults" class="notify-search-results"></div>
+            </div>
+        </div>
+
+        <div id="notifySelectedBox" class="notify-selected-box">
+            <div class="notify-all-pill">
+                <b>Người nhận:</b> Tất cả học viên
+            </div>
+        </div>
+
+        <div class="notify-field">
+            <label>Tiêu đề thông báo <b>*</b></label>
+            <input name="title" placeholder="VD: Lịch nghỉ tập, lịch thi cấp, nhắc học phí..." required>
+        </div>
+
+        <div class="notify-field">
+            <label>Nội dung <b>*</b></label>
+            <textarea
+                name="content"
+                id="notificationContent"
+                required
+                placeholder="Nhập nội dung thông báo..."
+            ></textarea>
+        </div>
+
+        <button class="notify-send-btn" type="submit">📨 Gửi thông báo</button>
+    </form>
+
+    <section class="notify-card notify-history-card">
+        <div class="notify-card-head">
+            <div>
+                <h2>📬 Lịch sử thông báo</h2>
+                <p>Các thông báo đã gửi gần đây.</p>
+            </div>
+        </div>
+
+        {% if notifications %}
+        <div class="notify-history-list">
+            {% for n in notifications %}
+            <article class="notify-history-item">
+                <div class="notify-history-top">
+                    <div>
+                        <div class="notify-history-title">{{ n.title }}</div>
+                        <div class="notify-history-meta">
+                            {{ n.created_at }} · {{ n.target_name or 'Tất cả học viên' }}
+                        </div>
+                    </div>
+                    <span class="notify-target-badge {{ 'all' if n.target_type == 'all' else 'single' }}">
+                        {{ 'Tất cả' if n.target_type == 'all' else 'Cá nhân' }}
+                    </span>
+                </div>
+                <div class="notify-history-content">{{ n.content }}</div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="notify-empty">Chưa có thông báo nào.</div>
+        {% endif %}
+    </section>
+</section>
+
+<script id="notifyStudentsData" type="application/json">
+[
+    {% for r in rows %}
+    {
+        "license": {{ r.license|tojson }},
+        "name": {{ r.name|tojson }},
+        "birthdate": {{ r.birthdate|tojson }},
+        "gender": {{ r.gender|tojson }},
+        "classroom": {{ r.classroom|tojson }},
+        "timeclass": {{ r.timeclass|tojson }},
+        "phone": {{ r.phonenumber|tojson }}
+    }{{ ',' if not loop.last }}
+    {% endfor %}
+]
+</script>
+
+<script>
+let selectedNotifyStudents = [];
+
+function getNotifyStudents() {
+    const el = document.getElementById("notifyStudentsData");
+    if (!el) return [];
+
+    try {
+        return JSON.parse(el.textContent || "[]");
+    } catch (e) {
+        return [];
+    }
+}
+
+function normalizeNotifyText(text) {
+    return String(text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .trim();
+}
+
+function changeNotifyTargetMode() {
+    const mode = document.getElementById("notifyTargetMode").value;
+    const searchInput = document.getElementById("notifyStudentSearch");
+    const resultsBox = document.getElementById("notifySearchResults");
+
+    if (mode === "all") {
+        selectedNotifyStudents = [];
+        searchInput.value = "";
+        searchInput.disabled = true;
+        if (resultsBox) resultsBox.style.display = "none";
+    } else {
+        searchInput.disabled = false;
+        setTimeout(() => searchInput.focus(), 50);
+    }
+
+    renderSelectedNotifyStudents();
+    updateNotificationGreeting();
+}
+
+function renderNotifySearchResults() {
+    const mode = document.getElementById("notifyTargetMode").value;
+    const input = document.getElementById("notifyStudentSearch");
+    const box = document.getElementById("notifySearchResults");
+
+    if (!input || !box) return;
+
+    if (mode !== "custom") {
+        box.style.display = "none";
+        return;
+    }
+
+    const keyword = normalizeNotifyText(input.value);
+    const students = getNotifyStudents();
+
+    let filtered = students;
+
+    if (keyword) {
+        filtered = students.filter(s => {
+            const text = normalizeNotifyText(
+                `${s.name || ""} ${s.license || ""} ${s.birthdate || ""} ${s.phone || ""} ${s.classroom || ""} ${s.timeclass || ""}`
+            );
+
+            return text.includes(keyword);
+        });
+    }
+
+    filtered = filtered
+        .filter(s => !selectedNotifyStudents.some(x => x.license === s.license))
+        .slice(0, 12);
+
+    if (!filtered.length) {
+        box.innerHTML = `<div class="notify-search-empty">Không tìm thấy học viên phù hợp.</div>`;
+        box.style.display = "block";
+        return;
+    }
+
+    box.innerHTML = filtered.map(s => `
+        <div class="notify-search-item">
+            <div class="notify-search-info">
+                <b>${s.name || "—"}</b>
+                <span>${s.license || "—"} · ${s.birthdate || "—"} · ${s.classroom || "—"} / ${s.timeclass || "—"}</span>
+            </div>
+
+            <button type="button"
+                    class="notify-add-student-btn"
+                    onclick="addNotifyStudent('${String(s.license || "").replace(/'/g, "\\'")}')">
+                +
+            </button>
+        </div>
+    `).join("");
+
+    box.style.display = "block";
+}
+
+function addNotifyStudent(license) {
+    const students = getNotifyStudents();
+    const student = students.find(s => s.license === license);
+
+    if (!student) return;
+
+    if (!selectedNotifyStudents.some(s => s.license === license)) {
+        selectedNotifyStudents.push(student);
+    }
+
+    const input = document.getElementById("notifyStudentSearch");
+    const box = document.getElementById("notifySearchResults");
+
+    if (input) input.value = "";
+    if (box) box.style.display = "none";
+
+    renderSelectedNotifyStudents();
+    updateNotificationGreeting();
+}
+
+function removeNotifyStudent(license) {
+    selectedNotifyStudents = selectedNotifyStudents.filter(s => s.license !== license);
+
+    renderSelectedNotifyStudents();
+    updateNotificationGreeting();
+    renderNotifySearchResults();
+}
+
+function renderSelectedNotifyStudents() {
+    const mode = document.getElementById("notifyTargetMode").value;
+    const box = document.getElementById("notifySelectedBox");
+
+    if (!box) return;
+
+    if (mode === "all") {
+        box.innerHTML = `
+            <div class="notify-all-pill">
+                <b>Người nhận:</b> Tất cả học viên
+            </div>
+        `;
+        return;
+    }
+
+    if (!selectedNotifyStudents.length) {
+        box.innerHTML = `
+            <div class="notify-empty-selected">
+                Chưa chọn học viên nào. Ken nhập tên/mã/SĐT ở ô trên rồi bấm dấu +.
+            </div>
+        `;
+        return;
+    }
+
+    box.innerHTML = `
+        <div class="notify-selected-list">
+            ${selectedNotifyStudents.map(s => `
+                <div class="notify-selected-pill">
+                    <input type="hidden" name="target_licenses" value="${s.license}">
+                    <div>
+                        <b>${s.name || "—"}</b>
+                        <span>${s.license || "—"} · ${s.birthdate || "—"}</span>
+                    </div>
+                    <button type="button" onclick="removeNotifyStudent('${String(s.license || "").replace(/'/g, "\\'")}')">×</button>
+                </div>
+            `).join("")}
+        </div>
+    `;
+}
+
+function getNotificationGreetingText() {
+    const mode = document.getElementById("notifyTargetMode").value;
+
+    if (mode === "all") {
+        return "Kính gửi quý Phụ huynh và võ sinh!";
+    }
+
+    if (!selectedNotifyStudents.length) {
+        return "Kính gửi quý Phụ huynh và võ sinh: {TEN_HOC_VIEN}";
+    }
+
+    if (selectedNotifyStudents.length === 1) {
+        const name = selectedNotifyStudents[0].name || "{TEN_HOC_VIEN}";
+        return `Kính gửi quý Phụ huynh và võ sinh: ${name}`;
+    }
+
+    return "Kính gửi quý Phụ huynh và võ sinh: {TEN_HOC_VIEN}";
+}
+
+function updateNotificationGreeting() {
+    const textarea = document.getElementById("notificationContent");
+    if (!textarea) return;
+
+    const newGreeting = getNotificationGreetingText();
+    const currentValue = textarea.value || "";
+    const greetingRegex = /^Kính gửi quý Phụ huynh và võ sinh[:!].*/;
+
+    if (!currentValue.trim()) {
+        textarea.value = newGreeting + "\n\n";
+        return;
+    }
+
+    const lines = currentValue.split("\n");
+
+    if (greetingRegex.test(lines[0].trim())) {
+        lines[0] = newGreeting;
+        textarea.value = lines.join("\n");
+        return;
+    }
+
+    textarea.value = newGreeting + "\n\n" + currentValue;
+}
+
+document.addEventListener("click", function (event) {
+    const searchWrap = document.querySelector(".notify-search-field");
+    const resultBox = document.getElementById("notifySearchResults");
+
+    if (!searchWrap || !resultBox) return;
+
+    if (!searchWrap.contains(event.target)) {
+        resultBox.style.display = "none";
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    changeNotifyTargetMode();
+    renderSelectedNotifyStudents();
+    updateNotificationGreeting();
+});
+</script>
+
+<style>
+.notify-page-grid {
+    display: grid;
+    grid-template-columns: minmax(420px, 1fr) minmax(360px, .9fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.notify-card {
+    background: #fff;
+    border: 1px solid #dbe7f5;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(15,23,42,.07);
+}
+
+.notify-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    border-bottom: 1px solid #e8eef7;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.notify-card-head h2 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    color: #0f172a;
+}
+
+.notify-card-head p {
+    margin: 0;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.notify-field {
+    margin-bottom: 13px;
+}
+
+.notify-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: #334155;
+    font-weight: 900;
+}
+
+.notify-field label b {
+    color: #ef4444;
+}
+
+.notify-field input,
+.notify-field select,
+.notify-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 650;
+    outline: none;
+}
+
+.notify-field input,
+.notify-field select {
+    height: 42px;
+}
+
+.notify-field textarea {
+    min-height: 180px;
+    padding: 12px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.notify-field input:focus,
+.notify-field select:focus,
+.notify-field textarea:focus {
+    background: #fff;
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 4px rgba(251,191,36,.16);
+}
+
+.notify-student-info {
+    margin-bottom: 14px;
+}
+
+.student-info-pill {
+    border-radius: 14px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    padding: 12px;
+    font-weight: 800;
+}
+
+.notify-student-card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: #fffdf3;
+    border: 1px solid #facc15;
+}
+
+.notify-student-card span {
+    display: block;
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 4px;
+}
+
+.notify-student-card b {
+    color: #0f172a;
+}
+
+.notify-send-btn {
+    width: 100%;
+    height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #0f172a;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.notify-history-list {
+    display: grid;
+    gap: 12px;
+    max-height: 620px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.notify-history-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px;
+    background: #f8fafc;
+}
+
+.notify-history-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.notify-history-title {
+    font-size: 16px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.notify-history-meta {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.notify-target-badge {
+    display: inline-flex;
+    height: 26px;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.notify-target-badge.all {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.notify-target-badge.single {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.notify-history-content {
+    color: #334155;
+    line-height: 1.55;
+    font-weight: 650;
+    white-space: pre-wrap;
+}
+
+.notify-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 22px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 850;
+    background: #f8fafc;
+}
+
+/* =========================
+   RECIPIENT SEARCH + SELECTED
+========================= */
+
+.notify-recipient-row {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.notify-search-field {
+    position: relative;
+}
+
+.notify-search-results {
+    display: none;
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    max-height: 320px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+    border-radius: 14px;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, .16);
+    padding: 8px;
+}
+
+.notify-search-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+}
+
+.notify-search-item:hover {
+    background: #f8fafc;
+    border-color: #dbe7f5;
+}
+
+.notify-search-info {
+    min-width: 0;
+}
+
+.notify-search-info b {
+    display: block;
+    color: #0f172a;
+    font-weight: 950;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notify-search-info span {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notify-add-student-btn {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 10px;
+    background: #ffc526;
+    color: #0f2a4a;
+    font-size: 20px;
+    font-weight: 950;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.notify-add-student-btn:hover {
+    filter: brightness(.97);
+    transform: translateY(-1px);
+}
+
+.notify-search-empty {
+    padding: 13px;
+    color: #64748b;
+    font-weight: 800;
+    text-align: center;
+}
+
+.notify-selected-box {
+    margin-bottom: 14px;
+}
+
+.notify-all-pill,
+.notify-empty-selected {
+    border-radius: 14px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    padding: 12px;
+    font-weight: 850;
+}
+
+.notify-empty-selected {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #9a3412;
+}
+
+.notify-selected-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.notify-selected-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+    padding: 9px 10px 9px 12px;
+    border-radius: 14px;
+    background: #ecfdf5;
+    border: 1px solid #86efac;
+    color: #14532d;
+    box-shadow: 0 6px 14px rgba(34, 197, 94, .10);
+}
+
+.notify-selected-pill b {
+    display: block;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.notify-selected-pill span {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 750;
+    color: #166534;
+}
+
+.notify-selected-pill button {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 999px;
+    background: #dc2626;
+    color: white;
+    font-size: 16px;
+    font-weight: 950;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+@media(max-width: 1050px) {
+    .notify-page-grid { grid-template-columns: 1fr; }
+    .notify-student-card { grid-template-columns: 1fr; }
+}
+
+@media(max-width: 700px) {
+    .notify-recipient-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+</style>
+{% endblock %}
