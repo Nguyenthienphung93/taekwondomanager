@@ -16,7 +16,11 @@
                 <label>Gửi cho</label>
                 <select name="target_mode" id="notifyTargetMode" onchange="changeNotifyTargetMode()">
                     <option value="all">Tất cả</option>
-                    <option value="custom">Tùy chọn</option>
+                    <option value="custom">Tùy chọn từng học viên</option>
+                    <option value="exam_registered">Thi cấp</option>
+                    <option value="exam_not_registered">Không thi cấp</option>
+                    <option value="dan_registered">Thi đẳng</option>
+                    <option value="dan_not_registered">Không thi đẳng</option>
                 </select>
             </div>
 
@@ -32,6 +36,41 @@
                 >
 
                 <div id="notifySearchResults" class="notify-search-results"></div>
+            </div>
+        </div>
+
+        <div id="notifyFilterBox" class="notify-filter-box">
+            <div class="notify-filter-row">
+                <div class="notify-field">
+                    <label>Năm</label>
+                    <select name="notify_year" id="notifyYear" onchange="renderSelectedNotifyStudents()">
+                        {% for y in year_options|default([current_year]) %}
+                        <option value="{{ y }}" {{ 'selected' if y == current_year else '' }}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="notify-field" id="examQuarterField">
+                    <label>Chọn quý thi cấp</label>
+                    <select name="exam_quarter" id="notifyExamQuarter" onchange="renderSelectedNotifyStudents()">
+                        <option value="Q1">Quý 1</option>
+                        <option value="Q2">Quý 2</option>
+                        <option value="Q3">Quý 3</option>
+                        <option value="Q4">Quý 4</option>
+                    </select>
+                </div>
+
+                <div class="notify-field" id="danRoundField">
+                    <label>Chọn lần/khu vực thi đẳng</label>
+                    <select name="dan_round" id="notifyDanRound" onchange="renderSelectedNotifyStudents()">
+                        <option value="L1">Lần 1</option>
+                        <option value="L2">Lần 2</option>
+                        <option value="MN">KV miền Nam</option>
+                        <option value="MT">KV miền Trung</option>
+                        <option value="MB">KV miền Bắc</option>
+                        <option value="QG">Quốc Gia</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -131,19 +170,66 @@ function normalizeNotifyText(text) {
         .trim();
 }
 
+function isNotifyGroupMode(mode) {
+    return ["exam_registered", "exam_not_registered", "dan_registered", "dan_not_registered"].includes(mode);
+}
+
+function getNotifyTargetText() {
+    const mode = document.getElementById("notifyTargetMode").value;
+    const year = document.getElementById("notifyYear")?.value || "";
+    const examQuarter = document.getElementById("notifyExamQuarter")?.value || "";
+    const danRound = document.getElementById("notifyDanRound")?.value || "";
+
+    const examMap = {Q1: "Quý 1", Q2: "Quý 2", Q3: "Quý 3", Q4: "Quý 4"};
+    const danMap = {
+        L1: "Lần 1",
+        L2: "Lần 2",
+        MN: "KV miền Nam",
+        MT: "KV miền Trung",
+        MB: "KV miền Bắc",
+        QG: "Quốc Gia"
+    };
+
+    if (mode === "all") return "Tất cả học viên";
+    if (mode === "custom") return "Tùy chọn từng học viên";
+    if (mode === "exam_registered") return `Học viên thi cấp / đã đăng ký thi cấp - ${examMap[examQuarter] || examQuarter} - ${year}`;
+    if (mode === "exam_not_registered") return `Học viên không thi cấp / chưa đăng ký thi cấp - ${examMap[examQuarter] || examQuarter} - ${year}`;
+    if (mode === "dan_registered") return `Học viên thi đẳng / đã đăng ký thi đẳng - ${danMap[danRound] || danRound} - ${year}`;
+    if (mode === "dan_not_registered") return `Học viên không thi đẳng / chưa đăng ký thi đẳng - ${danMap[danRound] || danRound} - ${year}`;
+
+    return "Tùy chọn";
+}
+
 function changeNotifyTargetMode() {
     const mode = document.getElementById("notifyTargetMode").value;
     const searchInput = document.getElementById("notifyStudentSearch");
     const resultsBox = document.getElementById("notifySearchResults");
+    const filterBox = document.getElementById("notifyFilterBox");
+    const examQuarterField = document.getElementById("examQuarterField");
+    const danRoundField = document.getElementById("danRoundField");
 
-    if (mode === "all") {
+    if (resultsBox) resultsBox.style.display = "none";
+
+    if (mode === "custom") {
+        searchInput.disabled = false;
+        if (filterBox) filterBox.style.display = "none";
+        if (examQuarterField) examQuarterField.style.display = "none";
+        if (danRoundField) danRoundField.style.display = "none";
+        setTimeout(() => searchInput.focus(), 50);
+    } else {
         selectedNotifyStudents = [];
         searchInput.value = "";
         searchInput.disabled = true;
-        if (resultsBox) resultsBox.style.display = "none";
-    } else {
-        searchInput.disabled = false;
-        setTimeout(() => searchInput.focus(), 50);
+
+        if (isNotifyGroupMode(mode)) {
+            if (filterBox) filterBox.style.display = "block";
+            if (examQuarterField) examQuarterField.style.display = mode.includes("exam") ? "block" : "none";
+            if (danRoundField) danRoundField.style.display = mode.includes("dan") ? "block" : "none";
+        } else {
+            if (filterBox) filterBox.style.display = "none";
+            if (examQuarterField) examQuarterField.style.display = "none";
+            if (danRoundField) danRoundField.style.display = "none";
+        }
     }
 
     renderSelectedNotifyStudents();
@@ -248,6 +334,16 @@ function renderSelectedNotifyStudents() {
         return;
     }
 
+    if (isNotifyGroupMode(mode)) {
+        box.innerHTML = `
+            <div class="notify-all-pill notify-filter-pill">
+                <b>Người nhận:</b> ${getNotifyTargetText()}
+                <span>Hệ thống sẽ tự lọc theo dữ liệu đã đóng phí thi trong bảng học phí.</span>
+            </div>
+        `;
+        return;
+    }
+
     if (!selectedNotifyStudents.length) {
         box.innerHTML = `
             <div class="notify-empty-selected">
@@ -278,6 +374,10 @@ function getNotificationGreetingText() {
 
     if (mode === "all") {
         return "Kính gửi quý Phụ huynh và võ sinh!";
+    }
+
+    if (isNotifyGroupMode(mode)) {
+        return "Kính gửi quý Phụ huynh và võ sinh: {TEN_HOC_VIEN}";
     }
 
     if (!selectedNotifyStudents.length) {
@@ -635,6 +735,28 @@ document.addEventListener("DOMContentLoaded", function () {
     text-align: center;
 }
 
+
+.notify-filter-box {
+    display: none;
+    margin-top: -2px;
+    margin-bottom: 12px;
+}
+
+.notify-filter-row {
+    display: grid;
+    grid-template-columns: 140px minmax(180px, 1fr) minmax(220px, 1fr);
+    gap: 12px;
+    align-items: end;
+}
+
+.notify-filter-pill span {
+    display: block;
+    margin-top: 5px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .notify-selected-box {
     margin-bottom: 14px;
 }
@@ -707,7 +829,8 @@ document.addEventListener("DOMContentLoaded", function () {
 }
 
 @media(max-width: 700px) {
-    .notify-recipient-row {
+    .notify-recipient-row,
+    .notify-filter-row {
         grid-template-columns: 1fr;
     }
 }

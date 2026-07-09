@@ -77,6 +77,7 @@
                 <th>Cấp hiện tại</th>
                 <th>Cấp dự thi</th>
                 <th>Số thi</th>
+                <th>HLV kiểm tra</th>
                 <th>Kết quả</th>
             </tr>
         </thead>
@@ -129,7 +130,39 @@
                 </td>
 
                 <td>
-                    {% if r.result_saved %}
+                    {% set coach_status = r.coach_check_status or 'Chưa KTra' %}
+
+                    <div class="coach-check-admin-badge
+                        {% if coach_status == 'Đúng' %}
+                            coach-check-ok
+                        {% elif coach_status == 'Sai' %}
+                            coach-check-wrong
+                        {% elif coach_status == 'Ktra lại' %}
+                            coach-check-review
+                        {% else %}
+                            coach-check-none
+                        {% endif %}
+                    ">
+                        <b>{{ coach_status }}</b>
+
+                        {% if r.coach_checked_by_name %}
+                            <span>{{ r.coach_checked_by_name }}</span>
+                        {% else %}
+                            <span>Chờ HLV KTra</span>
+                        {% endif %}
+
+                        {% if r.coach_checked_at %}
+                            <small>{{ r.coach_checked_at|datetime_vn }}</small>
+                        {% endif %}
+
+                        {% if r.coach_check_note %}
+                            <em>{{ r.coach_check_note }}</em>
+                        {% endif %}
+                    </div>
+                </td>
+
+                <td>
+                    {% if r.result_saved or r.saved_ket_qua or r.saved_so_thi %}
                         <div class="saved-result-badge
                             {% if r.saved_ket_qua == 'Đạt' %}
                                 saved-pass
@@ -1614,6 +1647,63 @@ function showImportExamModal(options) {
     background: #fef3c7;
     border: 1px solid #facc15;
     color: #92400e;
+}
+
+.coach-check-admin-badge {
+    min-width: 118px;
+    border-radius: 12px;
+    padding: 8px 10px;
+    display: grid;
+    gap: 3px;
+    font-weight: 850;
+    border: 1px solid #dbe7f5;
+    background: #f8fafc;
+    color: #334155;
+}
+
+.coach-check-admin-badge b {
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.coach-check-admin-badge span {
+    font-size: 12px;
+    color: #475569;
+}
+
+.coach-check-admin-badge small {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.coach-check-admin-badge em {
+    font-size: 11px;
+    color: #7c2d12;
+    font-style: normal;
+}
+
+.coach-check-ok {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.coach-check-wrong {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.coach-check-review {
+    background: #fff7d6;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.coach-check-none {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
 }
 </style>
 

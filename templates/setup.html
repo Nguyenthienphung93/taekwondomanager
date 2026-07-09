@@ -58,6 +58,7 @@
         <a href="/setup?tab=fees" class="setup-tab {{ 'active' if active_tab == 'fees' else '' }}">Biểu phí</a>
         <a class="setup-tab {{ 'active' if active_tab == 'exam' else '' }}" href="{{ url_for('setup', tab='exam') }}">Thi cấp</a>
         <a class="setup-tab {{ 'active' if active_tab == 'classes' else '' }}" href="{{ url_for('setup', tab='classes') }}">Lớp học</a>
+        <a class="setup-tab {{ 'active' if active_tab == 'club_info' else '' }}" href="{{ url_for('setup', tab='club_info') }}">Thông tin chung</a>
         <a class="setup-tab {{ 'active' if active_tab == 'payment' else '' }}" href="{{ url_for('setup', tab='payment') }}">Thông tin thanh toán</a>
     </div>
 
@@ -133,6 +134,298 @@
         </div>
 
         <button class="save-btn" type="submit">💾 Lưu thi cấp</button>
+    </form>
+    {% endif %}
+
+    {% if active_tab == 'club_info' %}
+    {% set club_info = settings.club_info %}
+    {% set head = club_info.head_coach %}
+    {% set registrar = club_info.registrar or {} %}
+    {% set coaches = club_info.coaches or [] %}
+    {% set regular_schedules = club_info.regular_schedules or [] %}
+    {% set summer_schedules = club_info.summer_schedules or [] %}
+    {% set fees_info = club_info.fees_info %}
+    {% set exam_notes = fees_info.exam_notes or [] %}
+
+    <form method="post" class="setup-card club-info-setup-card" enctype="multipart/form-data">
+        <input type="hidden" name="active_tab" value="club_info">
+
+        <h2>🏫 Thông tin chung CLB</h2>
+
+        <p class="payment-setup-desc">
+            Ken có thể sửa nội dung, thêm/xóa HLV, upload hình HLV lên Supabase và chỉnh lịch học/học phí hiển thị bên cổng học viên.
+        </p>
+
+        <div class="setup-subtitle">Giới thiệu CLB</div>
+
+        <label>Tiêu đề giới thiệu CLB</label>
+        <input type="text" name="intro_title" value="{{ club_info.intro_title or '' }}">
+
+        <label>Tiêu đề phụ</label>
+        <input type="text" name="intro_subtitle" value="{{ club_info.intro_subtitle or 'Sunflower Taekwondo Club' }}">
+
+        <label>Nội dung giới thiệu</label>
+        <textarea name="intro_content" rows="7">{{ club_info.intro_content or '' }}</textarea>
+
+        <div class="setup-subtitle">Huấn luyện viên trưởng</div>
+
+        <div class="setup-coach-chief-admin">
+            <div class="setup-photo-preview">
+                {% if head.photo_url %}
+                    <img src="{{ head.photo_url }}" alt="Ảnh HLV trưởng">
+                {% else %}
+                    <div class="setup-photo-empty">NTP</div>
+                {% endif %}
+            </div>
+
+            <div class="setup-grid-2">
+                <div class="field-box">
+                    <label>Tên HLV trưởng</label>
+                    <input type="text" name="head_name" value="{{ head.name or '' }}">
+                </div>
+
+                <div class="field-box">
+                    <label>Chức vụ</label>
+                    <input type="text" name="head_role" value="{{ head.role or 'HLV Trưởng' }}">
+                </div>
+
+                <div class="field-box">
+                    <label>SĐT</label>
+                    <input type="text" name="head_phone" value="{{ head.phone or '' }}" placeholder="Đang cập nhật">
+                </div>
+
+                <div class="field-box">
+                    <label>Upload hình HLV trưởng</label>
+                    <input type="file" name="head_photo_file" accept="image/png,image/jpeg,image/webp">
+                    <input type="hidden" name="head_photo_url" value="{{ head.photo_url or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <label>Thông tin về HLV trưởng</label>
+        <textarea name="head_description" rows="5">{{ head.description or '' }}</textarea>
+
+        <div class="setup-subtitle-row">
+            <div class="setup-subtitle">Danh sách HLV / Trợ giảng</div>
+            <button type="button" class="mini-add-btn" onclick="addCoachRow()">+ Thêm HLV</button>
+        </div>
+
+        <div class="setup-subtitle">Người ghi danh</div>
+
+        <div class="setup-coach-chief-admin">
+            <div class="setup-photo-preview">
+                {% if registrar.photo_url %}
+                    <img src="{{ registrar.photo_url }}" alt="Ảnh người ghi danh">
+                {% else %}
+                    <div class="setup-photo-empty">GD</div>
+                {% endif %}
+            </div>
+
+            <div class="setup-grid-2">
+                <div class="field-box">
+                    <label>Họ tên người ghi danh</label>
+                    <input type="text" name="registrar_name" value="{{ registrar.name or '' }}">
+                </div>
+
+                <div class="field-box">
+                    <label>Chức vụ</label>
+                    <input type="text" name="registrar_role" value="{{ registrar.role or 'Người ghi danh' }}">
+                </div>
+
+                <div class="field-box">
+                    <label>SĐT</label>
+                    <input type="text" name="registrar_phone" value="{{ registrar.phone or '' }}" placeholder="VD: 0909 xxx xxx">
+                </div>
+
+                <div class="field-box">
+                    <label>Upload hình người ghi danh</label>
+                    <input type="file" name="registrar_photo_file" accept="image/png,image/jpeg,image/webp">
+                    <input type="hidden" name="registrar_photo_url" value="{{ registrar.photo_url or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <label>Thông tin / ghi chú người ghi danh</label>
+        <textarea name="registrar_description" rows="4">{{ registrar.description or '' }}</textarea>
+
+        <input type="hidden" id="coach_count" name="coach_count" value="{{ coaches|length }}">
+
+        <div id="coachList" class="setup-dynamic-list">
+            {% for c in coaches %}
+            {% set i = loop.index0 %}
+            <div class="setup-dynamic-item coach-row" data-index="{{ i }}">
+                <input type="hidden" name="coach_delete_{{ i }}" value="0" class="delete-flag">
+                <input type="hidden" name="coach_photo_url_{{ i }}" value="{{ c.photo_url or '' }}">
+
+                <div class="dynamic-item-head">
+                    <b>HLV {{ loop.index }}</b>
+                    <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+                </div>
+
+                <div class="setup-coach-row-grid">
+                    <div class="setup-photo-preview small">
+                        {% if c.photo_url %}
+                            <img src="{{ c.photo_url }}" alt="{{ c.name }}">
+                        {% else %}
+                            <div class="setup-photo-empty">{{ (c.name or 'HLV')[:3] }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="setup-grid-2">
+                        <div class="field-box">
+                            <label>Nhóm lớp</label>
+                            <select name="coach_group_{{ i }}" class="setup-select">
+                                <option value="246" {{ 'selected' if c.group == '246' }}>HLV lớp 2-4-6</option>
+                                <option value="357" {{ 'selected' if c.group == '357' }}>HLV lớp 3-5-7</option>
+                                <option value="weekend" {{ 'selected' if c.group == 'weekend' }}>HLV lớp sáng & cuối tuần</option>
+                            </select>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Tên</label>
+                            <input type="text" name="coach_name_{{ i }}" value="{{ c.name or '' }}">
+                        </div>
+
+                        <div class="field-box">
+                            <label>Chức vụ</label>
+                            <input type="text" name="coach_role_{{ i }}" value="{{ c.role or '' }}">
+                        </div>
+
+                        <div class="field-box">
+                            <label>SĐT</label>
+                            <input type="text" name="coach_phone_{{ i }}" value="{{ c.phone or '' }}">
+                        </div>
+
+                        <div class="field-box">
+                            <label>Upload hình</label>
+                            <input type="file" name="coach_photo_file_{{ i }}" accept="image/png,image/jpeg,image/webp">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="setup-subtitle-row">
+            <div class="setup-subtitle">Lịch thường xuyên</div>
+            <button type="button" class="mini-add-btn" onclick="addScheduleRow('regular')">+ Thêm lịch</button>
+        </div>
+
+        <input type="hidden" id="regular_schedule_count" name="regular_schedule_count" value="{{ regular_schedules|length }}">
+
+        <div id="regularScheduleList" class="setup-dynamic-list">
+            {% for s in regular_schedules %}
+            {% set i = loop.index0 %}
+            <div class="setup-dynamic-item">
+                <input type="hidden" name="regular_schedule_delete_{{ i }}" value="0" class="delete-flag">
+                <div class="dynamic-item-head">
+                    <b>Lịch {{ loop.index }}</b>
+                    <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+                </div>
+                <div class="setup-grid-2">
+                    <div class="field-box">
+                        <label>Tên lớp</label>
+                        <input type="text" name="regular_schedule_title_{{ i }}" value="{{ s.title or '' }}">
+                    </div>
+                    <div class="field-box">
+                        <label>Thời gian</label>
+                        <input type="text" name="regular_schedule_time_{{ i }}" value="{{ s.time or '' }}">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="setup-subtitle-row">
+            <div class="setup-subtitle">Lịch hè</div>
+            <button type="button" class="mini-add-btn" onclick="addScheduleRow('summer')">+ Thêm lịch hè</button>
+        </div>
+
+        <input type="hidden" id="summer_schedule_count" name="summer_schedule_count" value="{{ summer_schedules|length }}">
+
+        <div id="summerScheduleList" class="setup-dynamic-list">
+            {% for s in summer_schedules %}
+            {% set i = loop.index0 %}
+            <div class="setup-dynamic-item">
+                <input type="hidden" name="summer_schedule_delete_{{ i }}" value="0" class="delete-flag">
+                <div class="dynamic-item-head">
+                    <b>Lịch hè {{ loop.index }}</b>
+                    <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+                </div>
+                <div class="setup-grid-2">
+                    <div class="field-box">
+                        <label>Tên lịch</label>
+                        <input type="text" name="summer_schedule_title_{{ i }}" value="{{ s.title or '' }}">
+                    </div>
+                    <div class="field-box">
+                        <label>Thời gian</label>
+                        <input type="text" name="summer_schedule_time_{{ i }}" value="{{ s.time or '' }}">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="setup-subtitle">Học phí, võ phục và thi cấp</div>
+
+        <div class="setup-grid-2">
+            <div class="field-box">
+                <label>Học phí 1 tháng</label>
+                <input type="text" name="monthly_fee" value="{{ fees_info.monthly_fee or '' }}">
+            </div>
+
+            <div class="field-box">
+                <label>Đóng 3 tháng</label>
+                <input type="text" name="three_month_discount" value="{{ fees_info.three_month_discount or '' }}">
+            </div>
+
+            <div class="field-box">
+                <label>Đóng 6 tháng</label>
+                <input type="text" name="six_month_bonus" value="{{ fees_info.six_month_bonus or '' }}">
+            </div>
+
+            <div class="field-box">
+                <label>Gia đình / bạn bè</label>
+                <input type="text" name="family_discount" value="{{ fees_info.family_discount or '' }}">
+            </div>
+
+            <div class="field-box">
+                <label>Võ phục</label>
+                <input type="text" name="uniform_fee" value="{{ fees_info.uniform_fee or '' }}">
+            </div>
+
+            <div class="field-box">
+                <label>Lệ phí thi cấp</label>
+                <input type="text" name="club_exam_fee" value="{{ fees_info.exam_fee or '' }}">
+            </div>
+        </div>
+
+        <div class="setup-subtitle-row">
+            <div class="setup-subtitle">Lưu ý thi cấp</div>
+            <button type="button" class="mini-add-btn" onclick="addExamNoteRow()">+ Thêm lưu ý</button>
+        </div>
+
+        <input type="hidden" id="exam_note_count" name="exam_note_count" value="{{ exam_notes|length }}">
+
+        <div id="examNoteList" class="setup-dynamic-list">
+            {% for note in exam_notes %}
+            {% set i = loop.index0 %}
+            <div class="setup-dynamic-item">
+                <input type="hidden" name="exam_note_delete_{{ i }}" value="0" class="delete-flag">
+                <div class="dynamic-item-head">
+                    <b>Lưu ý {{ loop.index }}</b>
+                    <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+                </div>
+                <textarea name="exam_note_{{ i }}" rows="2">{{ note }}</textarea>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="setup-note">
+            Ảnh HLV sẽ được upload lên Supabase bucket <b>system-assets</b>, thư mục <b>club-info/coaches</b>.
+        </div>
+
+        <button class="save-btn" type="submit">💾 Lưu thông tin chung</button>
     </form>
     {% endif %}
 
@@ -272,7 +565,25 @@
 .setup-card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:22px;box-shadow:0 12px 28px rgba(15,23,42,.08);max-width:780px;}
 .setup-card h2{margin:0 0 18px;font-size:24px;}
 .setup-card label{display:block;margin:15px 0 7px;font-weight:900;}
-.setup-card input[type="text"],.setup-card input[type="file"]{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:12px 13px;font-size:15px;font-weight:750;background:#f8fafc;}
+.setup-card input[type="text"],
+.setup-card input[type="file"],
+.setup-card textarea {
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    padding:12px 13px;
+    font-size:15px;
+    font-weight:750;
+    background:#f8fafc;
+}
+
+.setup-card textarea {
+    resize: vertical;
+    min-height: 110px;
+    line-height: 1.55;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
 .logo-preview-box{display:flex;align-items:center;gap:14px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:16px;padding:14px;margin-bottom:10px;}
 .logo-preview-box img{width:86px;height:86px;object-fit:contain;background:white;border-radius:14px;padding:8px;}
 .logo-preview-box p{margin:4px 0 0;color:#64748b;font-weight:650;}
@@ -567,6 +878,18 @@
     max-width: 980px;
 }
 
+.club-info-setup-card {
+    max-width: 1080px;
+}
+
+.club-info-setup-card textarea:focus,
+.club-info-setup-card input:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
 .payment-setup-desc {
     margin: -8px 0 18px;
     color: #64748b;
@@ -591,6 +914,118 @@
     background: #ffffff;
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+.setup-subtitle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.setup-subtitle-row .setup-subtitle {
+    margin: 0;
+}
+
+.setup-dynamic-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.setup-dynamic-item {
+    border: 1px solid #dbe7f5;
+    border-radius: 18px;
+    background: #f8fbff;
+    padding: 14px;
+}
+
+.dynamic-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dynamic-item-head b {
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.delete-row-btn {
+    border: 0;
+    border-radius: 10px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-weight: 950;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.delete-row-btn:hover {
+    background: #fecaca;
+}
+
+.setup-coach-chief-admin {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.setup-coach-row-grid {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 14px;
+}
+
+.setup-photo-preview {
+    width: 150px;
+    height: 190px;
+    border-radius: 18px;
+    border: 1px solid #dbe7f5;
+    background: #ffffff;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+}
+
+.setup-photo-preview.small {
+    width: 96px;
+    height: 116px;
+    border-radius: 14px;
+}
+
+.setup-photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.setup-photo-empty {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #dbeafe, #f8fafc);
+    color: #1d4ed8;
+    font-weight: 950;
+    font-size: 24px;
+}
+
+@media(max-width: 860px) {
+    .setup-coach-chief-admin,
+    .setup-coach-row-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .setup-photo-preview,
+    .setup-photo-preview.small {
+        margin: 0 auto;
+    }
 }
 </style>
 
@@ -645,6 +1080,138 @@ document.addEventListener("click", function(e) {
         closeClassOptionModal();
     }
 });
+
+function removeDynamicRow(btn) {
+    const item = btn.closest(".setup-dynamic-item");
+    if (!item) return;
+
+    const flag = item.querySelector(".delete-flag");
+    if (flag) {
+        flag.value = "1";
+        item.style.display = "none";
+    } else {
+        item.remove();
+    }
+}
+
+function addCoachRow() {
+    const list = document.getElementById("coachList");
+    const countInput = document.getElementById("coach_count");
+    if (!list || !countInput) return;
+
+    const i = parseInt(countInput.value || "0", 10);
+    countInput.value = i + 1;
+
+    const html = `
+        <div class="setup-dynamic-item coach-row" data-index="${i}">
+            <input type="hidden" name="coach_delete_${i}" value="0" class="delete-flag">
+            <input type="hidden" name="coach_photo_url_${i}" value="">
+
+            <div class="dynamic-item-head">
+                <b>HLV mới</b>
+                <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+            </div>
+
+            <div class="setup-coach-row-grid">
+                <div class="setup-photo-preview small">
+                    <div class="setup-photo-empty">HLV</div>
+                </div>
+
+                <div class="setup-grid-2">
+                    <div class="field-box">
+                        <label>Nhóm lớp</label>
+                        <select name="coach_group_${i}" class="setup-select">
+                            <option value="246">HLV lớp 2-4-6</option>
+                            <option value="357">HLV lớp 3-5-7</option>
+                            <option value="weekend">HLV lớp sáng & cuối tuần</option>
+                        </select>
+                    </div>
+
+                    <div class="field-box">
+                        <label>Tên</label>
+                        <input type="text" name="coach_name_${i}" value="">
+                    </div>
+
+                    <div class="field-box">
+                        <label>Chức vụ</label>
+                        <input type="text" name="coach_role_${i}" value="">
+                    </div>
+
+                    <div class="field-box">
+                        <label>SĐT</label>
+                        <input type="text" name="coach_phone_${i}" value="">
+                    </div>
+
+                    <div class="field-box">
+                        <label>Upload hình</label>
+                        <input type="file" name="coach_photo_file_${i}" accept="image/png,image/jpeg,image/webp">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    list.insertAdjacentHTML("beforeend", html);
+}
+
+function addScheduleRow(type) {
+    const isSummer = type === "summer";
+    const list = document.getElementById(isSummer ? "summerScheduleList" : "regularScheduleList");
+    const countInput = document.getElementById(isSummer ? "summer_schedule_count" : "regular_schedule_count");
+
+    if (!list || !countInput) return;
+
+    const i = parseInt(countInput.value || "0", 10);
+    countInput.value = i + 1;
+
+    const prefix = isSummer ? "summer_schedule" : "regular_schedule";
+    const title = isSummer ? "Lịch hè mới" : "Lịch mới";
+
+    const html = `
+        <div class="setup-dynamic-item">
+            <input type="hidden" name="${prefix}_delete_${i}" value="0" class="delete-flag">
+            <div class="dynamic-item-head">
+                <b>${title}</b>
+                <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+            </div>
+            <div class="setup-grid-2">
+                <div class="field-box">
+                    <label>Tên lịch / tên lớp</label>
+                    <input type="text" name="${prefix}_title_${i}" value="">
+                </div>
+                <div class="field-box">
+                    <label>Thời gian</label>
+                    <input type="text" name="${prefix}_time_${i}" value="">
+                </div>
+            </div>
+        </div>
+    `;
+
+    list.insertAdjacentHTML("beforeend", html);
+}
+
+function addExamNoteRow() {
+    const list = document.getElementById("examNoteList");
+    const countInput = document.getElementById("exam_note_count");
+
+    if (!list || !countInput) return;
+
+    const i = parseInt(countInput.value || "0", 10);
+    countInput.value = i + 1;
+
+    const html = `
+        <div class="setup-dynamic-item">
+            <input type="hidden" name="exam_note_delete_${i}" value="0" class="delete-flag">
+            <div class="dynamic-item-head">
+                <b>Lưu ý mới</b>
+                <button type="button" class="delete-row-btn" onclick="removeDynamicRow(this)">Xóa</button>
+            </div>
+            <textarea name="exam_note_${i}" rows="2"></textarea>
+        </div>
+    `;
+
+    list.insertAdjacentHTML("beforeend", html);
+}
 </script>
 
 {% endblock %}

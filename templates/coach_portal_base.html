@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}HLV Portal{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #f1f5f9;
+            color: #0f172a;
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-weight: 700;
+        }
+
+        /* =========================
+           HEADER FULL NGANG
+        ========================= */
+        .portal-topbar {
+            height: 118px;
+            width: 100%;
+            background: linear-gradient(135deg, #07162a, #0f2a4a);
+            color: #ffffff;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 10px 24px rgba(15,23,42,.16);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 180px;
+        }
+
+        .portal-topbar .portal-logo {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 92px;
+            height: 92px;
+            border-radius: 18px;
+            background: #ffffff;
+            padding: 8px;
+            display: grid;
+            place-items: center;
+        }
+
+        .portal-topbar .portal-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .club-title {
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        .club-title small {
+            display: block;
+            font-size: 24px;
+            font-weight: 950;
+        }
+
+        .club-title b {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 34px;
+            color: #facc15;
+            font-weight: 1000;
+            text-shadow: 0 4px 14px rgba(250,204,21,.25);
+        }
+
+        .top-clock {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            min-width: 140px;
+            border: 1px solid #facc15;
+            border-radius: 12px;
+            padding: 9px 12px;
+            text-align: center;
+            background: rgba(15, 42, 74, .66);
+            box-shadow: 0 10px 22px rgba(0,0,0,.14);
+        }
+
+        .top-clock .clock-time {
+            color: #facc15;
+            font-size: 20px;
+            font-weight: 1000;
+            line-height: 1;
+        }
+
+        .top-clock .clock-date {
+            margin-top: 5px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .mobile-sidebar-btn {
+            position: absolute;
+            left: 126px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 12px;
+            background: rgba(250, 204, 21, .16);
+            color: #facc15;
+            font-size: 18px;
+            cursor: pointer;
+            display: none;
+            place-items: center;
+        }
+
+
+
+        /* =========================
+           BODY: MENU + CONTENT
+        ========================= */
+        .portal-body {
+            display: grid;
+            grid-template-columns: 230px minmax(0, 1fr);
+            min-height: calc(100vh - 118px);
+            transition: grid-template-columns .22s ease;
+        }
+
+        .portal-body.sidebar-collapsed {
+            grid-template-columns: 72px minmax(0, 1fr);
+        }
+
+        .portal-sidebar {
+            background: #07111f;
+            color: #ffffff;
+            padding: 12px 8px;
+            height: calc(100vh - 118px);
+            position: sticky;
+            top: 118px;
+            overflow: hidden;
+            z-index: 20;
+        }
+
+
+        .sidebar-collapsed .portal-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-toggle {
+            width: 100%;
+            height: 36px;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(250, 204, 21, .16);
+            color: #facc15;
+            font-size: 17px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 12px;
+            font-weight: 950;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(250, 204, 21, .24);
+        }
+
+        .sidebar-collapsed .sidebar-toggle {
+            width: 48px;
+        }
+
+        .coach-mini-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #111c2f;
+            border: 1px solid #23324a;
+            border-radius: 16px;
+            padding: 10px;
+            margin-bottom: 14px;
+            min-width: 0;
+        }
+
+        .coach-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 999px;
+            background: #facc15;
+            color: #0f2a4a;
+            display: grid;
+            place-items: center;
+            font-weight: 950;
+            flex-shrink: 0;
+        }
+
+        .coach-mini-info {
+            min-width: 0;
+        }
+
+        .coach-mini-card b {
+            display: block;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 1.2;
+            max-width: 135px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .coach-mini-card span {
+            display: block;
+            color: #cbd5e1;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .sidebar-collapsed .coach-mini-card {
+            justify-content: center;
+            padding: 8px;
+        }
+
+        .sidebar-collapsed .coach-mini-info {
+            display: none;
+        }
+
+        .portal-nav {
+            display: grid;
+            gap: 8px;
+        }
+
+        .portal-nav a {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            height: 46px;
+            border-radius: 12px;
+            padding: 0 13px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 950;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .portal-nav a i {
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .portal-nav a.active {
+            background: #1d4ed8;
+        }
+
+        .portal-nav a.logout {
+            margin-top: 8px;
+            background: #3b1d2c;
+        }
+
+        .sidebar-collapsed .portal-nav a {
+            justify-content: center;
+            padding: 0;
+            width: 46px;
+            margin: 0 auto;
+        }
+
+        .sidebar-collapsed .nav-text {
+            display: none;
+        }
+
+        .portal-main {
+            min-width: 0;
+        }
+
+        .portal-content {
+            padding: 22px;
+        }
+
+        .portal-page-head {
+            margin-bottom: 16px;
+        }
+
+        .portal-page-head h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 950;
+        }
+
+        .portal-page-head p {
+            margin: 5px 0 0;
+            color: #64748b;
+            font-weight: 750;
+        }
+
+        .portal-card {
+            background: #ffffff;
+            border: 1px solid #dbe7f5;
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 12px 28px rgba(15,23,42,.07);
+        }
+
+        .flash-list {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .flash {
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #fff7d6;
+            border: 1px solid #fde68a;
+            color: #7c4a03;
+            font-weight: 800;
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media(max-width: 860px) {
+            .portal-topbar {
+                height: 96px;
+                padding: 0 116px 0 116px;
+            }
+
+            .portal-topbar .portal-logo {
+                left: 12px;
+                width: 72px;
+                height: 72px;
+                border-radius: 16px;
+                padding: 7px;
+            }
+
+            .mobile-sidebar-btn {
+                display: grid;
+                left: 92px;
+            }
+
+            .club-title small {
+                font-size: 18px;
+            }
+
+            .club-title b {
+                font-size: 25px;
+            }
+
+            .top-clock {
+                right: 10px;
+                min-width: 102px;
+                padding: 7px 8px;
+            }
+
+            .top-clock .clock-time {
+                font-size: 15px;
+            }
+
+            .top-clock .clock-date {
+                font-size: 10px;
+            }
+        }
+
+        @media(max-width: 520px) {
+            .portal-topbar {
+                height: 104px;
+                padding: 0 8px;
+                justify-content: center;
+            }
+
+            .portal-topbar .portal-logo {
+                left: 8px;
+                top: 12px;
+                transform: none;
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                padding: 5px;
+            }
+
+            .mobile-sidebar-btn {
+                left: 8px;
+                top: 66px;
+                transform: none;
+                width: 48px;
+                height: 30px;
+                border-radius: 10px;
+            }
+
+            .club-title {
+                max-width: 58%;
+                margin: 0 auto;
+            }
+
+            .club-title small {
+                font-size: 14px;
+            }
+
+            .club-title b {
+                font-size: 20px;
+            }
+
+            .top-clock {
+                top: 14px;
+                right: 8px;
+                transform: none;
+                min-width: 96px;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<header class="portal-topbar">
+    <button type="button" class="mobile-sidebar-btn" onclick="toggleCoachMobileSidebar()" title="Mở menu">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="portal-logo">
+        <img src="{{ app_settings.header.logo_url }}" alt="Logo">
+    </div>
+
+    <div class="club-title">
+        <small>{{ app_settings.header.club_small_title }}</small>
+        <b>{{ app_settings.header.club_name }}</b>
+    </div>
+
+    <div class="top-clock">
+        <div class="clock-time" id="coachClockTime">--:--:--</div>
+        <div class="clock-date" id="coachClockDate">--/--/----</div>
+    </div>
+</header>
+
+<div class="portal-body" id="coachPortalBody">
+    <aside class="portal-sidebar">
+        
+
+        <button type="button" class="sidebar-toggle" onclick="toggleCoachSidebar()" title="Thu/phóng menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="coach-mini-card">
+            <div class="coach-avatar">
+                {{ (coach.name or 'HLV')[:1] }}
+            </div>
+            <div class="coach-mini-info">
+                <b>{{ coach.name or 'HLV' }}</b>
+                <span>{{ coach.coach_code or '' }}</span>
+            </div>
+        </div>
+
+        <nav class="portal-nav">
+            <a class="{{ 'active' if active_page == 'coach_exam' else '' }}"
+               href="{{ url_for('coach_exam') }}">
+                <i class="fa-solid fa-clipboard-check"></i>
+                <span class="nav-text">Kiểm tra thi cấp</span>
+            </a>
+
+            <a class="logout" href="{{ url_for('coach_logout') }}">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span class="nav-text">Đăng xuất</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="portal-main">
+        <section class="portal-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-list">
+                    {% for category, message in messages %}
+                        <div class="flash">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block coach_content %}{% endblock %}
+        </section>
+    </main>
+</div>
+
+<script>
+function toggleCoachSidebar() {
+    const body = document.getElementById("coachPortalBody");
+    if (!body) return;
+
+    body.classList.toggle("sidebar-collapsed");
+
+    try {
+        localStorage.setItem(
+            "coach_sidebar_collapsed",
+            body.classList.contains("sidebar-collapsed") ? "1" : "0"
+        );
+    } catch (e) {}
+}
+
+function toggleCoachMobileSidebar() {
+    const body = document.getElementById("coachPortalBody");
+    if (!body) return;
+
+    body.classList.toggle("mobile-sidebar-open");
+}
+
+function closeCoachMobileSidebarOnClickOutside(e) {
+    const body = document.getElementById("coachPortalBody");
+    if (!body || !body.classList.contains("mobile-sidebar-open")) return;
+
+    const sidebar = body.querySelector(".portal-sidebar");
+    const btn = document.querySelector(".mobile-sidebar-btn");
+
+    if (
+        sidebar &&
+        !sidebar.contains(e.target) &&
+        btn &&
+        !btn.contains(e.target)
+    ) {
+        body.classList.remove("mobile-sidebar-open");
+    }
+}
+
+function updateCoachClock() {
+    const timeEl = document.getElementById("coachClockTime");
+    const dateEl = document.getElementById("coachClockDate");
+
+    if (!timeEl || !dateEl) return;
+
+    const now = new Date();
+
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+
+    const weekdays = [
+        "Chủ nhật",
+        "Thứ Hai",
+        "Thứ Ba",
+        "Thứ Tư",
+        "Thứ Năm",
+        "Thứ Sáu",
+        "Thứ Bảy"
+    ];
+
+    const dd = String(now.getDate()).padStart(2, "0");
+    const mo = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+
+    timeEl.textContent = `${hh}:${mm}:${ss}`;
+    dateEl.textContent = `${weekdays[now.getDay()]}, ${dd}/${mo}/${yyyy}`;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const body = document.getElementById("coachPortalBody");
+
+    try {
+        if (
+            body &&
+            localStorage.getItem("coach_sidebar_collapsed") === "1" &&
+            window.innerWidth > 860
+        ) {
+            body.classList.add("sidebar-collapsed");
+        }
+    } catch (e) {}
+
+    updateCoachClock();
+    setInterval(updateCoachClock, 1000);
+
+    document.addEventListener("click", closeCoachMobileSidebarOnClickOutside);
+});
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

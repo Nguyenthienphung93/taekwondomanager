@@ -2322,6 +2322,11 @@
                 <span class="student-nav-text">Thông tin</span>
             </a>
 
+            <a class="{{ 'active' if active_page == 'club_info' else '' }}" href="{{ url_for('student_portal_club_info') }}">
+                <span class="student-nav-icon"><i class="fa-solid fa-school-flag"></i></span>
+                <span class="student-nav-text">Thông tin CLB</span>
+            </a>
+
             <a class="{{ 'active' if active_page == 'fees' else '' }}" href="{{ url_for('student_portal_fees') }}">
                 <span class="student-nav-icon"><i class="fa-solid fa-money-bill-wave"></i></span>
                 <span class="student-nav-text">Học phí</span>

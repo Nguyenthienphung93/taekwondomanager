@@ -1,0 +1,311 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'club_info' %}
+{% block title %}Thông tin CLB{% endblock %}
+
+{% block extra_css %}
+<style>
+.club-info-wrap{display:grid;gap:16px;}
+.club-card{background:#fff;border:1px solid #dbe7f5;border-radius:22px;box-shadow:0 12px 28px rgba(15,23,42,.07);min-width:0;overflow:hidden;}
+.club-section-head{display:flex;align-items:center;gap:12px;}
+.club-section-icon{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#0f2a4a,#1d4ed8);color:#facc15;display:grid;place-items:center;font-size:22px;box-shadow:0 10px 22px rgba(29,78,216,.18);flex-shrink:0;}
+.club-section-head h2{margin:0;font-size:24px;color:#0f172a;font-weight:950;line-height:1.2;}
+.club-section-head p{margin:4px 0 0;color:#64748b;font-weight:750;}
+.club-text{color:#1e293b;font-size:16px;font-weight:680;line-height:1.72;}
+.club-text p{margin:0 0 12px;}.club-text p:last-child{margin-bottom:0;}
+
+/* =========================
+   ACCORDION - CHỈ MỞ 1 KHUNG
+========================= */
+.club-accordion-card{background:#fff;border:1px solid #dbe7f5;border-radius:22px;box-shadow:0 12px 28px rgba(15,23,42,.07);overflow:hidden;}
+.club-accordion-head{width:100%;border:0;background:#fff;padding:18px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left;cursor:pointer;}
+.club-accordion-head:hover{background:#f8fbff;}
+.club-accordion-left{display:flex;align-items:center;gap:12px;min-width:0;}
+.club-accordion-title h2{margin:0;font-size:24px;color:#0f172a;font-weight:950;line-height:1.2;}
+.club-accordion-title p{margin:4px 0 0;color:#64748b;font-weight:750;}
+.club-accordion-arrow{width:38px;height:38px;border-radius:14px;background:#eff6ff;color:#1d4ed8;display:grid;place-items:center;font-size:18px;transition:.2s;flex-shrink:0;}
+.club-accordion-card.is-open .club-accordion-arrow{transform:rotate(180deg);background:#facc15;color:#0f2a4a;}
+.club-accordion-body{display:none;padding:0 18px 18px;}
+.club-accordion-card.is-open .club-accordion-body{display:block;}
+
+/* =========================
+   INTRO MỚI
+========================= */
+.club-hero-card{position:relative;background:radial-gradient(circle at 0% 0%,rgba(250,204,21,.24),transparent 32%),radial-gradient(circle at 100% 0%,rgba(29,78,216,.12),transparent 34%),linear-gradient(135deg,#ffffff 0%,#f8fbff 100%);}
+.club-hero-card::before{content:"";position:absolute;inset:0 auto 0 0;width:8px;background:linear-gradient(180deg,#facc15,#1d4ed8);}
+.club-hero-content{position:relative;padding-left:4px;}
+.club-pretitle{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;padding:7px 12px;border-radius:999px;background:#fff7d6;border:1px solid #fde68a;color:#92400e;font-size:13px;font-weight:950;}
+.club-intro-main{margin:0 0 12px;color:#1e293b;font-size:16px;font-weight:750;line-height:1.72;}
+.club-intro-main b{color:#0f172a;font-weight:950;}
+.intro-pillar-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px;}
+.intro-pillar-card{border:1px solid #dbe7f5;border-radius:18px;background:#fff;padding:14px;box-shadow:0 8px 18px rgba(15,23,42,.045);}
+.intro-pillar-icon{width:40px;height:40px;border-radius:14px;background:#0f2a4a;color:#facc15;display:grid;place-items:center;font-size:18px;margin-bottom:10px;}
+.intro-pillar-card h3{margin:0 0 6px;color:#0f172a;font-size:16px;font-weight:950;}
+.intro-pillar-card p{margin:0;color:#475569;font-size:14px;font-weight:720;line-height:1.55;}
+
+/* =========================
+   HLV SECTION
+========================= */
+.coach-main-block{display:grid;gap:18px;}
+.coach-chief-card{border:1px solid #dbe7f5;border-radius:22px;background:linear-gradient(135deg,#fff 0%,#f8fbff 100%);padding:18px;}
+.coach-chief-title{display:inline-flex;align-items:center;gap:8px;background:#0f2a4a;color:#fff;font-size:15px;font-weight:900;padding:9px 14px;border-radius:999px;margin-bottom:16px;}
+.coach-chief-layout{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:center;}
+.coach-chief-photo,.coach-chief-placeholder{width:180px;height:220px;border-radius:18px;background:#eef4ff;border:1px solid #dbe7f5;box-shadow:0 10px 24px rgba(15,23,42,.10);}
+.coach-chief-photo{object-fit:cover;}.coach-chief-placeholder{display:grid;place-items:center;color:#1d4ed8;font-size:48px;font-weight:900;background:linear-gradient(135deg,#e2e8f0,#f8fafc);}
+.coach-chief-name{margin:0 0 8px;font-size:28px;font-weight:950;color:#0f172a;line-height:1.2;}
+.coach-chief-role{display:inline-block;padding:6px 14px;border-radius:999px;background:#facc15;color:#0f2a4a;font-size:14px;font-weight:950;margin-bottom:12px;}
+.coach-chief-desc{margin:0;color:#334155;font-size:15px;line-height:1.7;font-weight:720;}
+.coach-group-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.coach-group-card{border:1px solid #dbe7f5;border-radius:20px;background:#fff;padding:16px;box-shadow:0 10px 24px rgba(15,23,42,.05);}
+.coach-group-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}.coach-group-icon{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#facc15,#f59e0b);color:#0f2a4a;display:grid;place-items:center;font-size:18px;flex-shrink:0;}
+.coach-group-title{margin:0;font-size:20px;font-weight:950;color:#0f172a;line-height:1.2;}.coach-group-sub{margin:2px 0 0;color:#64748b;font-size:13px;font-weight:700;}
+.coach-person-list{display:grid;gap:14px;}.coach-person-card{border:1px solid #e2e8f0;border-radius:18px;padding:14px;background:#f8fbff;}.coach-person-top{display:flex;gap:12px;align-items:center;}
+.coach-person-photo,.coach-person-placeholder{width:72px;height:88px;border-radius:14px;background:#eef4ff;border:1px solid #dbe7f5;flex-shrink:0;}.coach-person-photo{object-fit:cover;}.coach-person-placeholder{display:grid;place-items:center;color:#1d4ed8;font-size:24px;font-weight:900;background:linear-gradient(135deg,#dbeafe,#eff6ff);}
+.coach-person-name{margin:0 0 6px;font-size:18px;font-weight:900;color:#0f172a;line-height:1.25;}.coach-meta{margin:4px 0;font-size:14px;color:#334155;font-weight:720;line-height:1.45;}.coach-meta b{color:#0f172a;}
+
+/* =========================
+   REGISTRAR
+========================= */
+.registrar-card{position:relative;overflow:hidden;background:radial-gradient(circle at 100% 0%,rgba(250,204,21,.22),transparent 30%),linear-gradient(135deg,#fff 0%,#f8fbff 100%);border:1px solid #dbe7f5;border-radius:22px;padding:18px;}
+.registrar-card::before{content:"";position:absolute;inset:0 auto 0 0;width:8px;background:linear-gradient(180deg,#f59e0b,#ef4444);}
+.registrar-layout{display:grid;grid-template-columns:180px minmax(0,1fr) 260px;gap:18px;align-items:center;position:relative;z-index:1;}
+.registrar-photo,.registrar-placeholder{width:180px;height:220px;border-radius:20px;background:#eef4ff;border:1px solid #dbe7f5;box-shadow:0 12px 26px rgba(15,23,42,.12);}.registrar-photo{object-fit:cover;}.registrar-placeholder{display:grid;place-items:center;color:#1d4ed8;font-size:42px;font-weight:950;background:linear-gradient(135deg,#fff7d6,#eff6ff);}
+.registrar-badge{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;background:#ef4444;color:#fff;font-size:14px;font-weight:950;margin-bottom:10px;box-shadow:0 10px 20px rgba(239,68,68,.22);}.registrar-name{margin:0 0 8px;font-size:28px;font-weight:950;color:#0f172a;line-height:1.18;}.registrar-desc{margin:0;color:#334155;font-size:15px;line-height:1.65;font-weight:720;}
+.registrar-contact-box{border-radius:20px;border:1px solid #fde68a;background:#fff7d6;padding:16px;box-shadow:0 10px 22px rgba(245,158,11,.12);}.registrar-contact-title{margin:0 0 12px;color:#92400e;font-size:16px;font-weight:950;}.registrar-phone{display:flex;align-items:center;gap:10px;min-height:54px;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid #facc15;color:#0f172a;font-size:20px;font-weight:950;}.registrar-phone i{color:#16a34a;font-size:22px;}
+
+/* =========================
+   SCHEDULE + FEE
+========================= */
+.club-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}.info-card-grid{display:grid;gap:12px;}.info-mini-card{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:start;padding:14px;border-radius:17px;border:1px solid #e2e8f0;background:#f8fafc;}.info-mini-icon{width:42px;height:42px;border-radius:14px;background:#0f2a4a;color:#facc15;display:grid;place-items:center;font-size:18px;}.info-mini-title{margin:0 0 4px;font-size:15px;font-weight:950;color:#0f172a;line-height:1.3;}.info-mini-desc{margin:0;color:#475569;font-size:14px;font-weight:720;line-height:1.48;}.fee-highlight{border-color:#fde68a;background:linear-gradient(180deg,#fffdf3,#fff);}.fee-highlight .info-mini-icon{background:linear-gradient(135deg,#facc15,#f59e0b);color:#0f2a4a;}
+.schedule-two-boxes{display:grid;grid-template-columns:1.35fr .9fr;gap:16px;align-items:stretch;}.schedule-box{border:1px solid #dbe7f5;border-radius:20px;padding:15px;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);box-shadow:0 10px 22px rgba(15,23,42,.05);}.schedule-summer-box{border-color:#fde68a;background:radial-gradient(circle at top right,rgba(250,204,21,.18),transparent 34%),linear-gradient(180deg,#fffdf3 0%,#fff 100%);}.schedule-box-head{display:flex;align-items:center;gap:11px;margin-bottom:13px;}.schedule-box-icon{width:42px;height:42px;border-radius:14px;background:#0f2a4a;color:#facc15;display:grid;place-items:center;font-size:18px;flex-shrink:0;}.schedule-box-icon.summer{background:linear-gradient(135deg,#facc15,#f59e0b);color:#0f2a4a;}.schedule-box-head h3{margin:0;color:#0f172a;font-size:20px;font-weight:950;line-height:1.2;}.schedule-box-head p{margin:3px 0 0;color:#64748b;font-size:13px;font-weight:750;}.schedule-note{margin-top:12px;border-radius:14px;padding:12px 13px;background:#fff7d6;border:1px solid #fde68a;color:#6b4e00;font-size:13px;font-weight:750;line-height:1.5;}
+.fee-box-wrap{display:grid;gap:16px;}.fee-main-box{border:1px solid #dbe7f5;border-radius:20px;padding:16px;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%);box-shadow:0 10px 22px rgba(15,23,42,.05);}.fee-box-head{display:flex;align-items:center;gap:11px;margin-bottom:14px;}.fee-box-icon{width:42px;height:42px;border-radius:14px;background:#0f2a4a;color:#facc15;display:grid;place-items:center;font-size:18px;flex-shrink:0;}.fee-box-icon.uniform{background:linear-gradient(135deg,#2563eb,#0f2a4a);color:#fff;}.fee-box-icon.exam{background:linear-gradient(135deg,#facc15,#f59e0b);color:#0f2a4a;}.fee-box-head h3{margin:0;color:#0f172a;font-size:20px;font-weight:950;line-height:1.2;}.fee-box-head p{margin:3px 0 0;color:#64748b;font-size:13px;font-weight:750;}.fee-plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}.fee-plan-card{border:1px solid #dbe7f5;border-radius:18px;background:#fff;padding:15px;text-align:center;box-shadow:0 8px 18px rgba(15,23,42,.045);}.fee-plan-card.discount{border-color:#fde68a;background:linear-gradient(180deg,#fffdf3,#fff);}.fee-plan-title{font-size:14px;font-weight:950;color:#0f172a;}.fee-plan-price{margin-top:8px;color:#1d4ed8;font-size:22px;font-weight:1000;line-height:1.1;}.fee-plan-card.discount .fee-plan-price{color:#d97706;}.fee-plan-desc{margin-top:5px;color:#64748b;font-size:13px;font-weight:750;}.fee-family-note{margin-top:12px;display:flex;gap:11px;align-items:center;padding:13px 14px;border-radius:16px;background:#fff7d6;border:1px solid #fde68a;color:#6b4e00;}.fee-family-note i{width:34px;height:34px;border-radius:12px;background:#facc15;color:#0f2a4a;display:grid;place-items:center;flex-shrink:0;}.fee-family-note b{display:block;color:#0f172a;font-weight:950;margin-bottom:2px;}.fee-family-note span{display:block;color:#6b4e00;font-size:13px;font-weight:750;}.uniform-box{background:radial-gradient(circle at top right,rgba(59,130,246,.10),transparent 35%),linear-gradient(180deg,#fff 0%,#f8fbff 100%);}.uniform-price-card,.exam-price-card{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid #dbe7f5;border-radius:17px;padding:15px;background:#fff;}.uniform-price-card b,.exam-price-card b{display:block;color:#0f172a;font-size:16px;font-weight:950;margin-bottom:3px;}.uniform-price-card span,.exam-price-card span{color:#64748b;font-size:13px;font-weight:750;}.uniform-price-card strong,.exam-price-card strong{color:#1d4ed8;font-size:20px;font-weight:1000;white-space:nowrap;}.exam-fee-box{border-color:#fde68a;background:radial-gradient(circle at top right,rgba(250,204,21,.16),transparent 35%),linear-gradient(180deg,#fffdf3 0%,#fff 100%);}.exam-note-box{margin-top:13px;border:1px solid #fecaca;border-radius:17px;background:#fff7f7;padding:14px 15px;}.exam-note-box h4{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:#991b1b;font-size:16px;font-weight:950;}.exam-note-box ul{margin:0;padding-left:20px;color:#7f1d1d;font-size:14px;font-weight:750;line-height:1.6;}.exam-note-box li+li{margin-top:7px;}
+
+@media(max-width:1100px){.coach-group-grid,.club-grid-2,.schedule-two-boxes{grid-template-columns:1fr;}.registrar-layout{grid-template-columns:160px minmax(0,1fr);}.registrar-contact-box{grid-column:1/-1;}.registrar-photo,.registrar-placeholder{width:160px;height:200px;}}
+@media(max-width:760px){.coach-chief-layout{grid-template-columns:1fr;}.coach-chief-photo,.coach-chief-placeholder{width:170px;height:210px;margin:0 auto;}.coach-chief-name,.registrar-name{font-size:24px;}.coach-person-top{align-items:flex-start;}.fee-plan-grid{grid-template-columns:1fr;}.uniform-price-card,.exam-price-card{align-items:flex-start;flex-direction:column;}.uniform-price-card strong,.exam-price-card strong{font-size:18px;}.registrar-layout{grid-template-columns:1fr;text-align:center;}.registrar-photo,.registrar-placeholder{margin:0 auto;}.registrar-badge{justify-content:center;}.registrar-phone{justify-content:center;font-size:18px;}}
+@media(max-width:620px){.club-accordion-head{padding:15px;}.club-accordion-body{padding:0 15px 15px;}.club-section-icon{width:42px;height:42px;border-radius:14px;font-size:19px;}.club-accordion-title h2,.club-section-head h2{font-size:20px;}.club-accordion-title p,.club-section-head p{font-size:13px;}.club-text,.club-intro-main{font-size:14px;}.intro-pillar-grid{grid-template-columns:1fr;}.info-mini-card{grid-template-columns:40px minmax(0,1fr);padding:12px;}.info-mini-icon{width:38px;height:38px;font-size:16px;}}
+@media(max-width:980px){.intro-pillar-grid{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>🏫 Thông tin CLB</h1>
+        <p>Giới thiệu CLB, ban huấn luyện, lịch học và các khoản phí hiện tại.</p>
+    </div>
+</div>
+
+<div class="club-info-wrap" id="clubAccordionRoot">
+
+    <!-- GIỚI THIỆU CLB -->
+    <section class="club-accordion-card club-hero-card is-open" data-club-accordion>
+        <button class="club-accordion-head" type="button" onclick="toggleClubAccordion(this)">
+            <div class="club-accordion-left">
+                <div class="club-section-icon"><i class="fa-solid fa-sun"></i></div>
+                <div class="club-accordion-title">
+                    <h2>CLB Taekwondo Sunflower - Hoa Hướng Dương Diên Hồng</h2>
+                    <p>Tiền thân: CLB Taekwondo Hoa Hướng Dương Quận 10</p>
+                </div>
+            </div>
+            <div class="club-accordion-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+        </button>
+        <div class="club-accordion-body">
+            <div class="club-hero-content">
+                <div class="club-pretitle"><i class="fa-solid fa-location-dot"></i> Cơ sở Diên Hồng</div>
+                <p class="club-intro-main">
+                    <b>CLB Taekwondo Sunflower (Hoa Hướng Dương)</b> là môi trường tập luyện võ thuật uy tín dành cho võ sinh ở mọi lứa tuổi. Hiện nay, cơ sở Quận 10 cũ đã chính thức chuyển đổi và nâng cấp hoạt động ổn định tại <b>Cơ sở Diên Hồng</b>, mở ra một không gian tập luyện chuyên nghiệp và khang trang hơn.
+                </p>
+                <p class="club-intro-main">
+                    Với định hướng đào tạo toàn diện theo tiêu chuẩn quốc gia, CLB tập trung đồng thời vào 3 trụ cột cốt lõi cho võ sinh:
+                </p>
+
+                <div class="intro-pillar-grid">
+                    <div class="intro-pillar-card">
+                        <div class="intro-pillar-icon"><i class="fa-solid fa-user-ninja"></i></div>
+                        <h3>Kỹ thuật chuyên sâu</h3>
+                        <p>Phát triển vững chắc từ nền tảng căn bản như kỹ thuật tấn, kỹ thuật tay - chân, bài quyền Poomsae, đối kháng Kyorugi và võ nhạc hiện đại.</p>
+                    </div>
+                    <div class="intro-pillar-card">
+                        <div class="intro-pillar-icon"><i class="fa-solid fa-dumbbell"></i></div>
+                        <h3>Thể chất & Kỷ luật</h3>
+                        <p>Nâng cao sức mạnh, sức bền, sự linh hoạt, rèn luyện tác phong nghiêm túc, ý chí vượt khó và tinh thần tự tin trong cuộc sống.</p>
+                    </div>
+                    <div class="intro-pillar-card">
+                        <div class="intro-pillar-icon"><i class="fa-solid fa-handshake-angle"></i></div>
+                        <h3>Võ đạo & Gắn kết</h3>
+                        <p>Nuôi dưỡng đạo đức võ học, biết ơn - tôn trọng; tạo điều kiện tham gia thi thăng cấp đai, giao lưu và hoạt động thi đấu phong trào ý nghĩa.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HLV -->
+    {% set head = club_info.head_coach or {} %}
+    {% set coaches = club_info.coaches or [] %}
+    {% set coaches_246 = coaches | selectattr("group", "equalto", "246") | list %}
+    {% set coaches_357 = coaches | selectattr("group", "equalto", "357") | list %}
+    {% set coaches_weekend = coaches | selectattr("group", "equalto", "weekend") | list %}
+
+    <section class="club-accordion-card" data-club-accordion>
+        <button class="club-accordion-head" type="button" onclick="toggleClubAccordion(this)">
+            <div class="club-accordion-left">
+                <div class="club-section-icon"><i class="fa-solid fa-user-shield"></i></div>
+                <div class="club-accordion-title">
+                    <h2>Thành phần HLV CLB HHD Diên Hồng</h2>
+                    <p>Đội ngũ phụ trách chuyên môn và hỗ trợ lớp học</p>
+                </div>
+            </div>
+            <div class="club-accordion-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+        </button>
+
+        <div class="club-accordion-body">
+            <div class="coach-main-block">
+                <div class="coach-chief-card">
+                    <div class="coach-chief-title"><i class="fa-solid fa-crown"></i> Huấn Luyện Viên Trưởng</div>
+                    <div class="coach-chief-layout">
+                        <div>
+                            {% if head.photo_url %}
+                                <img class="coach-chief-photo" src="{{ head.photo_url }}" alt="{{ head.name or 'HLV Trưởng' }}">
+                            {% else %}
+                                <div class="coach-chief-placeholder">{{ (head.name or 'NTP')[:3] }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="coach-chief-name">{{ head.name or 'Nguyễn Thiên Phụng' }}</h3>
+                            <div class="coach-chief-role">{{ head.role or 'HLV Trưởng' }}</div>
+                            {% if head.phone %}<p class="coach-meta"><b>SĐT:</b> {{ head.phone }}</p>{% endif %}
+                            <p class="coach-chief-desc">{{ head.description or 'Đang cập nhật thông tin HLV trưởng.' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="coach-group-grid">
+                    <div class="coach-group-card">
+                        <div class="coach-group-header"><div class="coach-group-icon"><i class="fa-solid fa-people-group"></i></div><div><h3 class="coach-group-title">HLV lớp 2-4-6</h3><p class="coach-group-sub">Lớp buổi chiều</p></div></div>
+                        <div class="coach-person-list">
+                            {% for c in coaches_246 %}
+                            <div class="coach-person-card"><div class="coach-person-top">
+                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
+                                <div><h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4><p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p><p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p></div>
+                            </div></div>
+                            {% else %}<div class="coach-person-card"><p class="coach-meta">Đang cập nhật HLV lớp 2-4-6.</p></div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="coach-group-card">
+                        <div class="coach-group-header"><div class="coach-group-icon"><i class="fa-solid fa-people-group"></i></div><div><h3 class="coach-group-title">HLV lớp 3-5-7</h3><p class="coach-group-sub">Lớp chính trong tuần</p></div></div>
+                        <div class="coach-person-list">
+                            {% for c in coaches_357 %}
+                            <div class="coach-person-card"><div class="coach-person-top">
+                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
+                                <div><h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4><p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p><p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p></div>
+                            </div></div>
+                            {% else %}<div class="coach-person-card"><p class="coach-meta">Đang cập nhật HLV lớp 3-5-7.</p></div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="coach-group-card">
+                        <div class="coach-group-header"><div class="coach-group-icon"><i class="fa-solid fa-sun"></i></div><div><h3 class="coach-group-title">HLV lớp sáng & cuối tuần</h3><p class="coach-group-sub">Thứ 7, Chủ nhật và lớp sáng</p></div></div>
+                        <div class="coach-person-list">
+                            {% for c in coaches_weekend %}
+                            <div class="coach-person-card"><div class="coach-person-top">
+                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
+                                <div><h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4><p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p><p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p></div>
+                            </div></div>
+                            {% else %}<div class="coach-person-card"><p class="coach-meta">Đang cập nhật HLV lớp sáng và cuối tuần.</p></div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NGƯỜI GHI DANH -->
+    {% set registrar = club_info.registrar or {} %}
+    <section class="club-accordion-card" data-club-accordion>
+        <button class="club-accordion-head" type="button" onclick="toggleClubAccordion(this)">
+            <div class="club-accordion-left">
+                <div class="club-section-icon"><i class="fa-solid fa-clipboard-user"></i></div>
+                <div class="club-accordion-title"><h2>Người Ghi Danh</h2><p>Thông tin liên hệ hỗ trợ đăng ký, học phí và lịch học</p></div>
+            </div>
+            <div class="club-accordion-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+        </button>
+        <div class="club-accordion-body">
+            <div class="registrar-card">
+                <div class="registrar-layout">
+                    <div>{% if registrar.photo_url %}<img class="registrar-photo" src="{{ registrar.photo_url }}" alt="{{ registrar.name or 'Người ghi danh' }}">{% else %}<div class="registrar-placeholder">{{ (registrar.name or 'GD')[:2] }}</div>{% endif %}</div>
+                    <div><div class="registrar-badge"><i class="fa-solid fa-star"></i>{{ registrar.role or 'Người ghi danh' }}</div><h3 class="registrar-name">{{ registrar.name or 'Đang cập nhật' }}</h3><p class="registrar-desc">{{ registrar.description or 'Phụ trách tư vấn, tiếp nhận thông tin đăng ký và hỗ trợ phụ huynh, võ sinh trong quá trình ghi danh tại CLB.' }}</p></div>
+                    <div class="registrar-contact-box"><h4 class="registrar-contact-title">Số điện thoại liên hệ</h4><div class="registrar-phone"><i class="fa-solid fa-phone-volume"></i><span>{{ registrar.phone or 'Đang cập nhật' }}</span></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="club-grid-2">
+        <!-- LỊCH HỌC -->
+        <section class="club-accordion-card" data-club-accordion>
+            <button class="club-accordion-head" type="button" onclick="toggleClubAccordion(this)">
+                <div class="club-accordion-left"><div class="club-section-icon"><i class="fa-solid fa-calendar-days"></i></div><div class="club-accordion-title"><h2>Lịch học</h2><p>Thời khóa biểu các lớp đang sinh hoạt</p></div></div>
+                <div class="club-accordion-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+            </button>
+            <div class="club-accordion-body">
+                <div class="schedule-two-boxes">
+                    <div class="schedule-box">
+                        <div class="schedule-box-head"><div class="schedule-box-icon"><i class="fa-solid fa-calendar-check"></i></div><div><h3>Lịch thường xuyên</h3><p>Các lớp tập cố định trong tuần</p></div></div>
+                        <div class="info-card-grid">
+                            <div class="info-mini-card"><div class="info-mini-icon"><i class="fa-solid fa-clock"></i></div><div><h3 class="info-mini-title">Lớp 2-4-6</h3><p class="info-mini-desc">18:00 - 19:30 và 19:30 - 21:00</p></div></div>
+                            <div class="info-mini-card"><div class="info-mini-icon"><i class="fa-solid fa-clock"></i></div><div><h3 class="info-mini-title">Lớp 3-5-7</h3><p class="info-mini-desc">18:00 - 19:30 và 19:30 - 21:00</p></div></div>
+                            <div class="info-mini-card"><div class="info-mini-icon"><i class="fa-solid fa-clock"></i></div><div><h3 class="info-mini-title">Lớp Thứ 7 và Chủ nhật</h3><p class="info-mini-desc">8:30 - 10:30</p></div></div>
+                        </div>
+                    </div>
+                    <div class="schedule-box schedule-summer-box">
+                        <div class="schedule-box-head"><div class="schedule-box-icon summer"><i class="fa-solid fa-sun"></i></div><div><h3>Lịch hè</h3><p>Từ đầu tháng 6 đến cuối tháng 8</p></div></div>
+                        <div class="info-card-grid"><div class="info-mini-card fee-highlight"><div class="info-mini-icon"><i class="fa-solid fa-sun"></i></div><div><h3 class="info-mini-title">Sáng 2-4-6 hoặc 3-5-7</h3><p class="info-mini-desc">8:00 - 9:30 và 9:30 - 11:00</p></div></div></div>
+                        <div class="schedule-note">Lịch hè áp dụng trong thời gian nghỉ hè. CLB có thể điều chỉnh theo số lượng võ sinh đăng ký thực tế.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- HỌC PHÍ -->
+        <section class="club-accordion-card" data-club-accordion>
+            <button class="club-accordion-head" type="button" onclick="toggleClubAccordion(this)">
+                <div class="club-accordion-left"><div class="club-section-icon"><i class="fa-solid fa-money-check-dollar"></i></div><div class="club-accordion-title"><h2>Học phí và lệ phí</h2><p>Thông tin học phí, võ phục và thi nâng cấp đai</p></div></div>
+                <div class="club-accordion-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+            </button>
+            <div class="club-accordion-body">
+                <div class="fee-box-wrap">
+                    <div class="fee-main-box">
+                        <div class="fee-box-head"><div class="fee-box-icon"><i class="fa-solid fa-coins"></i></div><div><h3>Học phí</h3><p>Các gói học phí hiện tại</p></div></div>
+                        <div class="fee-plan-grid">
+                            <div class="fee-plan-card"><div class="fee-plan-title">1 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.monthly_fee or '500.000đ' }}</div><div class="fee-plan-desc">/ tháng / học viên</div></div>
+                            <div class="fee-plan-card discount"><div class="fee-plan-title">3 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.three_month_discount or 'Giảm 10%' }}</div><div class="fee-plan-desc">học phí</div></div>
+                            <div class="fee-plan-card discount"><div class="fee-plan-title">6 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.six_month_bonus or 'Tặng 1 tháng' }}</div><div class="fee-plan-desc">miễn phí</div></div>
+                        </div>
+                        <div class="fee-family-note"><i class="fa-solid fa-users"></i><div><b>Gia đình hoặc bạn bè</b><span>{{ club_info.fees_info.family_discount or 'Giảm thêm 10% nếu đóng chung.' }}</span></div></div>
+                    </div>
+                    <div class="fee-main-box uniform-box"><div class="fee-box-head"><div class="fee-box-icon uniform"><i class="fa-solid fa-shirt"></i></div><div><h3>Võ phục</h3><p>Trang phục tập luyện Taekwondo</p></div></div><div class="uniform-price-card"><div><b>Võ phục Taekwondo</b><span>Áo + quần tập luyện</span></div><strong>{{ club_info.fees_info.uniform_fee or '420.000đ / bộ' }}</strong></div></div>
+                    <div class="fee-main-box exam-fee-box"><div class="fee-box-head"><div class="fee-box-icon exam"><i class="fa-solid fa-medal"></i></div><div><h3>Lệ phí thi nâng cấp đai</h3><p>Áp dụng cho các kỳ thi nâng cấp tại CLB</p></div></div><div class="exam-price-card"><div><b>Phí thi cấp</b><span>Đóng theo từng lần thi</span></div><strong>{{ club_info.fees_info.exam_fee or '300.000đ / lần' }}</strong></div><div class="exam-note-box"><h4><i class="fa-solid fa-triangle-exclamation"></i>Lưu ý</h4><ul>{% for note in club_info.fees_info.exam_notes or [] %}<li>{{ note }}</li>{% else %}<li>3 tháng CLB sẽ tổ chức thi nâng cấp đai 1 lần.</li><li>Võ sinh cần đảm bảo thời gian tập luyện và chuyên môn, được HLV phụ trách xác nhận trước khi thi.</li><li>Võ sinh mới thi lần đầu đóng thêm <b>20.000đ</b> một lần duy nhất để Liên đoàn Taekwondo Việt Nam cấp mã.</li>{% endfor %}</ul></div></div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+function toggleClubAccordion(button){
+    const currentCard = button.closest('[data-club-accordion]');
+    const root = document.getElementById('clubAccordionRoot');
+    if(!currentCard || !root) return;
+
+    const wasOpen = currentCard.classList.contains('is-open');
+    root.querySelectorAll('[data-club-accordion]').forEach(card => {
+        card.classList.remove('is-open');
+    });
+
+    if(!wasOpen){
+        currentCard.classList.add('is-open');
+    }
+}
+</script>
+{% endblock %}

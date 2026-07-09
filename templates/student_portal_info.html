@@ -17,12 +17,15 @@
 
 .student-photo {
     width: 260px;
-    height: 335px;
+    height: 347px;
     border-radius: 18px;
     object-fit: cover;
+    object-position: center top;
     background: #f1f5f9;
     border: 1px solid #dbe7f5;
     box-shadow: 0 10px 24px rgba(15,23,42,.12);
+    image-rendering: auto;
+    filter: saturate(0.98) contrast(0.98);
 }
 
 .no-photo {
@@ -103,7 +106,7 @@
 <div class="info-layout">
     <section class="portal-card photo-card">
         {% if photo_url %}
-            <img class="student-photo" src="{{ photo_url }}" alt="Ảnh học viên">
+            <img class="student-photo" src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}" alt="Ảnh học viên">
         {% else %}
             <div class="no-photo">Chưa có ảnh</div>
         {% endif %}
