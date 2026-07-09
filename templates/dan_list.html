@@ -79,6 +79,7 @@
                 <th>Cấp hiện tại</th>
                 <th>Cấp dự thi</th>
                 <th>Số thi</th>
+                <th>HLV kiểm tra</th>
                 <th>Kết quả</th>
             </tr>
         </thead>
@@ -131,7 +132,40 @@
                 </td>
 
                 <td>
-                    {% if r.result_saved %}
+                    {% set coach_status = r.coach_check_status or 'Chưa KTra' %}
+
+                    <div class="coach-check-admin-badge
+                        {% if coach_status == 'Đúng' %}
+                            coach-check-ok
+                        {% elif coach_status == 'Sai' %}
+                            coach-check-wrong
+                        {% elif coach_status == 'Ktra lại' %}
+                            coach-check-review
+                        {% else %}
+                            coach-check-none
+                        {% endif %}
+                    ">
+                        <b>{{ coach_status }}</b>
+
+                        {% if r.coach_checked_by_name %}
+                            <span>{{ r.coach_checked_by_name }}</span>
+                        {% else %}
+                            <span>Chờ HLV KTra</span>
+                        {% endif %}
+
+                        {% if r.coach_checked_at %}
+                            <small>{{ r.coach_checked_at|datetime_vn }}</small>
+                        {% endif %}
+
+                        {% if r.coach_check_note %}
+                            <em>{{ r.coach_check_note }}</em>
+                        {% endif %}
+                    </div>
+                </td>
+
+
+                <td>
+                    {% if r.result_saved or r.saved_ket_qua or r.saved_so_thi %}
                         <div class="saved-result-badge
                             {% if r.saved_ket_qua == 'Đạt' %}
                                 saved-pass
@@ -1589,6 +1623,72 @@ function showImportExamModal(options) {
     border: 1px solid #facc15;
     color: #92400e;
 }
-</style>
 
+.coach-check-admin-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    padding: 7px 12px;
+    border-radius: 14px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 950;
+    line-height: 1.25;
+    gap: 2px;
+}
+
+.coach-check-admin-badge b {
+    font-size: 13px;
+}
+
+.coach-check-admin-badge span {
+    font-size: 12px;
+    font-weight: 850;
+    opacity: .9;
+}
+
+.coach-check-admin-badge small {
+    font-size: 11px;
+    font-weight: 750;
+    opacity: .8;
+}
+
+.coach-check-admin-badge em {
+    margin-top: 3px;
+    max-width: 150px;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+    color: #334155;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.coach-check-admin-badge.coach-check-ok {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.coach-check-admin-badge.coach-check-wrong {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.coach-check-admin-badge.coach-check-review {
+    background: #fff7d6;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.coach-check-admin-badge.coach-check-none {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+</style>
 {% endblock %}

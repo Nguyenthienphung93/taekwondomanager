@@ -393,6 +393,7 @@ ADMIN_PUBLIC_ENDPOINTS = {
     "coach_login",
     "coach_logout",
     "coach_exam",
+    "coach_dan",
     "coach_exam_update_status",
 }
 
@@ -513,6 +514,22 @@ def is_safe_next_url(next_url):
     next_url = str(next_url or "").strip()
     return next_url.startswith("/") and not next_url.startswith("//")
 
+def back_to_current_page(default_endpoint):
+    """
+    Quay lại đúng trang vừa thao tác.
+    Dùng cho xóa/sửa để không bị nhảy về trang 1.
+    """
+    next_url = request.form.get("next") or request.referrer or url_for(default_endpoint)
+    next_url = str(next_url or "").strip()
+
+    # Chỉ cho redirect nội bộ, tránh redirect ra link ngoài
+    if next_url.startswith(request.host_url):
+        next_url = next_url.replace(request.host_url.rstrip("/"), "", 1)
+
+    if not is_safe_next_url(next_url):
+        next_url = url_for(default_endpoint)
+
+    return redirect(next_url)
 
 @app.before_request
 def require_admin_login_for_management_pages():
@@ -558,12 +575,12 @@ def admin_login():
             next_url = url_for("students")
 
         if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
-            session.clear()
+            # Không dùng session.clear(), vì sẽ làm out Student và Coach
             session["admin_logged_in"] = True
             session["admin_username"] = username
             session.permanent = remember
 
-            flash("Đăng nhập admin thành công")
+            flash("Đăng nhập admin thành công", "success")
             return redirect(next_url)
 
         flash("ID hoặc mật khẩu admin chưa đúng")
@@ -772,9 +789,9 @@ def students_add():
 @app.post('/students/<license_code>/delete')
 def students_delete(license_code):
     supabase.table(STUDENT_TABLE).delete().eq('license', license_code).execute()
-    flash(f'Đã xoá học viên: {license_code}')
-    return redirect(url_for('students'))
-
+    flash(f'Đã xoá học viên: {license_code}', "success")
+    return back_to_current_page("students")
+    
 @app.post('/students/<license_code>/update')
 def students_update(license_code):
     form = request.form
@@ -797,8 +814,8 @@ def students_update(license_code):
     }
 
     supabase.table(STUDENT_TABLE).update(payload).eq('license', license_code).execute()
-    flash(f"Đã cập nhật học viên: {license_code}")
-    return redirect(url_for('students'))
+    flash(f"Đã cập nhật học viên: {license_code}", "success")
+    return back_to_current_page("students")
 
 @app.get('/fees')
 def fees():
@@ -982,8 +999,8 @@ def fees_add():
     # Nếu HV đang tạm nghỉ đúng tháng vừa đóng, tự chuyển về bình thường
     clear_student_temp_leave_if_paid(ma_hv, month_codes)
 
-    flash(f'Đã lưu học phí: {sv.get("name")} - {format_money(grand_total)}')
-    return redirect(url_for('fees'))
+    flash(f'Đã lưu học phí: {sv.get("name")} - {format_money(grand_total)}', "success")
+    return back_to_current_page("fees")
 
 @app.post("/fees/delete/<fee_id>")
 def delete_fee(fee_id):
@@ -998,7 +1015,7 @@ def delete_fee(fee_id):
     except Exception as e:
         flash(f"Lỗi xóa: {e}", "danger")
 
-    return redirect("/fees")
+    return back_to_current_page("fees")
 
 
 def get_student_paid_months_count(ma_hv):
@@ -3330,7 +3347,7 @@ def unpaid_temp_leave():
         print("[SET TEMP LEAVE ERROR]", e)
         flash(f"Lỗi set tạm nghỉ: {e}", "danger")
 
-    return redirect(url_for("unpaid", month=month, year=year))
+    return back_to_current_page("unpaid")
 
 
 @app.post("/unpaid/temp-leave-cancel")
@@ -3341,7 +3358,7 @@ def unpaid_temp_leave_cancel():
 
     if not license_code:
         flash("Thiếu mã học viên để hủy tạm nghỉ.", "danger")
-        return redirect(url_for("unpaid", month=month, year=year))
+        return back_to_current_page("unpaid")
 
     try:
         supabase.table(STUDENT_TABLE) \
@@ -3359,7 +3376,7 @@ def unpaid_temp_leave_cancel():
         print("[CANCEL TEMP LEAVE ERROR]", e)
         flash(f"Lỗi hủy tạm nghỉ: {e}", "danger")
 
-    return redirect(url_for("unpaid", month=month, year=year))
+    return back_to_current_page("unpaid")
 
 @app.get("/exam-tracking")
 def exam_tracking():
@@ -4017,7 +4034,7 @@ def activities_add():
         print("[ADD ACTIVITY ERROR]", e)
         flash(f"Lỗi thêm hoạt động: {e}")
 
-    return redirect(url_for("activities"))
+    return back_to_current_page("activities")
 
 
 @app.post("/activities/update/<activity_id>")
@@ -4031,7 +4048,7 @@ def activities_update(activity_id):
 
     if not student:
         flash("Không tìm thấy hội viên để cập nhật hoạt động.", "danger")
-        return redirect(url_for("activities"))
+        return back_to_current_page("activities")
 
     payload = {
         "ma_hv": ma_hv,
@@ -4055,7 +4072,7 @@ def activities_update(activity_id):
         print("[UPDATE ACTIVITY ERROR]", e)
         flash(f"Lỗi cập nhật hoạt động: {e}", "danger")
 
-    return redirect(url_for("activities"))
+    return back_to_current_page("activities")
 
 
 @app.post("/activities/delete/<activity_id>")
@@ -4072,7 +4089,7 @@ def activities_delete(activity_id):
         print("[DELETE ACTIVITY ERROR]", e)
         flash(f"Lỗi xóa hoạt động: {e}", "danger")
 
-    return redirect(url_for("activities"))
+    return back_to_current_page("activities")
 
 
 def clean_option_list(values):
@@ -5209,7 +5226,7 @@ def coach_login():
                 flash("SĐT đăng nhập chưa đúng.", "danger")
                 return redirect(url_for("coach_login"))
 
-            session.clear()
+            # Không dùng session.clear(), vì sẽ làm out Admin và Student
             session["coach_logged_in"] = True
             session["coach_code"] = coach.get("coach_code")
             session["coach_name"] = coach.get("name")
@@ -5298,6 +5315,104 @@ def coach_exam():
         status_summary=status_summary
     )
 
+@app.get("/coach/dan")
+def coach_dan():
+    coach = require_coach_login()
+
+    if not coach:
+        return redirect(url_for("coach_login"))
+
+    now = datetime.now()
+
+    year = request.args.get("year", str(now.year)).strip()
+
+    # Nhận cả 2 tên để tránh lỗi HTML cũ / mới:
+    # - quarter: đang dùng trong coach_dan.html
+    # - dan_round: dự phòng nếu sau này đổi tên input
+    dan_round = (
+        request.args.get("quarter")
+        or request.args.get("dan_round")
+        or "L1"
+    )
+    dan_round = str(dan_round or "L1").strip().upper()
+
+    dan_round_options = [
+        {"value": "L1", "label": "Lần 1"},
+        {"value": "L2", "label": "Lần 2"},
+        {"value": "MN", "label": "KV miền Nam"},
+        {"value": "MT", "label": "KV miền Trung"},
+        {"value": "MB", "label": "KV miền Bắc"},
+        {"value": "QG", "label": "Quốc Gia"},
+    ]
+
+    dan_round_values = [
+        item["value"]
+        for item in dan_round_options
+    ]
+
+    if dan_round not in dan_round_values:
+        dan_round = "L1"
+
+    quarter_label = next(
+        (
+            item["label"]
+            for item in dan_round_options
+            if item["value"] == dan_round
+        ),
+        dan_round
+    )
+
+    rows = get_exam_list_rows_by_type_web(
+        year=year,
+        quarter=dan_round,
+        list_type="dan"
+    )
+
+    rows.sort(key=lambda r: (
+        get_belt_index_web(r.get("cap_du_thi")),
+        str(r.get("gender") or ""),
+        str(r.get("name") or "")
+    ))
+
+    status_summary = {
+        "total": len(rows),
+        "Đúng": 0,
+        "Sai": 0,
+        "Ktra lại": 0,
+        "Chưa KTra": 0,
+    }
+
+    for r in rows:
+        status = str(r.get("coach_check_status") or "").strip()
+
+        if not status:
+            status = "Chưa KTra"
+
+        if status not in status_summary:
+            status_summary[status] = 0
+
+        status_summary[status] += 1
+
+    years = [str(y) for y in range(now.year - 2, now.year + 3)]
+
+    return render_template(
+        "coach_dan.html",
+        coach=coach,
+        rows=rows,
+        year=year,
+
+        # Biến dùng cho coach_dan.html hiện tại
+        quarter=dan_round,
+        quarters=dan_round_options,
+        quarter_label=quarter_label,
+
+        # Biến dự phòng nếu sau này HTML dùng dan_round
+        dan_round=dan_round,
+        dan_round_options=dan_round_options,
+
+        years=years,
+        status_summary=status_summary
+    )
 
 @app.post("/coach/exam/update-status")
 def coach_exam_update_status():

@@ -194,8 +194,8 @@
 
             <form method="post" action="{{ url_for('coach_login') }}">
                 <div class="login-field">
-                    <label>Mã HLV</label>
-                    <input name="coach_code" placeholder="VD: HLV_NTP" autocomplete="username" required>
+                    <label>Mã hội viên</label>
+                    <input name="coach_code" placeholder="VD: V23-******" autocomplete="username" required>
                 </div>
 
                 <div class="login-field">
@@ -206,9 +206,6 @@
                 <button class="login-btn" type="submit">Đăng nhập HLV</button>
             </form>
 
-            <div class="login-note">
-                Tài khoản HLV được quản lý riêng trong bảng <b>coaches</b> trên Supabase.
-            </div>
 
             <a class="back-link" href="{{ url_for('student_login') }}">Về đăng nhập học viên</a>
         </section>

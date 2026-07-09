@@ -128,6 +128,44 @@
         height:34px;
         border-radius:12px;
     }
+
+
+    /* =========================
+       SIDEBAR ACTIVE + GIỮ TRẠNG THÁI THU GỌN
+       Desktop: khi menu đang thu gọn, bấm icon chỉ chuyển trang, không tự mở menu.
+    ========================= */
+    .sidebar a.active,
+    .sidebar a.admin-nav-active {
+        background: linear-gradient(135deg, #1d4ed8, #0a58ca) !important;
+        color: #ffffff !important;
+        box-shadow: inset 4px 0 0 #facc15, 0 8px 18px rgba(29, 78, 216, .26);
+    }
+
+    .sidebar a.active .mi,
+    .sidebar a.admin-nav-active .mi {
+        filter: drop-shadow(0 0 8px rgba(250,204,21,.45));
+    }
+
+    .sidebar.collapsed a.active,
+    .sidebar.collapsed a.admin-nav-active {
+        position: relative;
+        background: #1d4ed8 !important;
+        box-shadow: inset 0 0 0 2px rgba(250,204,21,.82), 0 8px 18px rgba(29,78,216,.24);
+    }
+
+    .sidebar.collapsed a.active::after,
+    .sidebar.collapsed a.admin-nav-active::after {
+        content: "";
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 24px;
+        border-radius: 999px;
+        background: #facc15;
+    }
+
     </style>
 </head>
 <body>
@@ -213,15 +251,173 @@
 </div>
 
 <script>
-function toggleSidebar() {
+
+/* =========================
+   GIỮ ĐÚNG TRANG SAU KHI POST
+   - Tự gắn input next vào mọi form POST.
+   - Chỉ khôi phục scroll/phân trang sau thao tác POST.
+   - Chuyển menu bằng icon là GET bình thường: luôn mở ở đầu trang.
+========================= */
+(function () {
+    const currentUrlKey = window.location.pathname + window.location.search;
+    const postReturnKey = "tkd_after_post_url";
+
+    window.tkdIsAfterPostReload = function () {
+        try {
+            return sessionStorage.getItem(postReturnKey) === currentUrlKey;
+        } catch (e) {
+            return false;
+        }
+    };
+
+    window.tkdClearAfterPostReload = function () {
+        try {
+            if (sessionStorage.getItem(postReturnKey) === currentUrlKey) {
+                sessionStorage.removeItem(postReturnKey);
+            }
+        } catch (e) {}
+    };
+
+    function getScrollKey() {
+        return "tkd_scroll_position:" + currentUrlKey;
+    }
+
+    function saveScrollPosition() {
+        try {
+            sessionStorage.setItem(
+                getScrollKey(),
+                JSON.stringify({
+                    x: window.scrollX || 0,
+                    y: window.scrollY || 0
+                })
+            );
+        } catch (e) {}
+    }
+
+    function restoreScrollPositionOnlyAfterPost() {
+        try {
+            if (!window.tkdIsAfterPostReload()) return;
+
+            const raw = sessionStorage.getItem(getScrollKey());
+            if (!raw) return;
+
+            const data = JSON.parse(raw);
+            const x = parseInt(data.x || 0, 10) || 0;
+            const y = parseInt(data.y || 0, 10) || 0;
+
+            requestAnimationFrame(function () {
+                window.scrollTo(x, y);
+            });
+
+            setTimeout(function () {
+                window.scrollTo(x, y);
+            }, 120);
+
+            setTimeout(function () {
+                sessionStorage.removeItem(getScrollKey());
+                window.tkdClearAfterPostReload();
+            }, 650);
+        } catch (e) {}
+    }
+
+    document.addEventListener("submit", function (e) {
+        const form = e.target;
+
+        if (!form || String(form.method || "").toLowerCase() !== "post") {
+            return;
+        }
+
+        if (!form.querySelector('input[name="next"]')) {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "next";
+            input.value = currentUrlKey;
+            form.appendChild(input);
+        }
+
+        try {
+            sessionStorage.setItem(postReturnKey, currentUrlKey);
+        } catch (err) {}
+
+        saveScrollPosition();
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        restoreScrollPositionOnlyAfterPost();
+    });
+})();
+
+
+function setAdminSidebarCollapsed(collapsed) {
     const layout = document.querySelector(".layout");
     const sidebar = document.getElementById("sidebar");
 
-    requestAnimationFrame(() => {
-        layout.classList.toggle("collapsed");
-        sidebar.classList.toggle("collapsed");
+    if (!layout || !sidebar) return;
+
+    layout.classList.toggle("collapsed", collapsed);
+    sidebar.classList.toggle("collapsed", collapsed);
+
+    try {
+        localStorage.setItem("admin_sidebar_collapsed", collapsed ? "1" : "0");
+    } catch (e) {}
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const collapsed = !(sidebar && sidebar.classList.contains("collapsed"));
+    setAdminSidebarCollapsed(collapsed);
+}
+
+function initAdminSidebarState() {
+    try {
+        setAdminSidebarCollapsed(localStorage.getItem("admin_sidebar_collapsed") === "1");
+    } catch (e) {}
+}
+
+function initAdminActiveNav() {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+
+    const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+
+    const routeGroups = [
+        ["/students", ["/students"]],
+        ["/fees", ["/fees"]],
+        ["/tracking", ["/tracking"]],
+        ["/unpaid", ["/unpaid"]],
+        ["/exam-tracking", ["/exam-tracking"]],
+        ["/exam-list", ["/exam-list"]],
+        ["/dan-list", ["/dan-list"]],
+        ["/results", ["/results"]],
+        ["/activities", ["/activities"]],
+        ["/notifications", ["/notifications"]],
+        ["/setup", ["/setup"]],
+        ["/information", ["/information"]]
+    ];
+
+    sidebar.querySelectorAll("a").forEach(function (link) {
+        const hrefRaw = link.getAttribute("href") || "";
+
+        if (!hrefRaw || hrefRaw === "#") {
+            link.addEventListener("click", function (e) {
+                e.preventDefault();
+            });
+            return;
+        }
+
+        const hrefPath = hrefRaw.split("?")[0].replace(/\/+$/, "") || "/";
+        const matched = routeGroups.some(function (group) {
+            return group[0] === hrefPath && group[1].some(function (path) {
+                return currentPath === path || currentPath.startsWith(path + "/");
+            });
+        });
+
+        link.classList.toggle("active", matched);
     });
 }
+
+initAdminSidebarState();
+initAdminActiveNav();
 setTimeout(() => {
     const toast = document.getElementById("toastPopup");
     if (toast) {

@@ -599,6 +599,44 @@
             }
         }
 
+
+
+        /* =========================
+           SIDEBAR ACTIVE DESKTOP / COLLAPSED
+           Khi menu thu gọn: icon tab đang mở vẫn nổi bật, không tự mở menu khi chuyển trang.
+        ========================= */
+        .student-nav a.active {
+            background: linear-gradient(135deg, #1d4ed8, #0a58ca) !important;
+            box-shadow: inset 4px 0 0 #facc15, 0 8px 18px rgba(29, 78, 216, .24);
+        }
+
+        .student-nav a.active .student-nav-icon {
+            color: #facc15;
+            text-shadow: 0 0 10px rgba(250,204,21,.35);
+        }
+
+        body.student-sidebar-collapsed .student-nav a.active {
+            box-shadow: inset 0 0 0 2px rgba(250,204,21,.82), 0 8px 18px rgba(29,78,216,.24);
+        }
+
+        body.student-sidebar-collapsed .student-nav a.active::after {
+            content: "";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 24px;
+            border-radius: 999px;
+            background: #facc15;
+        }
+
+        @media (max-width: 980px) {
+            body.student-sidebar-collapsed .student-nav a.active::after {
+                display: none;
+            }
+        }
+
         /* =========================
            TABLET
         ========================= */
@@ -2535,6 +2573,21 @@ function initStudentSidebar() {
     });
 }
 
+function initStudentActiveNavFallback() {
+    const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+
+    document.querySelectorAll(".student-nav a").forEach(function (link) {
+        if (link.classList.contains("logout-link")) return;
+
+        const href = (link.getAttribute("href") || "").split("?")[0].replace(/\/+$/, "") || "/";
+        const matched = href !== "/" && (currentPath === href || currentPath.startsWith(href + "/"));
+
+        if (matched) {
+            link.classList.add("active");
+        }
+    });
+}
+
 window.addEventListener("resize", function() {
     if (!isStudentMobileScreen()) {
         closeStudentSidebar();
@@ -2623,6 +2676,7 @@ function autoHidePortalToasts() {
 
 document.addEventListener("DOMContentLoaded", function() {
     initStudentSidebar();
+    initStudentActiveNavFallback();
     scheduleStudentClock();
     autoHidePortalToasts();
 });

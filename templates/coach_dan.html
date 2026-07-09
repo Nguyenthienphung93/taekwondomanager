@@ -1,0 +1,484 @@
+{% extends "coach_portal_base.html" %}
+{% set active_page = 'coach_dan' %}
+{% block title %}HLV kiểm tra thi đẳng{% endblock %}
+
+{% block extra_css %}
+<style>
+.filter-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.filter-form {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.field {
+    display: grid;
+    gap: 6px;
+}
+
+.field label {
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.field select {
+    height: 42px;
+    min-width: 120px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 12px;
+    background: #f8fafc;
+    font-weight: 850;
+    outline: none;
+}
+
+.filter-btn {
+    height: 42px;
+    border: 0;
+    border-radius: 12px;
+    background: #1d4ed8;
+    color: #ffffff;
+    padding: 0 18px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.summary-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.summary-pill {
+    border-radius: 999px;
+    padding: 9px 13px;
+    background: #f1f5f9;
+    border: 1px solid #dbe7f5;
+    font-weight: 950;
+    color: #334155;
+}
+
+.summary-pill.ok {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.summary-pill.wrong {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.summary-pill.review {
+    background: #fff7d6;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.summary-pill.none {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.status-select.none {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.coach-exam-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 9px;
+    min-width: 980px;
+}
+
+.coach-exam-table th {
+    text-align: center;
+    background: #0f2a4a;
+    color: #ffffff;
+    padding: 12px 10px;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.coach-exam-table th:first-child {
+    border-radius: 14px 0 0 14px;
+}
+
+.coach-exam-table th:last-child {
+    border-radius: 0 14px 14px 0;
+}
+
+.coach-exam-table td {
+    background: #ffffff;
+    border-top: 1px solid #dbe7f5;
+    border-bottom: 1px solid #dbe7f5;
+    padding: 12px 10px;
+    text-align: center;
+    font-weight: 800;
+    vertical-align: middle;
+}
+
+.coach-exam-table td:first-child {
+    border-left: 1px solid #dbe7f5;
+    border-radius: 14px 0 0 14px;
+}
+
+.coach-exam-table td:last-child {
+    border-right: 1px solid #dbe7f5;
+    border-radius: 0 14px 14px 0;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.belt-badge {
+    display: inline-flex;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 950;
+}
+
+.status-select {
+    height: 40px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 10px;
+    font-weight: 950;
+    outline: none;
+    background: #f8fafc;
+}
+
+.status-select.ok {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.status-select.wrong {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.status-select.review {
+    background: #fff7d6;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.note-input {
+    width: 180px;
+    height: 38px;
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    padding: 0 10px;
+    font-weight: 750;
+    background: #f8fafc;
+}
+
+.save-state {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.empty-box {
+    padding: 32px 14px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 850;
+}
+
+@media(max-width: 760px) {
+    .filter-card {
+        align-items: stretch;
+    }
+
+    .filter-form,
+    .filter-btn {
+        width: 100%;
+    }
+
+    .field {
+        width: 100%;
+    }
+
+    .field select {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block coach_content %}
+<div class="portal-page-head">
+    <h1>🥋 Kiểm tra danh sách thi đẳng</h1>
+    <p>HLV kiểm tra danh sách võ sinh đăng ký thi đẳng theo từng năm và lần/khu vực thi.</p>
+</div>
+
+<section class="portal-card filter-card">
+    <form class="filter-form" method="get">
+        <div class="field">
+            <label>Năm</label>
+            <select name="year">
+                {% for y in years %}
+                    <option value="{{ y }}" {{ 'selected' if y|string == year|string }}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label>Lần thi đẳng</label>
+            <select name="quarter">
+                {% for q in quarters|default(dan_round_options) %}
+                    <option value="{{ q.value }}" {{ 'selected' if q.value == quarter }}>{{ q.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button class="filter-btn" type="submit">
+            <i class="fa-solid fa-filter"></i>
+            Lọc danh sách
+        </button>
+    </form>
+
+    <div class="summary-grid">
+        <div class="summary-pill">Tổng: <span id="sumTotal">{{ status_summary.total }}</span></div>
+        <div class="summary-pill none">Chưa KTra: <span id="sumChuaKtra">{{ status_summary['Chưa KTra'] }}</span></div>
+        <div class="summary-pill ok">Đúng: <span id="sumDung">{{ status_summary['Đúng'] }}</span></div>
+        <div class="summary-pill wrong">Sai: <span id="sumSai">{{ status_summary['Sai'] }}</span></div>
+        <div class="summary-pill review">Ktra lại: <span id="sumKtra">{{ status_summary['Ktra lại'] }}</span></div>
+    </div>
+</section>
+
+<section class="portal-card">
+    {% if rows %}
+    <div class="table-wrap">
+        <table class="coach-exam-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mã HV</th>
+                    <th>Họ tên</th>
+                    <th>Ngày sinh</th>
+                    <th>Giới tính</th>
+                    <th>Cấp hiện tại</th>
+                    <th>Cấp dự thi</th>
+                    <th>HLV kiểm tra</th>
+                    <th>Ghi chú</th>
+                    <th>Đã kiểm tra</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for r in rows %}
+                {% set status = r.coach_check_status or 'Chưa KTra' %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ r.license }}</td>
+                    <td class="text-left">{{ r.name }}</td>
+                    <td>{{ r.birthdate or '—' }}</td>
+                    <td>{{ r.gender or '—' }}</td>
+                    <td>{{ r.belt or '—' }}</td>
+                    <td><span class="belt-badge">{{ r.cap_du_thi or '—' }}</span></td>
+
+                    <td>
+                        {% if r.hocphi_id %}
+                        <select
+                            class="status-select
+                                {% if status == 'Đúng' %}ok{% elif status == 'Sai' %}wrong{% elif status == 'Ktra lại' %}review{% else %}none{% endif %}
+                            "
+                            data-hocphi-id="{{ r.hocphi_id }}"
+                            onchange="saveCoachCheck(this)"
+                        >
+                            <option value="Chưa KTra" {{ 'selected' if status == 'Chưa KTra' }}>Chưa KTra</option>
+                            <option value="Đúng" {{ 'selected' if status == 'Đúng' }}>Đúng</option>
+                            <option value="Sai" {{ 'selected' if status == 'Sai' }}>Sai</option>
+                            <option value="Ktra lại" {{ 'selected' if status == 'Ktra lại' }}>Ktra lại</option>
+                        </select>
+                        <span class="save-state" id="state_{{ r.hocphi_id }}">
+                            {% if r.coach_checked_by_name %}
+                                {{ r.coach_checked_by_name }}
+                            {% else %}
+                                Chờ HLV KTra
+                            {% endif %}
+                        </span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if r.hocphi_id %}
+                        <input
+                            class="note-input"
+                            type="text"
+                            value="{{ r.coach_check_note or '' }}"
+                            data-hocphi-id="{{ r.hocphi_id }}"
+                            placeholder="Ghi chú"
+                            onchange="saveCoachCheck(this)"
+                        >
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td class="checked-at-cell">
+                        {% if r.coach_checked_at %}
+                            <b>{{ r.coach_checked_by_name or 'HLV' }}</b><br>
+                            <span>{{ r.coach_checked_at|datetime_vn }}</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty-box">
+            Chưa có danh sách thi đẳng cho {{ quarter_label or quarter }} - {{ year }}.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateStatusStyle(select) {
+    select.classList.remove("ok", "wrong", "review", "none");
+
+    if (select.value === "Đúng") {
+        select.classList.add("ok");
+    } else if (select.value === "Sai") {
+        select.classList.add("wrong");
+    } else if (select.value === "Ktra lại") {
+        select.classList.add("review");
+    } else {
+        select.classList.add("none");
+    }
+}
+
+async function saveCoachCheck(el) {
+    const hocphiId = el.dataset.hocphiId;
+    if (!hocphiId) return;
+
+    const row = el.closest("tr");
+    const select = row.querySelector(".status-select");
+    const noteInput = row.querySelector(".note-input");
+    const state = document.getElementById("state_" + hocphiId);
+
+    const status = select ? select.value : "Ktra lại";
+    const note = noteInput ? noteInput.value : "";
+
+    if (select) updateStatusStyle(select);
+    if (state) state.textContent = "Đang lưu...";
+
+    try {
+        const res = await fetch("{{ url_for('coach_exam_update_status') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                hocphi_id: hocphiId,
+                status: status,
+                note: note
+            })
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+            if (state) state.textContent = data.message || "Lỗi lưu";
+            alert(data.message || "Không lưu được trạng thái.");
+            return;
+        }
+
+                if (state) {
+                    state.textContent = data.checked_by_name || "Đã lưu";
+                }
+
+                const checkedCell = row.querySelector(".checked-at-cell");
+                if (checkedCell) {
+                    const now = new Date();
+                    const dd = String(now.getDate()).padStart(2, "0");
+                    const mm = String(now.getMonth() + 1).padStart(2, "0");
+                    const yyyy = now.getFullYear();
+                    const hh = String(now.getHours()).padStart(2, "0");
+                    const mi = String(now.getMinutes()).padStart(2, "0");
+
+                    checkedCell.innerHTML = `
+                        <b>${data.checked_by_name || "HLV"}</b><br>
+                        <span>${dd}/${mm}/${yyyy} ${hh}:${mi}</span>
+                    `;
+                }
+
+                updateCoachSummary();
+
+            } catch (err) {
+                if (state) state.textContent = "Lỗi kết nối";
+                alert("Lỗi kết nối khi lưu trạng thái HLV.");
+            }
+        }
+
+        function updateCoachSummary() {
+            let total = 0;
+            let chuaKtra = 0;
+            let dung = 0;
+            let sai = 0;
+            let ktra = 0;
+
+            document.querySelectorAll(".status-select").forEach(select => {
+                total++;
+
+                if (select.value === "Đúng") {
+                    dung++;
+                } else if (select.value === "Sai") {
+                    sai++;
+                } else if (select.value === "Ktra lại") {
+                    ktra++;
+                } else {
+                    chuaKtra++;
+                }
+            });
+
+            const totalEl = document.getElementById("sumTotal");
+            const chuaKtraEl = document.getElementById("sumChuaKtra");
+            const dungEl = document.getElementById("sumDung");
+            const saiEl = document.getElementById("sumSai");
+            const ktraEl = document.getElementById("sumKtra");
+
+            if (totalEl) totalEl.textContent = total;
+            if (chuaKtraEl) chuaKtraEl.textContent = chuaKtra;
+            if (dungEl) dungEl.textContent = dung;
+            if (saiEl) saiEl.textContent = sai;
+            if (ktraEl) ktraEl.textContent = ktra;
+        }
+
+        document.addEventListener("DOMContentLoaded", updateCoachSummary);
+        </script>
+{% endblock %}

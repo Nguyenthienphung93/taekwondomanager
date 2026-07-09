@@ -315,19 +315,152 @@
             box-shadow: 0 12px 28px rgba(15,23,42,.07);
         }
 
-        .flash-list {
-            display: grid;
-            gap: 8px;
-            margin-bottom: 12px;
+
+
+        /* =========================
+           SIDEBAR ACTIVE DESKTOP / COLLAPSED
+           Khi menu thu gọn: icon tab đang mở vẫn nổi bật, không tự mở menu khi chuyển trang.
+        ========================= */
+        .portal-nav a.active {
+            background: linear-gradient(135deg, #1d4ed8, #0a58ca) !important;
+            box-shadow: inset 4px 0 0 #facc15, 0 8px 18px rgba(29,78,216,.24);
         }
 
-        .flash {
-            border-radius: 12px;
-            padding: 10px 12px;
-            background: #fff7d6;
-            border: 1px solid #fde68a;
-            color: #7c4a03;
-            font-weight: 800;
+        .portal-nav a.active i {
+            color: #facc15;
+            text-shadow: 0 0 10px rgba(250,204,21,.35);
+        }
+
+        .sidebar-collapsed .portal-nav a.active {
+            position: relative;
+            box-shadow: inset 0 0 0 2px rgba(250,204,21,.82), 0 8px 18px rgba(29,78,216,.24);
+        }
+
+        .sidebar-collapsed .portal-nav a.active::after {
+            content: "";
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 24px;
+            border-radius: 999px;
+            background: #facc15;
+        }
+
+        @media(max-width: 860px) {
+            .sidebar-collapsed .portal-nav a.active::after {
+                display: none;
+            }
+        }
+
+        /* =========================
+           TOAST THÔNG BÁO - GIỐNG STUDENT PORTAL
+        ========================= */
+        .portal-toast-wrap {
+            position: fixed;
+            top: 128px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: min(520px, calc(100vw - 28px));
+            pointer-events: none;
+        }
+
+        .portal-toast {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .96);
+            border: 1px solid rgba(255, 255, 255, .55);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, .20);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            pointer-events: auto;
+            animation: portalToastIn .28s ease;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+
+        .portal-toast.toast-success,
+        .portal-toast.toast-message {
+            background: rgba(220, 252, 231, .96);
+            border-left: 6px solid #22c55e;
+            color: #14532d;
+        }
+
+        .portal-toast.toast-danger,
+        .portal-toast.toast-error {
+            background: rgba(254, 226, 226, .96);
+            border-left: 6px solid #ef4444;
+            color: #7f1d1d;
+        }
+
+        .portal-toast.toast-warning {
+            background: rgba(254, 243, 199, .96);
+            border-left: 6px solid #f59e0b;
+            color: #78350f;
+        }
+
+        .portal-toast.toast-info {
+            background: rgba(219, 234, 254, .96);
+            border-left: 6px solid #3b82f6;
+            color: #1e3a8a;
+        }
+
+        .portal-toast-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .82);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 1000;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+
+        .portal-toast-message {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 850;
+            line-height: 1.45;
+        }
+
+        .portal-toast-close {
+            width: 28px;
+            height: 28px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .82);
+            color: #334155;
+            font-size: 18px;
+            font-weight: 1000;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .portal-toast.hide {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        @keyframes portalToastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px) scale(.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         /* =========================
@@ -472,6 +605,12 @@
                 <span class="nav-text">Kiểm tra thi cấp</span>
             </a>
 
+            <a class="{{ 'active' if active_page == 'coach_dan' else '' }}"
+               href="{{ url_for('coach_dan') }}">
+                <i class="fa-solid fa-award"></i>
+                <span class="nav-text">Kiểm tra thi đẳng</span>
+            </a>
+
             <a class="logout" href="{{ url_for('coach_logout') }}">
                 <i class="fa-solid fa-right-from-bracket"></i>
                 <span class="nav-text">Đăng xuất</span>
@@ -483,11 +622,32 @@
         <section class="portal-content">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                <div class="flash-list">
-                    {% for category, message in messages %}
-                        <div class="flash">{{ message }}</div>
-                    {% endfor %}
-                </div>
+                    <div class="portal-toast-wrap">
+                        {% for category, message in messages %}
+                            {% set toast_category = 'success' if category == 'message' else category %}
+                            <div class="portal-toast toast-{{ toast_category }}">
+                                <div class="portal-toast-icon">
+                                    {% if toast_category == 'success' %}
+                                        ✓
+                                    {% elif toast_category == 'danger' or toast_category == 'error' %}
+                                        !
+                                    {% elif toast_category == 'warning' %}
+                                        ⚠
+                                    {% else %}
+                                        i
+                                    {% endif %}
+                                </div>
+
+                                <div class="portal-toast-message">
+                                    {{ message }}
+                                </div>
+
+                                <button type="button" class="portal-toast-close" onclick="closePortalToast(this)">
+                                    ×
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             {% endwith %}
 
@@ -565,6 +725,50 @@ function updateCoachClock() {
     dateEl.textContent = `${weekdays[now.getDay()]}, ${dd}/${mo}/${yyyy}`;
 }
 
+
+
+function initCoachActiveNavFallback() {
+    const body = document.getElementById("coachPortalBody");
+    if (!body) return;
+
+    const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+
+    body.querySelectorAll(".portal-nav a").forEach(function (link) {
+        if (link.classList.contains("logout")) return;
+
+        const href = (link.getAttribute("href") || "").split("?")[0].replace(/\/+$/, "") || "/";
+        const matched = href !== "/" && (currentPath === href || currentPath.startsWith(href + "/"));
+
+        if (matched) {
+            link.classList.add("active");
+        }
+    });
+}
+
+function closePortalToast(button) {
+    const toast = button.closest(".portal-toast");
+
+    if (!toast) return;
+
+    toast.classList.add("hide");
+
+    setTimeout(function () {
+        toast.remove();
+    }, 250);
+}
+
+function autoHidePortalToasts() {
+    document.querySelectorAll(".portal-toast").forEach(function (toast) {
+        setTimeout(function () {
+            toast.classList.add("hide");
+
+            setTimeout(function () {
+                toast.remove();
+            }, 250);
+        }, 3000);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const body = document.getElementById("coachPortalBody");
 
@@ -578,9 +782,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     } catch (e) {}
 
+    initCoachActiveNavFallback();
+
     updateCoachClock();
     setInterval(updateCoachClock, 1000);
 
+    autoHidePortalToasts();
     document.addEventListener("click", closeCoachMobileSidebarOnClickOutside);
 });
 </script>

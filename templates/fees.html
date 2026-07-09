@@ -947,6 +947,12 @@ function deleteFee() {
     form.method = "POST";
     form.action = "/fees/delete/" + currentFeeId;
 
+    const nextInput = document.createElement("input");
+    nextInput.type = "hidden";
+    nextInput.name = "next";
+    nextInput.value = window.location.pathname + window.location.search;
+    form.appendChild(nextInput);
+
     document.body.appendChild(form);
     form.submit();
 }
@@ -1099,8 +1105,59 @@ async function exportReceiptPDF() {
 
 /* =========================
    PHÂN TRANG DANH SÁCH
+   - Có lưu trạng thái trang hiện tại vào sessionStorage.
+   - Sau khi xóa/sửa/lưu rồi reload lại, bảng tự mở lại đúng trang cũ.
 ========================= */
 const tablePaginationState = {};
+
+function getTablePageStorageKey(tableId) {
+    return "tkd_table_page:" + window.location.pathname + ":" + window.location.search + ":" + tableId;
+}
+
+function saveTablePageState(tableId) {
+    try {
+        const state = tablePaginationState[tableId];
+
+        if (!state) return;
+
+        sessionStorage.setItem(
+            getTablePageStorageKey(tableId),
+            JSON.stringify({
+                page: state.page || 1,
+                pageSize: state.pageSize || 50
+            })
+        );
+    } catch (e) {}
+}
+
+function shouldRestoreTablePageAfterPost() {
+    try {
+        return typeof window.tkdIsAfterPostReload === "function" && window.tkdIsAfterPostReload();
+    } catch (e) {
+        return false;
+    }
+}
+
+function loadTablePageState(tableId) {
+    try {
+        if (!shouldRestoreTablePageAfterPost()) {
+            return null;
+        }
+
+        const raw = sessionStorage.getItem(getTablePageStorageKey(tableId));
+
+        if (!raw) return null;
+
+        const data = JSON.parse(raw);
+
+        return {
+            page: parseInt(data.page || "1", 10) || 1,
+            pageSize: parseInt(data.pageSize || "50", 10) || 50
+        };
+    } catch (e) {
+        return null;
+    }
+}
 
 function getPaginatedRows(tableId) {
     const table = document.querySelector(`[data-paginated-table="${tableId}"]`);
@@ -1114,12 +1171,20 @@ function getPaginatedRows(tableId) {
 
 function initTablePagination(tableId) {
     const rows = getPaginatedRows(tableId);
+    const saved = loadTablePageState(tableId) || {};
 
     tablePaginationState[tableId] = {
-        page: 1,
-        pageSize: 50,
+        page: saved.page || 1,
+        pageSize: saved.pageSize || 50,
         totalRows: rows.length
     };
+
+    const control = document.querySelector(`[data-pagination="${tableId}"]`);
+    const select = control ? control.querySelector(".page-size-select") : null;
+
+    if (select) {
+        select.value = String(tablePaginationState[tableId].pageSize);
+    }
 
     applyTablePagination(tableId);
 }
@@ -1135,6 +1200,7 @@ function setTablePageSize(tableId, value) {
     state.page = 1;
 
     tablePaginationState[tableId] = state;
+    saveTablePageState(tableId);
     applyTablePagination(tableId);
 }
 
@@ -1148,6 +1214,8 @@ function changeTablePage(tableId, direction) {
     if (state.page < 1) state.page = 1;
     if (state.page > totalPages) state.page = totalPages;
 
+    tablePaginationState[tableId] = state;
+    saveTablePageState(tableId);
     applyTablePagination(tableId);
 }
 
@@ -1188,6 +1256,7 @@ function applyTablePagination(tableId) {
     }
 
     tablePaginationState[tableId] = state;
+    saveTablePageState(tableId);
 }
 
 document.addEventListener("DOMContentLoaded", function () {
