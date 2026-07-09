@@ -3,7 +3,7 @@ import calendar
 import json
 import os
 from io import BytesIO
-
+from PIL import Image, ImageOps, ImageFilter
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -29,14 +29,8 @@ SUPABASE_URL = os.environ.get(
 )
 
 STUDENT_PHOTO_BUCKET = "student-photos"
+CLUB_ASSET_BUCKET = "system-assets"
 
-# =========================
-# CẤU HÌNH APP - SETUP
-# Lưu thông tin Ken chỉnh trong tab Setup vào file JSON
-# =========================
-CONFIG_FILE = BASE_DIR / "app_settings.json"
-LOGO_UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "logos"
-LOGO_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_APP_SETTINGS = {
     "header": {
@@ -64,6 +58,126 @@ DEFAULT_APP_SETTINGS = {
         "timeclasses": ["Ca 1", "Ca 2"],
         "clubs": ["Hoa Hướng Dương Q1(CLB_00019)", "Hoa Hướng Dương Q10(CLB_00104)"]
     },
+
+    "club_info": {
+        "intro_title": "CLB Taekwondo Sunflower - Hoa Hướng Dương Diên Hồng",
+        "intro_subtitle": "Sunflower Taekwondo Club",
+        "intro_content": (
+            "CLB Taekwondo Sunflower, còn được biết đến với tên CLB Taekwondo Hoa Hướng Dương, "
+            "là môi trường tập luyện Taekwondo dành cho võ sinh nhiều lứa tuổi. Hiện nay cơ sở Q10 "
+            "hoạt động với tên CLB Hoa Hướng Dương - Diên Hồng, định hướng đào tạo võ sinh theo tinh thần "
+            "kỷ luật, tự tin, lễ phép và phát triển thể chất toàn diện.\n\n"
+            "CLB chú trọng nền tảng kỹ thuật căn bản, rèn luyện thể lực, tác phong võ đạo, đồng thời tạo điều kiện "
+            "cho võ sinh tham gia thi nâng cấp đai, biểu diễn, giao lưu và các hoạt động phong trào phù hợp."
+        ),
+
+        "head_coach": {
+            "name": "Nguyễn Thiên Phụng",
+            "role": "HLV Trưởng",
+            "phone": "",
+            "photo_url": "",
+            "description": (
+                "Nguyễn Thiên Phụng là VĐV Taekwondo Poomsae Việt Nam, nhiều năm thi đấu đỉnh cao "
+                "và đạt nhiều thành tích nổi bật trong nước cũng như quốc tế. Hiện tại phụ trách định hướng "
+                "chuyên môn chung, xây dựng chương trình huấn luyện, theo dõi chất lượng đào tạo và phát triển "
+                "phong trào của CLB Hoa Hướng Dương - Diên Hồng."
+            )
+        },
+
+        "registrar": {
+            "name": "Đang cập nhật",
+            "role": "Người ghi danh",
+            "phone": "",
+            "photo_url": "",
+            "description": (
+                "Phụ trách tư vấn, tiếp nhận thông tin đăng ký, hỗ trợ phụ huynh và võ sinh "
+                "trong quá trình ghi danh, đóng học phí và theo dõi lịch học tại CLB."
+            )
+        },
+
+        "coaches": [
+            {
+                "group": "246",
+                "group_title": "HLV lớp 2-4-6",
+                "group_subtitle": "Lớp buổi chiều",
+                "name": "Nguyễn Hoàng Long",
+                "role": "Phụ Trách HLV",
+                "phone": "",
+                "photo_url": ""
+            },
+            {
+                "group": "246",
+                "group_title": "HLV lớp 2-4-6",
+                "group_subtitle": "Lớp buổi chiều",
+                "name": "Nguyễn Duy Thông",
+                "role": "Trợ giảng",
+                "phone": "",
+                "photo_url": ""
+            },
+            {
+                "group": "357",
+                "group_title": "HLV lớp 3-5-7",
+                "group_subtitle": "Lớp chính trong tuần",
+                "name": "Nông Thạch Khiêm",
+                "role": "Phụ Trách HLV",
+                "phone": "",
+                "photo_url": ""
+            },
+            {
+                "group": "357",
+                "group_title": "HLV lớp 3-5-7",
+                "group_subtitle": "Lớp chính trong tuần",
+                "name": "Nguyễn Trung Hiếu",
+                "role": "Phụ Trách HLV",
+                "phone": "",
+                "photo_url": ""
+            },
+            {
+                "group": "357",
+                "group_title": "HLV lớp 3-5-7",
+                "group_subtitle": "Lớp chính trong tuần",
+                "name": "Trần Ngọc Hà",
+                "role": "Trợ giảng",
+                "phone": "",
+                "photo_url": ""
+            },
+            {
+                "group": "weekend",
+                "group_title": "HLV lớp sáng & cuối tuần",
+                "group_subtitle": "Thứ 7, Chủ nhật và lớp sáng",
+                "name": "Nguyễn Lê Cường",
+                "role": "Phụ Trách HLV",
+                "phone": "",
+                "photo_url": ""
+            }
+        ],
+
+        "regular_schedules": [
+            {"title": "Lớp 2-4-6", "time": "18:00 - 19:30 và 19:30 - 21:00"},
+            {"title": "Lớp 3-5-7", "time": "18:00 - 19:30 và 19:30 - 21:00"},
+            {"title": "Lớp Thứ 7 và Chủ nhật", "time": "8:30 - 10:30"}
+        ],
+
+        "summer_schedules": [
+            {"title": "Lớp hè", "time": "Từ đầu tháng 6 đến cuối tháng 8"},
+            {"title": "Sáng 2-4-6 hoặc 3-5-7", "time": "8:00 - 9:30 và 9:30 - 11:00"}
+        ],
+
+        "fees_info": {
+            "monthly_fee": "500.000đ",
+            "three_month_discount": "Giảm 10%",
+            "six_month_bonus": "Tặng 1 tháng miễn phí",
+            "family_discount": "Giảm thêm 10% nếu đóng chung",
+            "uniform_fee": "420.000đ / bộ",
+            "exam_fee": "300.000đ / lần",
+            "exam_notes": [
+                "3 tháng CLB sẽ tổ chức thi nâng cấp đai 1 lần.",
+                "Võ sinh cần đảm bảo thời gian tập luyện và chuyên môn, được HLV phụ trách xác nhận trước khi thi.",
+                "Võ sinh mới thi lần đầu đóng thêm 20.000đ một lần duy nhất để Liên đoàn Taekwondo Việt Nam cấp mã, phục vụ hoạt động quản lý chung và đảm bảo quyền lợi trong quá trình tập luyện."
+            ]
+        }
+    },
+
     "profile": {
         "owner": "Nguyễn Thiên Phụng",
         "phone_zalo": "0989 03 04 93",
@@ -87,24 +201,72 @@ def merge_settings(defaults, saved):
 
 
 def load_app_settings():
-    if not CONFIG_FILE.exists():
-        save_app_settings(DEFAULT_APP_SETTINGS)
-        return DEFAULT_APP_SETTINGS.copy()
-
+    """
+    Đọc setup hệ thống từ Supabase.
+    Nếu Supabase chưa có dữ liệu thì tự tạo từ DEFAULT_APP_SETTINGS.
+    """
     try:
-        saved = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        rows = supabase.table(APP_SETTINGS_TABLE) \
+            .select("key,value") \
+            .execute().data or []
+
+        if not rows:
+            save_app_settings(DEFAULT_APP_SETTINGS)
+            return DEFAULT_APP_SETTINGS.copy()
+
+        saved = {}
+
+        for row in rows:
+            key = str(row.get("key") or "").strip()
+            value = row.get("value") or {}
+
+            if key:
+                saved[key] = value
+
         return merge_settings(DEFAULT_APP_SETTINGS, saved)
 
     except Exception as e:
-        print("[LOAD APP SETTINGS ERROR]", e)
+        print("[LOAD APP SETTINGS SUPABASE ERROR]", e)
+
+        # Dự phòng nếu Supabase lỗi thì vẫn cho app chạy bằng mặc định
         return DEFAULT_APP_SETTINGS.copy()
 
 
 def save_app_settings(settings):
-    CONFIG_FILE.write_text(
-        json.dumps(settings, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
+    """
+    Lưu setup hệ thống lên Supabase.
+    Mỗi nhóm setup là 1 dòng:
+    header, fees, exam, class_options, club_info, profile...
+    """
+    try:
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        for key, value in settings.items():
+            payload = {
+                "key": key,
+                "value": value,
+                "updated_at": now_iso,
+            }
+
+            existing = supabase.table(APP_SETTINGS_TABLE) \
+                .select("key") \
+                .eq("key", key) \
+                .limit(1) \
+                .execute().data or []
+
+            if existing:
+                supabase.table(APP_SETTINGS_TABLE) \
+                    .update(payload) \
+                    .eq("key", key) \
+                    .execute()
+            else:
+                supabase.table(APP_SETTINGS_TABLE) \
+                    .insert(payload) \
+                    .execute()
+
+    except Exception as e:
+        print("[SAVE APP SETTINGS SUPABASE ERROR]", e)
+        raise e
 
 
 def money_to_int_web(v):
@@ -213,6 +375,7 @@ ADMIN_PASSWORD_HASH = generate_password_hash(
 ADMIN_PUBLIC_ENDPOINTS = {
     "admin_login",
     "static",
+    "index",
 
     # Các route học viên để không bị khóa bởi admin login
     "student_login",
@@ -221,10 +384,16 @@ ADMIN_PUBLIC_ENDPOINTS = {
     "student_portal_notifications",
     "student_portal_notification_detail",
     "student_portal_info",
+    "student_portal_club_info",
     "student_portal_fees",
     "student_portal_exams",
     "student_portal_activities",
     "student_portal_settings",
+
+    "coach_login",
+    "coach_logout",
+    "coach_exam",
+    "coach_exam_update_status",
 }
 
 ADMIN_PUBLIC_PATH_PREFIXES = (
@@ -232,6 +401,9 @@ ADMIN_PUBLIC_PATH_PREFIXES = (
     "/student-login",
     "/student-logout",
     "/student-portal",
+    "/coach-login",
+    "/coach-logout",
+    "/coach/",
 )
 
 def get_default_payment_settings():
@@ -453,7 +625,7 @@ def datetime_vn_filter(value):
 
 @app.get('/')
 def index():
-    return redirect(url_for('students'))
+    return redirect(url_for('student_login'))
 
 def remove_accents(text):
     text = str(text or "").replace("đ", "d").replace("Đ", "D")
@@ -1259,9 +1431,28 @@ def get_exam_list_rows_by_type_web(year, quarter, list_type="cap"):
         saved_result_map = {}
 
     fees = supabase.table(HOCPHI_TABLE) \
-        .select("ma_hv") \
+        .select("id,ma_hv,ma_quy,thoi_gian,coach_check_status,coach_check_note,coach_checked_by,coach_checked_by_name,coach_checked_at") \
         .eq("ma_quy", ma_quy) \
         .execute().data or []
+
+    fee_map = {}
+
+    for f in fees:
+        ma_hv_fee = str(f.get("ma_hv") or "").strip()
+
+        if not ma_hv_fee:
+            continue
+
+        old = fee_map.get(ma_hv_fee)
+
+        if not old:
+            fee_map[ma_hv_fee] = f
+        else:
+            old_time = str(old.get("thoi_gian") or "")
+            new_time = str(f.get("thoi_gian") or "")
+
+            if new_time > old_time:
+                fee_map[ma_hv_fee] = f
 
     ids = []
 
@@ -1313,10 +1504,22 @@ def get_exam_list_rows_by_type_web(year, quarter, list_type="cap"):
         s["cap_du_thi"] = cap_du_thi
         s["ket_qua_mac_dinh"] = "Đạt"
 
+        # Dữ liệu kết quả đã chốt trong bảng ketqua.
+        # Bắt buộc có để exam_list/admin biết dòng nào đã lưu kết quả,
+        # từ đó hiện badge "Đã lưu kết quả" thay vì còn combobox Đạt/Không đạt/Vắng.
         s["result_saved"] = bool(saved_result)
         s["saved_ket_qua"] = saved_result.get("ket_qua", "") if saved_result else ""
         s["saved_so_thi"] = saved_result.get("so_thi", "") if saved_result else ""
         s["saved_cap_thi"] = saved_result.get("cap_dai_thi", "") if saved_result else ""
+
+        fee_check = fee_map.get(license_code, {}) or {}
+
+        s["hocphi_id"] = fee_check.get("id", "")
+        s["coach_check_status"] = fee_check.get("coach_check_status") or "Chưa KTra"
+        s["coach_check_note"] = fee_check.get("coach_check_note") or ""
+        s["coach_checked_by"] = fee_check.get("coach_checked_by") or ""
+        s["coach_checked_by_name"] = fee_check.get("coach_checked_by_name") or ""
+        s["coach_checked_at"] = fee_check.get("coach_checked_at") or ""
         is_dan = is_dan_exam_belt_web(cap_du_thi)
 
         if list_type == "dan" and is_dan:
@@ -1990,11 +2193,13 @@ def api_student(license_code):
     return jsonify(data[0] if data else {})
 
 STUDENT_TABLE = "student"
+COACH_TABLE = "coaches"
 HOCPHI_TABLE = "hocphi"
 KETQUA_TABLE = "ketqua"
 HOATDONG_TABLE = "hoatdong"
 NOTIFICATION_TABLE = "notifications"
 PAYMENT_SETTINGS_TABLE = "payment_settings"
+APP_SETTINGS_TABLE = "app_settings"
 NOTIFICATION_READ_TABLE = "notification_reads"
 EXAM_INFO_TABLE = "exam_infos"
 BELT_FLOW_WEB = [
@@ -2032,10 +2237,114 @@ def normalize_belt_name_web(belt):
 
     return raw
 
+def supabase_public_url(bucket, filename):
+    filename = str(filename or "").strip().lstrip("/")
+    return f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{filename}"
+
+
 def supabase_student_photo_public_url(filename):
     filename = str(filename or "").strip().lstrip("/")
-    return f"{SUPABASE_URL}/storage/v1/object/public/{STUDENT_PHOTO_BUCKET}/{filename}"
+    return supabase_public_url(STUDENT_PHOTO_BUCKET, filename)
 
+
+def upload_club_asset_to_supabase(file_storage, folder="club-info"):
+    """
+    Upload ảnh logo/HLV/thông tin CLB lên Supabase Storage.
+    """
+    if not file_storage or not file_storage.filename:
+        return ""
+
+    filename = secure_filename(file_storage.filename)
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise ValueError("Ảnh chỉ nhận file JPG, JPEG, PNG hoặc WEBP.")
+
+    storage_path = f"{folder}/{datetime.now().strftime('%Y%m%d%H%M%S%f')}.{ext}"
+    content = file_storage.read()
+
+    content_type_map = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+    }
+
+    try:
+        supabase.storage.from_(CLUB_ASSET_BUCKET).upload(
+            storage_path,
+            content,
+            {
+                "content-type": content_type_map.get(ext, "application/octet-stream"),
+                "upsert": "true"
+            }
+        )
+    except Exception:
+        supabase.storage.from_(CLUB_ASSET_BUCKET).update(
+            storage_path,
+            content,
+            {
+                "content-type": content_type_map.get(ext, "application/octet-stream"),
+                "upsert": "true"
+            }
+        )
+
+    return supabase_public_url(CLUB_ASSET_BUCKET, storage_path)
+
+def prepare_student_photo_for_upload(file_storage, target_width=780, target_height=1040, quality=98):
+    """
+    Xử lý ảnh học viên trước khi upload Supabase:
+    - Sửa xoay EXIF
+    - Convert RGB
+    - Crop đúng tỷ lệ 3x4
+    - Resize vừa đủ để hiển thị web, tránh bị sharpen quá mạnh
+    - Làm mềm rất nhẹ để giảm lốm đốm vùng da/áo
+    - Xuất JPEG chất lượng cao
+    """
+
+    img = Image.open(file_storage.stream)
+    img = ImageOps.exif_transpose(img)
+    img = img.convert("RGB")
+
+    src_w, src_h = img.size
+    target_ratio = target_width / target_height
+    src_ratio = src_w / src_h
+
+    # Crop đúng tỷ lệ 3x4
+    if src_ratio > target_ratio:
+        new_w = int(src_h * target_ratio)
+        left = (src_w - new_w) // 2
+        img = img.crop((left, 0, left + new_w, src_h))
+
+    elif src_ratio < target_ratio:
+        new_h = int(src_w / target_ratio)
+
+        # Ưu tiên giữ mặt và phần đầu, không cắt quá thấp
+        top = max(0, int((src_h - new_h) * 0.10))
+
+        if top + new_h > src_h:
+            top = src_h - new_h
+
+        img = img.crop((0, top, src_w, top + new_h))
+
+    # Dùng BICUBIC mềm hơn LANCZOS, tránh bị rít nét
+    img = img.resize((target_width, target_height), Image.Resampling.BICUBIC)
+
+    # Làm mềm cực nhẹ, giảm lốm đốm nhưng không mất chi tiết mặt
+    img = img.filter(ImageFilter.GaussianBlur(radius=0.18))
+
+    output = BytesIO()
+    img.save(
+        output,
+        format="JPEG",
+        quality=quality,
+        optimize=True,
+        progressive=False,
+        subsampling=0
+    )
+    output.seek(0)
+
+    return output.getvalue()
 
 def get_student_photo_url(license_code):
     license_code = str(license_code or "").strip()
@@ -2120,19 +2429,22 @@ def api_student_photo_upload(license_code):
         }), 400
 
     try:
-        # Lưu ngay ngoài bucket student-photos, giống cách Ken đang upload thủ công
-        storage_path = f"{license_code}.{ext}"
-        content = file.read()
+        # Luôn xử lý và lưu ảnh học viên thành JPG chuẩn 3x4
+        storage_path = f"{license_code}.jpg"
+        content = prepare_student_photo_for_upload(file)
 
-        # Xóa ảnh cũ khác đuôi để mỗi học viên chỉ còn 1 ảnh
-        for old_ext in ALLOWED_PHOTO_EXTENSIONS:
-            old_path = f"{license_code}.{old_ext}"
+        # Xóa toàn bộ ảnh cũ khác đuôi để mỗi học viên chỉ còn 1 ảnh
+        old_paths = [
+            f"{license_code}.jpg",
+            f"{license_code}.jpeg",
+            f"{license_code}.png",
+            f"{license_code}.webp",
+        ]
 
-            if old_path != storage_path:
-                try:
-                    supabase.storage.from_(STUDENT_PHOTO_BUCKET).remove([old_path])
-                except Exception:
-                    pass
+        try:
+            supabase.storage.from_(STUDENT_PHOTO_BUCKET).remove(old_paths)
+        except Exception:
+            pass
 
         # Upload mới / ghi đè ảnh cũ
         try:
@@ -2140,7 +2452,7 @@ def api_student_photo_upload(license_code):
                 storage_path,
                 content,
                 {
-                    "content-type": file.content_type or f"image/{ext}",
+                    "content-type": "image/jpeg",
                     "upsert": "true"
                 }
             )
@@ -2149,22 +2461,25 @@ def api_student_photo_upload(license_code):
                 storage_path,
                 content,
                 {
-                    "content-type": file.content_type or f"image/{ext}",
+                    "content-type": "image/jpeg",
                     "upsert": "true"
                 }
             )
 
         photo_url = supabase_student_photo_public_url(storage_path)
 
+        # Thêm version chống cache để web hiện ảnh mới ngay
+        photo_url_with_version = f"{photo_url}?v={int(datetime.now().timestamp())}"
+
         # Lưu link ảnh vào bảng student
         supabase.table(STUDENT_TABLE) \
-            .update({"photo_url": photo_url}) \
+            .update({"photo_url": photo_url_with_version}) \
             .eq("license", license_code) \
             .execute()
 
         return jsonify({
             "ok": True,
-            "photo_url": photo_url
+            "photo_url": photo_url_with_version
         })
 
     except Exception as e:
@@ -3807,6 +4122,169 @@ OPTION_META = {
     "clubs": "CLB",
 }
 
+def get_list_count(form, name):
+    try:
+        return int(form.get(name, "0") or 0)
+    except:
+        return 0
+
+
+def read_club_info_from_form(form, files, old_club_info):
+    old_club_info = old_club_info or {}
+
+    head_old = old_club_info.get("head_coach", {}) or {}
+
+    head_photo_url = str(form.get("head_photo_url") or head_old.get("photo_url") or "").strip()
+    head_photo_file = files.get("head_photo_file")
+
+    if head_photo_file and head_photo_file.filename:
+        head_photo_url = upload_club_asset_to_supabase(head_photo_file, "club-info/coaches")
+
+    head_coach = {
+        "name": str(form.get("head_name") or "").strip(),
+        "role": str(form.get("head_role") or "HLV Trưởng").strip(),
+        "phone": str(form.get("head_phone") or "").strip(),
+        "photo_url": head_photo_url,
+        "description": str(form.get("head_description") or "").strip(),
+    }
+
+    registrar_old = old_club_info.get("registrar", {}) or {}
+
+    registrar_photo_url = str(
+        form.get("registrar_photo_url") or registrar_old.get("photo_url") or ""
+    ).strip()
+
+    registrar_photo_file = files.get("registrar_photo_file")
+
+    if registrar_photo_file and registrar_photo_file.filename:
+        registrar_photo_url = upload_club_asset_to_supabase(
+            registrar_photo_file,
+            "club-info/registrar"
+        )
+
+    registrar = {
+        "name": str(form.get("registrar_name") or "").strip(),
+        "role": str(form.get("registrar_role") or "Người ghi danh").strip(),
+        "phone": str(form.get("registrar_phone") or "").strip(),
+        "photo_url": registrar_photo_url,
+        "description": str(form.get("registrar_description") or "").strip(),
+    }
+
+    coaches = []
+    coach_count = get_list_count(form, "coach_count")
+
+    group_map = {
+        "246": {
+            "group_title": "HLV lớp 2-4-6",
+            "group_subtitle": "Lớp buổi chiều",
+        },
+        "357": {
+            "group_title": "HLV lớp 3-5-7",
+            "group_subtitle": "Lớp chính trong tuần",
+        },
+        "weekend": {
+            "group_title": "HLV lớp sáng & cuối tuần",
+            "group_subtitle": "Thứ 7, Chủ nhật và lớp sáng",
+        },
+    }
+
+    for i in range(coach_count):
+        if str(form.get(f"coach_delete_{i}") or "") == "1":
+            continue
+
+        name = str(form.get(f"coach_name_{i}") or "").strip()
+        role = str(form.get(f"coach_role_{i}") or "").strip()
+        group = str(form.get(f"coach_group_{i}") or "246").strip()
+        phone = str(form.get(f"coach_phone_{i}") or "").strip()
+
+        if not name and not role and not phone:
+            continue
+
+        photo_url = str(form.get(f"coach_photo_url_{i}") or "").strip()
+        photo_file = files.get(f"coach_photo_file_{i}")
+
+        if photo_file and photo_file.filename:
+            photo_url = upload_club_asset_to_supabase(photo_file, "club-info/coaches")
+
+        group_info = group_map.get(group, group_map["246"])
+
+        coaches.append({
+            "group": group,
+            "group_title": group_info["group_title"],
+            "group_subtitle": group_info["group_subtitle"],
+            "name": name,
+            "role": role,
+            "phone": phone,
+            "photo_url": photo_url,
+        })
+
+    regular_schedules = []
+    regular_count = get_list_count(form, "regular_schedule_count")
+
+    for i in range(regular_count):
+        if str(form.get(f"regular_schedule_delete_{i}") or "") == "1":
+            continue
+
+        title = str(form.get(f"regular_schedule_title_{i}") or "").strip()
+        time_text = str(form.get(f"regular_schedule_time_{i}") or "").strip()
+
+        if title or time_text:
+            regular_schedules.append({
+                "title": title,
+                "time": time_text,
+            })
+
+    summer_schedules = []
+    summer_count = get_list_count(form, "summer_schedule_count")
+
+    for i in range(summer_count):
+        if str(form.get(f"summer_schedule_delete_{i}") or "") == "1":
+            continue
+
+        title = str(form.get(f"summer_schedule_title_{i}") or "").strip()
+        time_text = str(form.get(f"summer_schedule_time_{i}") or "").strip()
+
+        if title or time_text:
+            summer_schedules.append({
+                "title": title,
+                "time": time_text,
+            })
+
+    exam_notes = []
+    note_count = get_list_count(form, "exam_note_count")
+
+    for i in range(note_count):
+        if str(form.get(f"exam_note_delete_{i}") or "") == "1":
+            continue
+
+        note = str(form.get(f"exam_note_{i}") or "").strip()
+
+        if note:
+            exam_notes.append(note)
+
+    return {
+        "intro_title": str(form.get("intro_title") or "").strip(),
+        "intro_subtitle": str(form.get("intro_subtitle") or "").strip(),
+        "intro_content": str(form.get("intro_content") or "").strip(),
+
+        "head_coach": head_coach,
+        "registrar": registrar,
+        "coaches": coaches,
+
+        "regular_schedules": regular_schedules,
+        "summer_schedules": summer_schedules,
+
+        "fees_info": {
+            "monthly_fee": str(form.get("monthly_fee") or "").strip(),
+            "three_month_discount": str(form.get("three_month_discount") or "").strip(),
+            "six_month_bonus": str(form.get("six_month_bonus") or "").strip(),
+            "family_discount": str(form.get("family_discount") or "").strip(),
+            "uniform_fee": str(form.get("uniform_fee") or "").strip(),
+            "exam_fee": str(form.get("club_exam_fee") or "").strip(),
+            "exam_notes": exam_notes,
+        }
+    }
+
 
 @app.post("/setup/class-options/add")
 def setup_class_options_add():
@@ -3898,20 +4376,9 @@ def setup():
                         flash("Logo chỉ nhận file jpg, jpeg, png, webp.", "danger")
                         return redirect(url_for("setup", tab="header"))
 
-                    logo_name = f"club_logo.{ext}"
-                    logo_path = LOGO_UPLOAD_DIR / logo_name
-
-                    for old in LOGO_UPLOAD_DIR.glob("club_logo.*"):
-                        try:
-                            old.unlink()
-                        except:
-                            pass
-
-                    logo_file.save(logo_path)
-
-                    settings["header"]["logo_url"] = url_for(
-                        "static",
-                        filename=f"uploads/logos/{logo_name}"
+                    settings["header"]["logo_url"] = upload_club_asset_to_supabase(
+                        logo_file,
+                        "club-info/header"
                     )
 
             elif active_tab == "fees":
@@ -3942,12 +4409,20 @@ def setup():
                     settings["exam"]["exam_number_prefix"]
                 )
 
+            elif active_tab == "club_info":
+                settings["club_info"] = read_club_info_from_form(
+                    request.form,
+                    request.files,
+                    settings.get("club_info", DEFAULT_APP_SETTINGS.get("club_info", {}))
+                )
+
             elif active_tab == "payment":
                 save_payment_settings(request.form)
                 flash("Đã lưu thông tin thanh toán lên Supabase")
-
             save_app_settings(settings)
             flash("Đã lưu cài đặt.", "success")
+
+
 
         except Exception as e:
             print("[SETUP SAVE ERROR]", e)
@@ -4231,6 +4706,117 @@ def personalize_notification_content(content, student_name="", is_all=False):
 
     return "\n".join(lines).strip()
 
+def build_notification_filter_ma_quy(target_mode, year, exam_quarter="", dan_round=""):
+    """
+    Tạo mã kỳ thi để lọc thông báo theo học phí đã đăng ký thi.
+    - Thi cấp: Q12026, Q22026...
+    - Thi đẳng: L1-2026, L2-2026, MN-2026...
+    """
+    target_mode = str(target_mode or "").strip()
+    year = str(year or datetime.now().year).strip()
+    exam_quarter = str(exam_quarter or "").strip().upper()
+    dan_round = str(dan_round or "").strip().upper()
+
+    if target_mode in ["exam_registered", "exam_not_registered"]:
+        if not exam_quarter:
+            return ""
+        return f"{exam_quarter}{year}"
+
+    if target_mode in ["dan_registered", "dan_not_registered"]:
+        if not dan_round:
+            return ""
+        return f"{dan_round}-{year}"
+
+    return ""
+
+
+def get_students_by_notification_target(target_mode, students, year, exam_quarter="", dan_round=""):
+    """
+    Trả về danh sách học viên theo tùy chọn gửi thông báo:
+    - exam_registered: đã đăng ký thi cấp kỳ chọn.
+    - exam_not_registered: chưa đăng ký thi cấp kỳ chọn.
+    - dan_registered: đã đăng ký thi đẳng kỳ/lần chọn.
+    - dan_not_registered: chưa đăng ký thi đẳng kỳ/lần chọn.
+    """
+    target_mode = str(target_mode or "").strip()
+
+    ma_quy = build_notification_filter_ma_quy(
+        target_mode=target_mode,
+        year=year,
+        exam_quarter=exam_quarter,
+        dan_round=dan_round
+    )
+
+    if not ma_quy:
+        return [], ""
+
+    fees = safe_rows(HOCPHI_TABLE, "ma_hv,ma_quy")
+
+    registered_ids = {
+        str(f.get("ma_hv") or "").strip()
+        for f in fees
+        if str(f.get("ma_quy") or "").strip().upper() == ma_quy.upper()
+    }
+
+    active_students = [
+        s for s in students
+        if is_active(s.get("active")) and str(s.get("license") or "").strip()
+    ]
+
+    if target_mode in ["exam_registered", "dan_registered"]:
+        filtered_students = [
+            s for s in active_students
+            if str(s.get("license") or "").strip() in registered_ids
+        ]
+
+    elif target_mode in ["exam_not_registered", "dan_not_registered"]:
+        filtered_students = [
+            s for s in active_students
+            if str(s.get("license") or "").strip() not in registered_ids
+        ]
+
+    else:
+        filtered_students = []
+
+    return filtered_students, ma_quy
+
+
+def get_notification_target_label(target_mode, year, exam_quarter="", dan_round=""):
+    target_mode = str(target_mode or "").strip()
+    year = str(year or datetime.now().year).strip()
+    exam_quarter = str(exam_quarter or "").strip().upper()
+    dan_round = str(dan_round or "").strip().upper()
+
+    exam_label_map = {
+        "Q1": "Quý 1",
+        "Q2": "Quý 2",
+        "Q3": "Quý 3",
+        "Q4": "Quý 4",
+    }
+
+    dan_label_map = {
+        "L1": "Lần 1",
+        "L2": "Lần 2",
+        "MN": "KV miền Nam",
+        "MT": "KV miền Trung",
+        "MB": "KV miền Bắc",
+        "QG": "Quốc Gia",
+    }
+
+    if target_mode == "exam_registered":
+        return f"Thi cấp - Đã đăng ký - {exam_label_map.get(exam_quarter, exam_quarter)} - {year}"
+
+    if target_mode == "exam_not_registered":
+        return f"Thi cấp - Chưa đăng ký - {exam_label_map.get(exam_quarter, exam_quarter)} - {year}"
+
+    if target_mode == "dan_registered":
+        return f"Thi đẳng - Đã đăng ký - {dan_label_map.get(dan_round, dan_round)} - {year}"
+
+    if target_mode == "dan_not_registered":
+        return f"Thi đẳng - Chưa đăng ký - {dan_label_map.get(dan_round, dan_round)} - {year}"
+
+    return "Tùy chọn"
+
 @app.route("/notifications", methods=["GET", "POST"])
 def notifications():
     cleanup_old_notifications()
@@ -4238,11 +4824,18 @@ def notifications():
     students = safe_rows(STUDENT_TABLE)
     students.sort(key=lambda s: str(s.get("name") or ""))
 
+    now_year = datetime.now().year
+    year_options = [now_year - 1, now_year, now_year + 1]
+
     if request.method == "POST":
         target_mode = request.form.get("target_mode", "all").strip()
         target_licenses = request.form.getlist("target_licenses")
         title = request.form.get("title", "").strip()
         content = request.form.get("content", "").strip()
+
+        notify_year = request.form.get("notify_year", str(now_year)).strip() or str(now_year)
+        exam_quarter = request.form.get("exam_quarter", "").strip().upper()
+        dan_round = request.form.get("dan_round", "").strip().upper()
 
         target_licenses = [
             str(x or "").strip()
@@ -4281,19 +4874,83 @@ def notifications():
                 flash("Đã gửi thông báo cho tất cả học viên.", "success")
                 return redirect(url_for("notifications"))
 
-            # =========================
-            # GỬI TÙY CHỌN NHIỀU HỌC VIÊN
-            # =========================
-            if not target_licenses:
-                flash("Ken chưa chọn học viên nhận thông báo.", "danger")
-                return redirect(url_for("notifications"))
-
             student_map = {
                 str(s.get("license") or "").strip(): s
                 for s in students
             }
 
             payloads = []
+
+            # =========================
+            # GỬI THEO NHÓM THI CẤP / THI ĐẲNG
+            # =========================
+            group_target_modes = [
+                "exam_registered",
+                "exam_not_registered",
+                "dan_registered",
+                "dan_not_registered",
+            ]
+
+            if target_mode in group_target_modes:
+                if target_mode in ["exam_registered", "exam_not_registered"] and not exam_quarter:
+                    flash("Ken chưa chọn quý thi cấp.", "danger")
+                    return redirect(url_for("notifications"))
+
+                if target_mode in ["dan_registered", "dan_not_registered"] and not dan_round:
+                    flash("Ken chưa chọn lần/khu vực thi đẳng.", "danger")
+                    return redirect(url_for("notifications"))
+
+                target_students, ma_quy = get_students_by_notification_target(
+                    target_mode=target_mode,
+                    students=students,
+                    year=notify_year,
+                    exam_quarter=exam_quarter,
+                    dan_round=dan_round
+                )
+
+                target_label = get_notification_target_label(
+                    target_mode=target_mode,
+                    year=notify_year,
+                    exam_quarter=exam_quarter,
+                    dan_round=dan_round
+                )
+
+                if not target_students:
+                    flash(f"Không có học viên phù hợp với nhóm: {target_label}.", "danger")
+                    return redirect(url_for("notifications"))
+
+                for student in target_students:
+                    license_code = str(student.get("license") or "").strip()
+                    student_name = student.get("name", "")
+
+                    final_content = personalize_notification_content(
+                        content,
+                        student_name=student_name,
+                        is_all=False
+                    )
+
+                    payloads.append({
+                        "target_type": target_mode,
+                        "target_license": license_code,
+                        "target_name": student_name,
+                        "title": title,
+                        "content": append_notification_footer(final_content),
+                    })
+
+                supabase.table(NOTIFICATION_TABLE).insert(payloads).execute()
+
+                flash(
+                    f"Đã gửi thông báo cho {len(payloads)} học viên thuộc nhóm: {target_label}.",
+                    "success"
+                )
+                return redirect(url_for("notifications"))
+
+            # =========================
+            # GỬI TÙY CHỌN NHIỀU HỌC VIÊN
+            # =========================
+            if not target_licenses:
+                flash("Ken chưa chọn học viên nhận thông báo.", "danger")
+                return redirect(url_for("notifications"))
 
             for license_code in target_licenses:
                 student = student_map.get(license_code)
@@ -4337,7 +4994,9 @@ def notifications():
     return render_template(
         "notifications.html",
         rows=students,
-        notifications=notifications_rows
+        notifications=notifications_rows,
+        current_year=now_year,
+        year_options=year_options
     )
     
 @app.route("/student-login", methods=["GET", "POST"])
@@ -4465,6 +5124,240 @@ def student_logout():
     flash("Đã đăng xuất.", "success")
     return redirect(url_for("student_login"))
 
+# =========================
+# COACH PORTAL - HLV
+# =========================
+
+def normalize_phone_web(value):
+    return re.sub(r"\D", "", str(value or ""))
+
+
+def is_active_text(value):
+    text = remove_accents(str(value or "")).strip().lower()
+    return text in ["co", "yes", "true", "1", "active", "dang hoat dong"]
+
+
+def get_logged_coach():
+    coach_code = str(session.get("coach_code") or "").strip()
+
+    if not coach_code:
+        return None
+
+    try:
+        rows = supabase.table(COACH_TABLE) \
+            .select("*") \
+            .eq("coach_code", coach_code) \
+            .limit(1) \
+            .execute().data or []
+
+        if not rows:
+            session.pop("coach_logged_in", None)
+            session.pop("coach_code", None)
+            return None
+
+        coach = rows[0]
+
+        if not is_active_text(coach.get("active")):
+            session.pop("coach_logged_in", None)
+            session.pop("coach_code", None)
+            return None
+
+        return coach
+
+    except Exception as e:
+        print("[GET LOGGED COACH ERROR]", e)
+        return None
+
+
+def require_coach_login():
+    if not session.get("coach_logged_in"):
+        return None
+
+    return get_logged_coach()
+
+
+@app.route("/coach-login", methods=["GET", "POST"])
+def coach_login():
+    if request.method == "POST":
+        coach_code = request.form.get("coach_code", "").strip()
+        phone = normalize_phone_web(request.form.get("phone", ""))
+
+        if not coach_code or not phone:
+            flash("Vui lòng nhập Mã HLV và SĐT.", "danger")
+            return redirect(url_for("coach_login"))
+
+        try:
+            rows = supabase.table(COACH_TABLE) \
+                .select("*") \
+                .eq("coach_code", coach_code) \
+                .limit(1) \
+                .execute().data or []
+
+            if not rows:
+                flash("Không tìm thấy Mã HLV.", "danger")
+                return redirect(url_for("coach_login"))
+
+            coach = rows[0]
+
+            if not is_active_text(coach.get("active")):
+                flash("Tài khoản HLV này đang bị khóa.", "danger")
+                return redirect(url_for("coach_login"))
+
+            db_phone = normalize_phone_web(coach.get("phone"))
+
+            if not db_phone or db_phone != phone:
+                flash("SĐT đăng nhập chưa đúng.", "danger")
+                return redirect(url_for("coach_login"))
+
+            session.clear()
+            session["coach_logged_in"] = True
+            session["coach_code"] = coach.get("coach_code")
+            session["coach_name"] = coach.get("name")
+
+            flash("Đăng nhập HLV thành công.", "success")
+            return redirect(url_for("coach_exam"))
+
+        except Exception as e:
+            print("[COACH LOGIN ERROR]", e)
+            flash(f"Lỗi đăng nhập HLV: {e}", "danger")
+            return redirect(url_for("coach_login"))
+
+    return render_template("coach_login.html")
+
+
+@app.get("/coach-logout")
+def coach_logout():
+    session.pop("coach_logged_in", None)
+    session.pop("coach_code", None)
+    session.pop("coach_name", None)
+
+    flash("Đã đăng xuất HLV.", "success")
+    return redirect(url_for("coach_login"))
+
+
+@app.get("/coach/exam")
+def coach_exam():
+    coach = require_coach_login()
+
+    if not coach:
+        return redirect(url_for("coach_login"))
+
+    now = datetime.now()
+
+    year = request.args.get("year", str(now.year)).strip()
+    quarter = request.args.get(
+        "quarter",
+        f"Q{(now.month - 1) // 3 + 1}"
+    ).strip().upper()
+
+    if quarter not in ["Q1", "Q2", "Q3", "Q4"]:
+        quarter = f"Q{(now.month - 1) // 3 + 1}"
+
+    rows = get_exam_list_rows_by_type_web(
+        year=year,
+        quarter=quarter,
+        list_type="cap"
+    )
+
+    rows.sort(key=lambda r: (
+        get_belt_index_web(r.get("cap_du_thi")),
+        str(r.get("gender") or ""),
+        str(r.get("name") or "")
+    ))
+
+    status_summary = {
+        "total": len(rows),
+        "Đúng": 0,
+        "Sai": 0,
+        "Ktra lại": 0,
+        "Chưa KTra": 0,
+    }
+
+    for r in rows:
+        status = str(r.get("coach_check_status") or "").strip()
+
+        if not status:
+            status = "Chưa KTra"
+
+        if status not in status_summary:
+            status_summary[status] = 0
+
+        status_summary[status] += 1
+
+    years = [str(y) for y in range(now.year - 2, now.year + 3)]
+    quarters = ["Q1", "Q2", "Q3", "Q4"]
+
+    return render_template(
+        "coach_exam.html",
+        coach=coach,
+        rows=rows,
+        year=year,
+        quarter=quarter,
+        years=years,
+        quarters=quarters,
+        status_summary=status_summary
+    )
+
+
+@app.post("/coach/exam/update-status")
+def coach_exam_update_status():
+    coach = require_coach_login()
+
+    if not coach:
+        return jsonify({
+            "ok": False,
+            "message": "HLV chưa đăng nhập."
+        }), 401
+
+    data = request.get_json(silent=True) or {}
+
+    hocphi_id = str(data.get("hocphi_id") or "").strip()
+    status = str(data.get("status") or "").strip()
+    note = str(data.get("note") or "").strip()
+
+    allowed_status = ["Chưa KTra", "Đúng", "Sai", "Ktra lại"]
+
+    if not hocphi_id:
+        return jsonify({
+            "ok": False,
+            "message": "Thiếu ID học phí."
+        }), 400
+
+    if status not in allowed_status:
+        return jsonify({
+            "ok": False,
+            "message": "Trạng thái không hợp lệ."
+        }), 400
+
+    try:
+        payload = {
+            "coach_check_status": status,
+            "coach_check_note": note,
+            "coach_checked_by": str(coach.get("coach_code") or ""),
+            "coach_checked_by_name": str(coach.get("name") or ""),
+            "coach_checked_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        supabase.table(HOCPHI_TABLE) \
+            .update(payload) \
+            .eq("id", hocphi_id) \
+            .execute()
+
+        return jsonify({
+            "ok": True,
+            "message": "Đã lưu kiểm tra HLV.",
+            "status": status,
+            "checked_by_name": payload["coach_checked_by_name"],
+            "checked_at": payload["coach_checked_at"],
+        })
+
+    except Exception as e:
+        print("[COACH EXAM UPDATE STATUS ERROR]", e)
+
+        return jsonify({
+            "ok": False,
+            "message": str(e)
+        }), 500
 
 @app.get("/student-portal")
 def student_portal_home():
@@ -4540,6 +5433,24 @@ def student_portal_info():
         photo_url=get_student_photo_url(student.get("license"))
     )
 
+@app.get("/student-portal/club-info")
+def student_portal_club_info():
+    student = require_student_login()
+    if not student:
+        return redirect(url_for("student_login"))
+
+    license_code = student.get("license")
+    notifications_rows, unread_count = get_student_notifications(license_code)
+
+    settings = load_app_settings()
+    club_info = settings.get("club_info", DEFAULT_APP_SETTINGS.get("club_info", {}))
+
+    return render_template(
+        "student_portal_club_info.html",
+        student=student,
+        unread_count=unread_count,
+        club_info=club_info
+    )
 
 @app.get("/student-portal/fees")
 def student_portal_fees():
