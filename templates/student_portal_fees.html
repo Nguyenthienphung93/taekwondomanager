@@ -558,6 +558,7 @@
     justify-content: center;
     gap: 10px;
     margin-top: 14px;
+    flex-wrap: wrap;
 }
 
 .receipt-actions button {
@@ -1092,7 +1093,7 @@
         <div id="portalReceiptA5" class="receipt-a5">
             <div class="receipt-header">
                 <div class="receipt-logo-box">
-                    <img src="{{ app_settings.header.logo_url }}" alt="Logo CLB">
+                    <img src="{{ app_settings.header.logo_url }}" alt="Logo CLB" crossorigin="anonymous">
                 </div>
 
                 <div class="receipt-company">
@@ -1163,7 +1164,7 @@
                     <div class="sign-title">Người thu tiền</div>
                     <div class="sign-note">(Ký, Họ tên)</div>
                     <div class="sign-space sign-image-wrap">
-                        <img src="https://hbmqqvrhjnhxgrxvlthm.supabase.co/storage/v1/object/public/system-assets/chuky.png" class="signature-img" alt="Chữ ký">
+                        <img src="https://hbmqqvrhjnhxgrxvlthm.supabase.co/storage/v1/object/public/system-assets/chuky.png" class="signature-img" alt="Chữ ký" crossorigin="anonymous">
                     </div>
                     <div class="sign-name">Lê Tri Tâm</div>
                 </div>
@@ -1173,11 +1174,16 @@
         </div>
 
         <div class="receipt-actions">
+            <button type="button" class="print-btn" onclick="downloadPortalReceiptPNG()">🖼️ Tải ảnh</button>
+            <button type="button" class="print-btn" onclick="downloadPortalReceiptPDF()">📄 Tải PDF</button>
             <button type="button" class="print-btn" onclick="window.print()">🖨️ In</button>
             <button type="button" class="close-btn" onclick="closePortalReceipt()">Đóng</button>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
 <script>
 function filterFeeCards(type, btn) {
@@ -1314,6 +1320,145 @@ function copyPaymentText(id) {
     }
 
     fallbackCopyText(text);
+}
+
+function safeReceiptFileName(text) {
+    return String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .toLowerCase();
+}
+
+function getPortalReceiptFileName(ext) {
+    const nameEl = document.getElementById("rcName");
+
+    const studentName = safeReceiptFileName(
+        nameEl ? nameEl.textContent : "hoc_vien"
+    );
+
+    const now = new Date();
+
+    const timeText =
+        now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0") +
+        "_" +
+        String(now.getHours()).padStart(2, "0") +
+        String(now.getMinutes()).padStart(2, "0") +
+        String(now.getSeconds()).padStart(2, "0");
+
+    return `bien_lai_${studentName}_${timeText}.${ext}`;
+}
+
+function isIOSDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+async function buildPortalReceiptCanvas() {
+    const receipt = document.getElementById("portalReceiptA5");
+
+    if (!receipt) {
+        alert("Không tìm thấy khung hóa đơn.");
+        return null;
+    }
+
+    return await html2canvas(receipt, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        allowTaint: true,
+        scrollX: 0,
+        scrollY: -window.scrollY
+    });
+}
+
+function downloadBlobPortal(blob, filename) {
+    const url = URL.createObjectURL(blob);
+
+    /*
+        iPhone/iPad đôi khi không tải trực tiếp như laptop/Android.
+        Cách ổn nhất là mở file ra tab mới, rồi chọn Chia sẻ > Lưu vào Files/Ảnh.
+    */
+    if (isIOSDevice()) {
+        const newWindow = window.open(url, "_blank");
+
+        if (!newWindow) {
+            alert("iPhone/iPad đang chặn popup. Ken cho phép popup rồi bấm tải lại nha.");
+        }
+
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+    }
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+async function downloadPortalReceiptPNG() {
+    try {
+        const canvas = await buildPortalReceiptCanvas();
+        if (!canvas) return;
+
+        const filename = getPortalReceiptFileName("png");
+
+        canvas.toBlob(function(blob) {
+            if (!blob) {
+                alert("Không tạo được file ảnh hóa đơn.");
+                return;
+            }
+
+            downloadBlobPortal(blob, filename);
+        }, "image/png");
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi tải ảnh hóa đơn. Ken thử tải PDF hoặc kiểm tra lại logo/chữ ký.");
+    }
+}
+
+async function downloadPortalReceiptPDF() {
+    try {
+        const canvas = await buildPortalReceiptCanvas();
+        if (!canvas) return;
+
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert("Chưa tải được thư viện PDF. Ken kiểm tra mạng hoặc reload lại trang.");
+            return;
+        }
+
+        const imgData = canvas.toDataURL("image/png");
+        const { jsPDF } = window.jspdf;
+
+        const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a5"
+        });
+
+        pdf.addImage(imgData, "PNG", 0, 0, 148, 210);
+
+        const filename = getPortalReceiptFileName("pdf");
+        const pdfBlob = pdf.output("blob");
+
+        downloadBlobPortal(pdfBlob, filename);
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi tải PDF hóa đơn. Ken kiểm tra lại html2canvas/jsPDF.");
+    }
 }
 
 function fallbackCopyText(text) {

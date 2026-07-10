@@ -75,6 +75,7 @@ DEFAULT_APP_SETTINGS = {
             "name": "Nguyễn Thiên Phụng",
             "role": "HLV Trưởng",
             "phone": "",
+            "qualification": "",
             "photo_url": "",
             "description": (
                 "Nguyễn Thiên Phụng là VĐV Taekwondo Poomsae Việt Nam, nhiều năm thi đấu đỉnh cao "
@@ -103,6 +104,7 @@ DEFAULT_APP_SETTINGS = {
                 "name": "Nguyễn Hoàng Long",
                 "role": "Phụ Trách HLV",
                 "phone": "",
+                "qualification": "",
                 "photo_url": ""
             },
             {
@@ -112,6 +114,7 @@ DEFAULT_APP_SETTINGS = {
                 "name": "Nguyễn Duy Thông",
                 "role": "Trợ giảng",
                 "phone": "",
+                "qualification": "",
                 "photo_url": ""
             },
             {
@@ -121,6 +124,7 @@ DEFAULT_APP_SETTINGS = {
                 "name": "Nông Thạch Khiêm",
                 "role": "Phụ Trách HLV",
                 "phone": "",
+                "qualification": "",
                 "photo_url": ""
             },
             {
@@ -130,6 +134,7 @@ DEFAULT_APP_SETTINGS = {
                 "name": "Nguyễn Trung Hiếu",
                 "role": "Phụ Trách HLV",
                 "phone": "",
+                "qualification": "",
                 "photo_url": ""
             },
             {
@@ -139,6 +144,7 @@ DEFAULT_APP_SETTINGS = {
                 "name": "Trần Ngọc Hà",
                 "role": "Trợ giảng",
                 "phone": "",
+                "qualification": "",
                 "photo_url": ""
             },
             {
@@ -148,6 +154,7 @@ DEFAULT_APP_SETTINGS = {
                 "name": "Nguyễn Lê Cường",
                 "role": "Phụ Trách HLV",
                 "phone": "",
+                "qualification": "",
                 "photo_url": ""
             }
         ],
@@ -791,7 +798,7 @@ def students_delete(license_code):
     supabase.table(STUDENT_TABLE).delete().eq('license', license_code).execute()
     flash(f'Đã xoá học viên: {license_code}', "success")
     return back_to_current_page("students")
-    
+
 @app.post('/students/<license_code>/update')
 def students_update(license_code):
     form = request.form
@@ -2214,6 +2221,7 @@ COACH_TABLE = "coaches"
 HOCPHI_TABLE = "hocphi"
 KETQUA_TABLE = "ketqua"
 HOATDONG_TABLE = "hoatdong"
+ACTIVITY_EVENTS_TABLE = "activity_events"
 NOTIFICATION_TABLE = "notifications"
 PAYMENT_SETTINGS_TABLE = "payment_settings"
 APP_SETTINGS_TABLE = "app_settings"
@@ -3738,54 +3746,177 @@ def exam_tracking_export():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+RESULT_PERIOD_OPTIONS = [
+    {"value": "Q1", "label": "Q1"},
+    {"value": "Q2", "label": "Q2"},
+    {"value": "Q3", "label": "Q3"},
+    {"value": "Q4", "label": "Q4"},
+    {"value": "L1", "label": "L1"},
+    {"value": "L2", "label": "L2"},
+    {"value": "KVMN", "label": "KVMN"},
+    {"value": "KVMT", "label": "KVMT"},
+    {"value": "KVMB", "label": "KVMB"},
+    {"value": "QG", "label": "QG"},
+]
+
+RESULT_CAP_OPTIONS = [
+    "Cấp 9", "Cấp 8", "Cấp 7", "Cấp 6", "Cấp 5",
+    "Cấp 4", "Cấp 3", "Cấp 2", "Cấp 1"
+]
+
+RESULT_DAN_OPTIONS = [
+    "1 Đẳng", "2 Đẳng", "3 Đẳng", "4 Đẳng", "5 Đẳng",
+    "6 Đẳng", "7 Đẳng", "8 Đẳng", "9 Đẳng", "10 Đẳng"
+]
+
+RESULT_CAP_THI_OPTIONS = RESULT_CAP_OPTIONS + RESULT_DAN_OPTIONS
+
+def normalize_result_period_code_web(value):
+    """
+    Chuẩn hóa mã Quý / Lần cho trang kết quả.
+    Hệ thống cũ đang lưu thi đẳng: MN, MT, MB.
+    Giao diện Ken muốn hiện: KVMN, KVMT, KVMB.
+    """
+    s = str(value or "").strip().upper()
+    s = s.replace(" ", "")
+
+    period_map = {
+        "MN": "KVMN",
+        "MT": "KVMT",
+        "MB": "KVMB",
+        "KVMN": "KVMN",
+        "KVMT": "KVMT",
+        "KVMB": "KVMB",
+    }
+
+    return period_map.get(s, s)
+
+
+def parse_result_ky_thi_web(ky_thi):
+    """
+    Nhận:
+    - 2026-Q1, 2026-Q2...
+    - Q1-2026, Q12026
+    - L1-2026, L2-2026
+    - MN-2026, MT-2026, MB-2026, QG-2026
+    - KVMN-2026, KVMT-2026, KVMB-2026
+    Trả về: year, period
+    """
+    s = str(ky_thi or "").strip().upper()
+
+    if not s:
+        return "", ""
+
+    s = s.replace("_", "-").replace("/", "-").replace(" ", "")
+
+    # Dạng 2026-Q1
+    m = re.match(r"^(20\d{2})-(Q[1-4])$", s)
+    if m:
+        return m.group(1), normalize_result_period_code_web(m.group(2))
+
+    # Dạng Q1-2026 hoặc Q12026
+    m = re.match(r"^(Q[1-4])\D*(20\d{2})$", s)
+    if m:
+        return m.group(2), normalize_result_period_code_web(m.group(1))
+
+    # Dạng L1-2026, MN-2026, KVMN-2026...
+    m = re.match(r"^(L1|L2|MN|MT|MB|KVMN|KVMT|KVMB|QG)\D*(20\d{2})$", s)
+    if m:
+        return m.group(2), normalize_result_period_code_web(m.group(1))
+
+    # Dạng 2026-L1, 2026-MN...
+    m = re.match(r"^(20\d{2})\D*(L1|L2|MN|MT|MB|KVMN|KVMT|KVMB|QG)$", s)
+    if m:
+        return m.group(1), normalize_result_period_code_web(m.group(2))
+
+    return "", ""
+
+
+def result_sort_key_web(row):
+    """
+    Sort kết quả theo thứ tự kỳ thi mới nhất trước.
+    """
+    ky_thi = str(row.get("ky_thi") or "").strip()
+    year, period = parse_result_ky_thi_web(ky_thi)
+
+    period_order = {
+        "Q1": 1,
+        "Q2": 2,
+        "Q3": 3,
+        "Q4": 4,
+        "L1": 11,
+        "L2": 12,
+        "KVMN": 13,
+        "KVMT": 14,
+        "KVMB": 15,
+        "QG": 16,
+    }
+
+    try:
+        year_int = int(year)
+    except:
+        year_int = 0
+
+    return (
+        year_int,
+        period_order.get(period, 0),
+        str(row.get("so_thi") or "")
+    )
+
 @app.get("/results")
 def results():
     now = datetime.now()
 
     year = request.args.get("year", "").strip()
-    quarter = request.args.get("quarter", "").strip()
+    quarter = request.args.get("quarter", "").strip().upper()
+    quarter = normalize_result_period_code_web(quarter)
+
     name = request.args.get("name", "").strip()
     cap_thi = request.args.get("cap_thi", "").strip()
     ket_qua = request.args.get("ket_qua", "").strip()
 
     rows = safe_rows(KETQUA_TABLE)
 
-    # Sắp xếp mới nhất lên trên
-    rows.sort(key=lambda r: str(r.get("ky_thi") or ""), reverse=True)
+    # Sắp xếp mới nhất lên trên, hỗ trợ cả thi cấp và thi đẳng
+    rows.sort(key=result_sort_key_web, reverse=True)
 
-    # Lấy danh sách năm, cấp thi để đổ vào combobox
+    # Lấy danh sách năm đúng cho cả 2026-Q2 và L1-2026 / MN-2026
     year_options = sorted(
         {
-            str(r.get("ky_thi") or "").split("-")[0]
+            parse_result_ky_thi_web(r.get("ky_thi"))[0]
             for r in rows
-            if str(r.get("ky_thi") or "").split("-")[0]
+            if parse_result_ky_thi_web(r.get("ky_thi"))[0]
         },
         reverse=True
     )
 
-    cap_thi_options = sorted(
-        {
-            str(r.get("cap_dai_thi") or "").strip()
-            for r in rows
-            if str(r.get("cap_dai_thi") or "").strip()
-        }
-    )
+    # Nếu chưa có dữ liệu năm thì vẫn cho hiện quanh năm hiện tại
+    if not year_options:
+        year_options = [str(y) for y in range(now.year - 2, now.year + 6)]
 
     # Nếu chưa chọn năm thì mặc định năm hiện tại
     if not year:
         year = str(now.year)
 
+    if quarter in ["Q1", "Q2", "Q3", "Q4"]:
+        cap_thi_options = RESULT_CAP_OPTIONS
+    elif quarter in ["L1", "L2", "KVMN", "KVMT", "KVMB", "QG"]:
+        cap_thi_options = RESULT_DAN_OPTIONS
+    else:
+        cap_thi_options = RESULT_CAP_THI_OPTIONS
+
+    period_options = RESULT_PERIOD_OPTIONS
+
     filtered = []
 
     for r in rows:
-        ky_thi = str(r.get("ky_thi") or "")
-        r_year = ky_thi.split("-")[0] if "-" in ky_thi else ""
-        r_quarter = ky_thi.split("-")[1] if "-" in ky_thi else ""
+        ky_thi = str(r.get("ky_thi") or "").strip()
+        r_year, r_period = parse_result_ky_thi_web(ky_thi)
 
         if year and r_year != year:
             continue
 
-        if quarter and r_quarter != quarter:
+        if quarter and r_period != quarter:
             continue
 
         if name:
@@ -3793,12 +3924,18 @@ def results():
             if name.lower() not in text:
                 continue
 
-        if cap_thi and str(r.get("cap_dai_thi") or "") != cap_thi:
-            continue
+        if cap_thi:
+            row_cap = normalize_belt_name_web(r.get("cap_dai_thi"))
+            filter_cap = normalize_belt_name_web(cap_thi)
+
+            if row_cap != filter_cap:
+                continue
 
         if ket_qua and str(r.get("ket_qua") or "") != ket_qua:
             continue
 
+        # Thêm nhãn hiển thị cho kỳ thi nếu cần dùng sau này
+        r["period_code"] = r_period
         filtered.append(r)
 
     delete_errors = session.pop("result_delete_errors", [])
@@ -3814,6 +3951,7 @@ def results():
         current_year=now.year,
         year_options=year_options,
         cap_thi_options=cap_thi_options,
+        period_options=period_options,
         delete_errors=delete_errors
     )
 
@@ -3985,18 +4123,175 @@ def format_activity_date_range(start_raw, end_raw):
     # Khác năm: 28/12/2025 - 04/01/2026
     return f"{start.strftime('%d/%m/%Y')} - {end.strftime('%d/%m/%Y')}"
 
+def normalize_activity_text_web(text):
+    text = str(text or "").strip().lower()
+    text = remove_accents(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def parse_activity_start_date_web(raw):
+    """
+    Lấy ngày bắt đầu từ chuỗi thời gian hoạt động.
+
+    Nhận các dạng:
+    - 06 - 12/07/2026
+    - 12-15/07/2026
+    - 13 - 15/07/2026
+    - 19 - 25/06/2026
+    - 14/06 - 17/07/2026
+    - 27/06/2026
+    """
+    raw = str(raw or "").strip()
+
+    if not raw:
+        return date(9999, 12, 31)
+
+    s = raw.replace("–", "-").replace("—", "-")
+    s = re.sub(r"\s+", " ", s).strip()
+
+    # Dạng: 06 - 12/07/2026 hoặc 12-15/07/2026
+    m = re.search(r"(\d{1,2})\s*-\s*(\d{1,2})/(\d{1,2})/(\d{4})", s)
+    if m:
+        start_day = int(m.group(1))
+        month = int(m.group(3))
+        year = int(m.group(4))
+
+        try:
+            return date(year, month, start_day)
+        except:
+            return date(9999, 12, 31)
+
+    # Dạng: 14/06 - 17/07/2026
+    m = re.search(r"(\d{1,2})/(\d{1,2})\s*-\s*(\d{1,2})/(\d{1,2})/(\d{4})", s)
+    if m:
+        start_day = int(m.group(1))
+        start_month = int(m.group(2))
+        year = int(m.group(5))
+
+        try:
+            return date(year, start_month, start_day)
+        except:
+            return date(9999, 12, 31)
+
+    # Dạng: 27/06/2026
+    m = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", s)
+    if m:
+        day = int(m.group(1))
+        month = int(m.group(2))
+        year = int(m.group(3))
+
+        try:
+            return date(year, month, day)
+        except:
+            return date(9999, 12, 31)
+
+    return date(9999, 12, 31)
+
+
+def activity_medal_rank_web(result_text):
+    """
+    Thứ tự trong cùng giải:
+    HCV -> HCB -> HCĐ -> khác
+    """
+    text = normalize_activity_text_web(result_text)
+
+    if (
+        "huy chuong vang" in text
+        or "hcv" in text
+        or "hang nhat" in text
+        or "giai nhat" in text
+    ):
+        return 0
+
+    if (
+        "huy chuong bac" in text
+        or "hcb" in text
+        or "hang nhi" in text
+        or "giai nhi" in text
+        or "a quan" in text
+    ):
+        return 1
+
+    if (
+        "huy chuong dong" in text
+        or "hcd" in text
+        or "hcđ" in str(result_text or "").lower()
+        or "hang ba" in text
+        or "giai ba" in text
+    ):
+        return 2
+
+    return 9
+
+
+def activity_group_key_web(activity_name):
+    """
+    Gom theo tên giải, bỏ bớt khoảng trắng và dấu để sort ổn định.
+    """
+    return normalize_activity_text_web(activity_name)
+
+
 @app.get("/activities")
 def activities():
     rows = safe_rows(HOATDONG_TABLE)
-    rows.sort(key=lambda r: str(r.get("created_at") or r.get("thoi_gian") or ""), reverse=True)
+
+    # Chuẩn bị dữ liệu phụ cho template tô màu từng giải
+    for r in rows:
+        start_date = parse_activity_start_date_web(r.get("thoi_gian"))
+        medal_rank = activity_medal_rank_web(r.get("ket_qua"))
+        group_key = activity_group_key_web(r.get("hoat_dong"))
+
+        r["_activity_start_date"] = start_date
+        r["_activity_group_key"] = group_key
+        r["_activity_medal_rank"] = medal_rank
+
+    # Sort:
+    # 1. Ngày bắt đầu sớm trước
+    # 2. Tên giải
+    # 3. HCV -> HCB -> HCĐ
+    # 4. Họ tên
+    rows.sort(key=lambda r: (
+        r.get("_activity_start_date") or date(9999, 12, 31),
+        r.get("_activity_group_key") or "",
+        r.get("_activity_medal_rank", 9),
+        normalize_activity_text_web(r.get("ho_ten"))
+    ))
+
+    # Tô màu luân phiên theo từng giải
+    last_group = None
+    group_index = -1
+
+    for r in rows:
+        current_group = r.get("_activity_group_key") or ""
+
+        if current_group != last_group:
+            group_index += 1
+            last_group = current_group
+
+        r["_activity_group_class"] = f"activity-group-{group_index % 6}"
+
+        medal_rank = r.get("_activity_medal_rank", 9)
+
+        if medal_rank == 0:
+            r["_activity_medal_class"] = "activity-medal-gold"
+        elif medal_rank == 1:
+            r["_activity_medal_class"] = "activity-medal-silver"
+        elif medal_rank == 2:
+            r["_activity_medal_class"] = "activity-medal-bronze"
+        else:
+            r["_activity_medal_class"] = ""
 
     students = safe_rows(STUDENT_TABLE)
     students.sort(key=lambda s: str(s.get("name") or ""))
 
+    events = get_activity_events_web()
+
     return render_template(
         "activities.html",
         rows=rows,
-        students=students
+        students=students,
+        events=events
     )
 
 @app.post("/activities/add")
@@ -4092,6 +4387,246 @@ def activities_delete(activity_id):
     return back_to_current_page("activities")
 
 
+def format_activity_event_time_web(start_date, end_date):
+    """
+    Nhận YYYY-MM-DD, trả về:
+    - 06 - 12/07/2026 nếu cùng tháng/năm
+    - 14/06 - 17/07/2026 nếu khác tháng
+    - 27/06/2026 nếu cùng ngày
+    """
+    start_date = str(start_date or "").strip()
+    end_date = str(end_date or "").strip()
+
+    def parse_iso_date(v):
+        try:
+            return datetime.strptime(v, "%Y-%m-%d").date()
+        except:
+            return None
+
+    s = parse_iso_date(start_date)
+    e = parse_iso_date(end_date)
+
+    if not s and not e:
+        return ""
+
+    if s and not e:
+        return s.strftime("%d/%m/%Y")
+
+    if e and not s:
+        return e.strftime("%d/%m/%Y")
+
+    if s == e:
+        return s.strftime("%d/%m/%Y")
+
+    if s.year == e.year and s.month == e.month:
+        return f"{s.day:02d} - {e.day:02d}/{e.month:02d}/{e.year}"
+
+    return f"{s.day:02d}/{s.month:02d} - {e.day:02d}/{e.month:02d}/{e.year}"
+
+
+def get_activity_events_web():
+    try:
+        events = supabase.table(ACTIVITY_EVENTS_TABLE) \
+            .select("*") \
+            .order("start_date") \
+            .execute().data or []
+
+        return events
+
+    except Exception as e:
+        print("[GET ACTIVITY EVENTS ERROR]", e)
+        return []
+
+
+@app.post("/activity-events/add")
+def activity_events_add():
+    data = request.get_json(silent=True) or {}
+
+    event_name = str(data.get("event_name") or "").strip()
+    start_date = str(data.get("start_date") or "").strip()
+    end_date = str(data.get("end_date") or "").strip()
+    location = str(data.get("location") or "").strip()
+
+    if not event_name:
+        return jsonify({
+            "ok": False,
+            "message": "Ken chưa nhập tên sự kiện."
+        }), 400
+
+    if not start_date:
+        return jsonify({
+            "ok": False,
+            "message": "Ken chưa chọn ngày bắt đầu."
+        }), 400
+
+    if not end_date:
+        end_date = start_date
+
+    payload = {
+        "event_name": event_name,
+        "start_date": start_date,
+        "end_date": end_date,
+        "location": location,
+    }
+
+    try:
+        result = supabase.table(ACTIVITY_EVENTS_TABLE) \
+            .insert(payload) \
+            .execute().data or []
+
+        event = result[0] if result else payload
+
+        return jsonify({
+            "ok": True,
+            "message": "Đã lưu sự kiện.",
+            "event": event
+        })
+
+    except Exception as e:
+        print("[ADD ACTIVITY EVENT ERROR]", e)
+
+        return jsonify({
+            "ok": False,
+            "message": f"Lỗi lưu sự kiện: {e}"
+        }), 500
+
+
+@app.get("/activity-events/list")
+def activity_events_list():
+    try:
+        events = supabase.table(ACTIVITY_EVENTS_TABLE) \
+            .select("*") \
+            .order("start_date") \
+            .execute().data or []
+
+        return jsonify({
+            "ok": True,
+            "events": events
+        })
+
+    except Exception as e:
+        print("[LIST ACTIVITY EVENTS ERROR]", e)
+
+        return jsonify({
+            "ok": False,
+            "message": str(e),
+            "events": []
+        }), 500
+
+
+@app.post("/activities/bulk-add")
+def activities_bulk_add():
+    data = request.get_json(silent=True) or {}
+
+    event_name = str(data.get("event_name") or "").strip()
+    start_date = str(data.get("start_date") or "").strip()
+    end_date = str(data.get("end_date") or "").strip()
+    location = str(data.get("location") or "").strip()
+    items = data.get("items") or []
+
+    if not event_name:
+        return jsonify({
+            "ok": False,
+            "message": "Thiếu tên sự kiện."
+        }), 400
+
+    if not start_date:
+        return jsonify({
+            "ok": False,
+            "message": "Thiếu ngày bắt đầu."
+        }), 400
+
+    if not end_date:
+        end_date = start_date
+
+    if not isinstance(items, list) or not items:
+        return jsonify({
+            "ok": False,
+            "message": "Ken chưa thêm nội dung và hội viên."
+        }), 400
+
+    all_licenses = []
+
+    for item in items:
+        students = item.get("students") or []
+
+        for license_code in students:
+            license_code = str(license_code or "").strip()
+
+            if license_code and license_code not in all_licenses:
+                all_licenses.append(license_code)
+
+    if not all_licenses:
+        return jsonify({
+            "ok": False,
+            "message": "Ken chưa chọn hội viên nào."
+        }), 400
+
+    try:
+        student_rows = supabase.table(STUDENT_TABLE) \
+            .select("license,name") \
+            .in_("license", all_licenses) \
+            .execute().data or []
+
+        student_map = {
+            str(s.get("license") or "").strip(): s
+            for s in student_rows
+        }
+
+        thoi_gian = format_activity_event_time_web(start_date, end_date)
+
+        payloads = []
+
+        for item in items:
+            noi_dung = str(item.get("noi_dung") or "").strip()
+            ket_qua = str(item.get("ket_qua") or "").strip()
+            students = item.get("students") or []
+
+            if not noi_dung:
+                continue
+
+            if not ket_qua:
+                continue
+
+            for license_code in students:
+                license_code = str(license_code or "").strip()
+                student = student_map.get(license_code)
+
+                if not student:
+                    continue
+
+                payloads.append({
+                    "ma_hv": license_code,
+                    "ho_ten": student.get("name") or "",
+                    "hoat_dong": event_name,
+                    "thoi_gian": thoi_gian,
+                    "dia_diem": location,
+                    "noi_dung": noi_dung,
+                    "ket_qua": ket_qua,
+                })
+
+        if not payloads:
+            return jsonify({
+                "ok": False,
+                "message": "Không có dữ liệu hợp lệ để lưu."
+            }), 400
+
+        supabase.table(HOATDONG_TABLE).insert(payloads).execute()
+
+        return jsonify({
+            "ok": True,
+            "message": f"Đã lưu {len(payloads)} hoạt động.",
+            "count": len(payloads)
+        })
+
+    except Exception as e:
+        print("[BULK ADD ACTIVITIES ERROR]", e)
+
+        return jsonify({
+            "ok": False,
+            "message": f"Lỗi lưu hoạt động: {e}"
+        }), 500
+        
 def clean_option_list(values):
     cleaned = []
     seen = set()
@@ -4161,6 +4696,7 @@ def read_club_info_from_form(form, files, old_club_info):
         "name": str(form.get("head_name") or "").strip(),
         "role": str(form.get("head_role") or "HLV Trưởng").strip(),
         "phone": str(form.get("head_phone") or "").strip(),
+        "qualification": str(form.get("head_qualification") or "").strip(),
         "photo_url": head_photo_url,
         "description": str(form.get("head_description") or "").strip(),
     }
@@ -4213,8 +4749,9 @@ def read_club_info_from_form(form, files, old_club_info):
         role = str(form.get(f"coach_role_{i}") or "").strip()
         group = str(form.get(f"coach_group_{i}") or "246").strip()
         phone = str(form.get(f"coach_phone_{i}") or "").strip()
+        qualification = str(form.get(f"coach_qualification_{i}") or "").strip()
 
-        if not name and not role and not phone:
+        if not name and not role and not phone and not qualification:
             continue
 
         photo_url = str(form.get(f"coach_photo_url_{i}") or "").strip()
@@ -4232,6 +4769,7 @@ def read_club_info_from_form(form, files, old_club_info):
             "name": name,
             "role": role,
             "phone": phone,
+            "qualification": qualification,
             "photo_url": photo_url,
         })
 

@@ -235,6 +235,25 @@
             overflow: hidden;
         }
 
+        .student-profile-link {
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: .18s ease;
+        }
+
+        .student-profile-link:hover {
+            background: rgba(29, 78, 216, .42);
+            border-color: rgba(250, 204, 21, .55);
+            transform: translateY(-1px);
+        }
+
+        .student-profile-link.active {
+            background: linear-gradient(135deg, #1d4ed8, #0a58ca);
+            border-color: rgba(250, 204, 21, .85);
+            box-shadow: inset 4px 0 0 #facc15, 0 8px 18px rgba(29, 78, 216, .24);
+        }
+
         .student-avatar-mini {
             width: 54px;
             height: 54px;
@@ -2295,7 +2314,555 @@
                 translate: 0 -5px;
             }
         }
-    </style>
+
+
+        /* =====================================================
+           STUDENT HEADER - ĐỒNG BỘ 100% THEO ADMIN BASE
+        ===================================================== */
+
+        :root {
+            --portal-header-h: 120px;
+        }
+
+        .student-header {
+            height: 120px !important;
+            min-height: 120px !important;
+            width: 100% !important;
+            background: linear-gradient(90deg, #071426, #0f2a4a) !important;
+            color: #ffffff !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 210px !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+        }
+
+        .student-header .logo-box {
+            position: absolute !important;
+            left: 22px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+
+            width: 100px !important;
+            height: 100px !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+            min-height: 100px !important;
+            max-height: 100px !important;
+
+            border-radius: 18px !important;
+            background: #ffffff !important;
+            padding: 8px !important;
+            overflow: hidden !important;
+            box-shadow: none !important;
+
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 4 !important;
+        }
+
+        .student-header .logo-box img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+        }
+
+        .student-title-wrap {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            transform: none !important;
+
+            width: min(920px, 62vw) !important;
+            max-width: min(920px, 62vw) !important;
+            min-width: 0 !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+
+            text-align: center !important;
+            line-height: 1.12 !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
+        }
+
+        .student-title-small {
+            display: block !important;
+            color: #ffffff !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 35px !important;
+            font-weight: 800 !important;
+            line-height: 1.04 !important;
+            letter-spacing: 0 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            text-shadow: none !important;
+        }
+
+        .student-title-big {
+            display: inline-block !important;
+            max-width: 100% !important;
+            margin: 5px auto 0 !important;
+            padding: 1px 10px 3px !important;
+
+            border-radius: 8px !important;
+            background: rgba(250, 204, 21, 0.08) !important;
+            box-shadow: 0 4px 12px rgba(250, 204, 21, 0.18) !important;
+
+            color: #facc15 !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 55px !important;
+            font-weight: 800 !important;
+            line-height: 1.02 !important;
+            letter-spacing: 0 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            text-shadow: none !important;
+        }
+
+        .student-header-actions {
+            position: absolute !important;
+            right: 22px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            z-index: 4 !important;
+        }
+
+        .student-clock-box {
+            min-width: 170px !important;
+            min-height: 58px !important;
+            padding: 8px 14px !important;
+            border-radius: 14px !important;
+            background: rgba(15, 23, 42, 0.55) !important;
+            border: 1px solid rgba(250, 204, 21, 0.55) !important;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22) !important;
+            text-align: center !important;
+
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .student-clock-time {
+            color: #facc15 !important;
+            font-size: 22px !important;
+            line-height: 1 !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px !important;
+            font-variant-numeric: tabular-nums !important;
+        }
+
+        .student-clock-date {
+            margin-top: 6px !important;
+            color: #e5e7eb !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            line-height: 1.15 !important;
+            white-space: nowrap !important;
+        }
+
+        .student-mobile-menu-btn {
+            display: none !important;
+        }
+
+        .student-layout {
+            min-height: calc(100vh - 120px) !important;
+        }
+
+        .student-sidebar {
+            height: calc(100vh - 120px) !important;
+        }
+
+        /* Tablet */
+        @media (max-width: 1050px) {
+            .student-header {
+                height: 96px !important;
+                min-height: 96px !important;
+                padding: 0 160px !important;
+            }
+
+            .student-header .logo-box {
+                left: 12px !important;
+                width: 76px !important;
+                height: 76px !important;
+                min-width: 76px !important;
+                max-width: 76px !important;
+                min-height: 76px !important;
+                max-height: 76px !important;
+                border-radius: 16px !important;
+                padding: 7px !important;
+            }
+
+            .student-title-small {
+                font-size: 24px !important;
+            }
+
+            .student-title-big {
+                font-size: 34px !important;
+            }
+
+            .student-clock-box {
+                right: 12px !important;
+                min-width: 135px !important;
+                padding: 7px 10px !important;
+            }
+
+            .student-clock-time {
+                font-size: 18px !important;
+            }
+
+            .student-clock-date {
+                font-size: 11px !important;
+            }
+
+            .student-mobile-menu-btn {
+                display: inline-flex !important;
+                width: 42px !important;
+                height: 42px !important;
+                border: 0 !important;
+                border-radius: 12px !important;
+                background: rgba(250, 204, 21, .16) !important;
+                color: #facc15 !important;
+                font-size: 18px !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            .student-layout {
+                min-height: calc(100vh - 96px) !important;
+            }
+
+            .student-sidebar {
+                height: 100dvh !important;
+            }
+        }
+
+        /* Điện thoại */
+        @media (max-width: 760px) {
+            .student-header {
+                height: 86px !important;
+                min-height: 86px !important;
+                padding: 0 70px !important;
+            }
+
+            .student-header .logo-box {
+                left: 10px !important;
+                width: 56px !important;
+                height: 56px !important;
+                min-width: 56px !important;
+                max-width: 56px !important;
+                min-height: 56px !important;
+                max-height: 56px !important;
+                border-radius: 14px !important;
+                padding: 5px !important;
+            }
+
+            .student-title-wrap {
+                width: 62vw !important;
+                max-width: 62vw !important;
+            }
+
+            .student-title-small {
+                font-size: 14px !important;
+            }
+
+            .student-title-big {
+                font-size: 22px !important;
+                margin-top: 3px !important;
+            }
+
+            .student-clock-box {
+                display: none !important;
+            }
+
+            .student-header-actions {
+                right: 10px !important;
+            }
+
+            .student-mobile-menu-btn {
+                display: inline-flex !important;
+                width: 38px !important;
+                height: 38px !important;
+            }
+
+            .student-layout {
+                min-height: calc(100vh - 86px) !important;
+            }
+        }
+
+
+        /* =====================================================
+           FIX TABLET/DESKTOP: NÚT 3 GẠCH CHỈ NẰM TRÊN HEADER Ở ĐIỆN THOẠI
+           Từ 761px trở lên dùng sidebar bên trái như Admin/Coach.
+        ===================================================== */
+        @media (min-width: 761px) and (max-width: 1050px) {
+            .student-mobile-menu-btn {
+                display: none !important;
+            }
+
+            .student-layout {
+                display: grid !important;
+                grid-template-columns: var(--portal-sidebar-open) minmax(0, 1fr) !important;
+                min-height: calc(100vh - 96px) !important;
+            }
+
+            body.student-sidebar-collapsed .student-layout {
+                grid-template-columns: var(--portal-sidebar-close) minmax(0, 1fr) !important;
+            }
+
+            .student-sidebar {
+                position: sticky !important;
+                top: 0 !important;
+                left: auto !important;
+                width: auto !important;
+                height: calc(100vh - 96px) !important;
+                transform: none !important;
+                z-index: 60 !important;
+                box-shadow: none !important;
+            }
+
+            .student-sidebar-backdrop,
+            .student-sidebar-backdrop.show {
+                display: none !important;
+            }
+
+            body.student-sidebar-collapsed .student-mini-text,
+            body.student-sidebar-collapsed .student-nav-text {
+                display: none !important;
+            }
+
+            body.student-sidebar-collapsed .student-mini-profile {
+                justify-content: center !important;
+                padding: 10px 6px !important;
+            }
+
+            body.student-sidebar-collapsed .student-nav a {
+                justify-content: center !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+
+            body.student-sidebar-collapsed .nav-badge {
+                position: absolute !important;
+                top: 4px !important;
+                right: 5px !important;
+                min-width: 18px !important;
+                height: 18px !important;
+                font-size: 10px !important;
+                padding: 0 4px !important;
+            }
+        }
+
+    
+
+        /* =========================================================
+           UNIFIED CLUB HEADER — ADMIN / COACH / STUDENT
+        ========================================================= */
+        :root {
+            --club-header-height: 120px;
+            --club-header-bg-start: #071426;
+            --club-header-bg-end: #0f2a4a;
+            --club-header-yellow: #facc15;
+            --club-header-logo-size: 100px;
+            --club-header-side-gap: 22px;
+            --club-header-clock-width: 170px;
+            --portal-header-h: var(--club-header-height);
+        }
+
+        .student-header {
+            width: 100% !important;
+            height: var(--club-header-height) !important;
+            min-height: var(--club-header-height) !important;
+            padding: 0 215px !important;
+            background: linear-gradient(90deg, var(--club-header-bg-start), var(--club-header-bg-end)) !important;
+            color: #fff !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+        }
+
+        .student-header .logo-box {
+            position: absolute !important;
+            left: var(--club-header-side-gap) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: var(--club-header-logo-size) !important;
+            height: var(--club-header-logo-size) !important;
+            min-width: var(--club-header-logo-size) !important;
+            min-height: var(--club-header-logo-size) !important;
+            padding: 8px !important;
+            border-radius: 18px !important;
+            background: #fff !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: none !important;
+        }
+
+        .student-header .logo-box img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+        }
+
+        .student-header .student-title-wrap {
+            position: static !important;
+            transform: none !important;
+            width: min(920px, 62vw) !important;
+            max-width: min(920px, 62vw) !important;
+            min-width: 0 !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            text-align: center !important;
+            line-height: 1.12 !important;
+        }
+
+        .student-header .student-title-small {
+            display: block !important;
+            margin: 0 !important;
+            color: #fff !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 35px !important;
+            font-weight: 800 !important;
+            line-height: 1.04 !important;
+            letter-spacing: 0 !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .student-header .student-title-big {
+            display: inline-block !important;
+            max-width: 100% !important;
+            margin: 5px auto 0 !important;
+            padding: 1px 10px 3px !important;
+            border-radius: 8px !important;
+            background: rgba(250, 204, 21, .08) !important;
+            box-shadow: 0 4px 12px rgba(250, 204, 21, .18) !important;
+            color: var(--club-header-yellow) !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 55px !important;
+            font-weight: 800 !important;
+            line-height: 1.02 !important;
+            letter-spacing: 0 !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .student-header .student-header-actions {
+            position: absolute !important;
+            right: var(--club-header-side-gap) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        .student-header .student-clock-box {
+            min-width: var(--club-header-clock-width) !important;
+            min-height: 58px !important;
+            padding: 8px 14px !important;
+            border: 1px solid rgba(250, 204, 21, .55) !important;
+            border-radius: 14px !important;
+            background: rgba(15, 23, 42, .55) !important;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, .22) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+        }
+
+        .student-header .student-clock-time {
+            color: var(--club-header-yellow) !important;
+            font-size: 22px !important;
+            line-height: 1 !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px !important;
+            font-variant-numeric: tabular-nums !important;
+        }
+
+        .student-header .student-clock-date {
+            margin-top: 6px !important;
+            color: #e5e7eb !important;
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            font-weight: 800 !important;
+            white-space: nowrap !important;
+        }
+
+        .student-header .student-mobile-menu-btn { display: none !important; }
+        .student-layout { min-height: calc(100vh - var(--club-header-height)) !important; }
+        .student-sidebar { height: calc(100vh - var(--club-header-height)) !important; }
+
+        @media (max-width: 1050px) {
+            :root {
+                --club-header-height: 96px;
+                --club-header-logo-size: 76px;
+                --club-header-side-gap: 12px;
+                --club-header-clock-width: 135px;
+                --portal-header-h: var(--club-header-height);
+            }
+            .student-header { padding: 0 165px !important; }
+            .student-header .logo-box { padding: 7px !important; border-radius: 16px !important; }
+            .student-header .student-title-small { font-size: 24px !important; }
+            .student-header .student-title-big { font-size: 34px !important; }
+            .student-header .student-clock-box { padding: 7px 10px !important; }
+            .student-header .student-clock-time { font-size: 18px !important; }
+            .student-header .student-clock-date { font-size: 11px !important; }
+        }
+
+        @media (max-width: 760px) {
+            :root {
+                --club-header-height: 86px;
+                --club-header-logo-size: 56px;
+                --club-header-side-gap: 10px;
+                --portal-header-h: var(--club-header-height);
+            }
+            .student-header { padding: 0 70px !important; }
+            .student-header .logo-box { padding: 5px !important; border-radius: 14px !important; }
+            .student-header .student-title-wrap { width: 62vw !important; max-width: 62vw !important; }
+            .student-header .student-title-small { font-size: 14px !important; }
+            .student-header .student-title-big { margin-top: 3px !important; font-size: 22px !important; }
+            .student-header .student-clock-box { display: none !important; }
+            .student-header .student-header-actions { right: 10px !important; }
+            .student-header .student-mobile-menu-btn {
+                display: inline-flex !important;
+                width: 38px !important;
+                height: 38px !important;
+                border-radius: 12px !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+        }
+
+</style>
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -2331,7 +2898,8 @@
             <i class="fa-solid fa-bars"></i>
         </button>
 
-        <div class="student-mini-profile">
+        <a href="{{ url_for('student_portal_info') }}"
+           class="student-mini-profile student-profile-link {{ 'active' if active_page == 'info' else '' }}">
             <div class="student-avatar-mini">
                 {% if student.photo_url %}
                     <img src="{{ student.photo_url }}" alt="Ảnh học viên">
@@ -2344,7 +2912,7 @@
                 <div class="student-mini-name">{{ student.name }}</div>
                 <div class="student-mini-code">{{ student.license }}</div>
             </div>
-        </div>
+        </a>
 
         <nav class="student-nav">
             <a class="{{ 'active' if active_page == 'notifications' else '' }}" href="{{ url_for('student_portal_notifications') }}">
@@ -2353,11 +2921,6 @@
                 {% if unread_count and unread_count > 0 %}
                     <span class="nav-badge">{{ unread_count }}</span>
                 {% endif %}
-            </a>
-
-            <a class="{{ 'active' if active_page == 'info' else '' }}" href="{{ url_for('student_portal_info') }}">
-                <span class="student-nav-icon"><i class="fa-solid fa-user"></i></span>
-                <span class="student-nav-text">Thông tin</span>
             </a>
 
             <a class="{{ 'active' if active_page == 'club_info' else '' }}" href="{{ url_for('student_portal_club_info') }}">
@@ -2518,7 +3081,7 @@
 
 <script>
 function isStudentMobileScreen() {
-    return window.matchMedia("(max-width: 980px)").matches;
+    return window.matchMedia("(max-width: 760px)").matches;
 }
 
 function toggleStudentSidebar() {
@@ -2571,6 +3134,16 @@ function initStudentSidebar() {
             }
         });
     });
+
+    const profileLink = document.querySelector(".student-profile-link");
+
+    if (profileLink) {
+        profileLink.addEventListener("click", function() {
+            if (isStudentMobileScreen()) {
+                closeStudentSidebar();
+            }
+        });
+    }
 }
 
 function initStudentActiveNavFallback() {

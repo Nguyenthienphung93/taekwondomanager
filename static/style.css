@@ -2565,3 +2565,394 @@ p {
     font-variant-numeric: tabular-nums;
     text-rendering: geometricPrecision;
 }
+
+/* =========================================================
+   ADMIN HEADER - LOGO BO GÓC GIỐNG STUDENT/COACH
+========================================================= */
+
+.top-header .logo-box {
+    width: 100px !important;
+    height: 100px !important;
+    left: 22px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+
+    border-radius: 18px !important;
+    background: #ffffff !important;
+    padding: 8px !important;
+    overflow: hidden !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.top-header .logo-box img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+/* =========================================================
+   UNIFIED CLUB HEADER — ADMIN / COACH / STUDENT
+   Nguồn chuẩn dùng chung cho cả 3 giao diện.
+========================================================= */
+:root {
+    --club-header-height: 120px;
+    --club-header-bg-start: #071426;
+    --club-header-bg-end: #0f2a4a;
+    --club-header-yellow: #facc15;
+    --club-header-logo-size: 100px;
+    --club-header-side-gap: 22px;
+    --club-header-clock-width: 170px;
+}
+
+.top-header {
+    width: 100% !important;
+    height: var(--club-header-height) !important;
+    min-height: var(--club-header-height) !important;
+    padding: 0 215px !important;
+    background: linear-gradient(90deg, var(--club-header-bg-start), var(--club-header-bg-end)) !important;
+    color: #fff !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+}
+
+.top-header .logo-box {
+    position: absolute !important;
+    left: var(--club-header-side-gap) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: var(--club-header-logo-size) !important;
+    height: var(--club-header-logo-size) !important;
+    min-width: var(--club-header-logo-size) !important;
+    min-height: var(--club-header-logo-size) !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+}
+
+.top-header .logo-box img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+.top-header .club-title-wrap {
+    width: min(920px, 62vw) !important;
+    max-width: min(920px, 62vw) !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    line-height: 1.12 !important;
+}
+
+.top-header .club-title {
+    display: block !important;
+    margin: 0 !important;
+    color: #fff !important;
+    font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+    font-size: 35px !important;
+    font-weight: 800 !important;
+    line-height: 1.04 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.top-header .club-subtitle {
+    display: inline-block !important;
+    max-width: 100% !important;
+    margin: 5px auto 0 !important;
+    padding: 1px 10px 3px !important;
+    border-radius: 8px !important;
+    background: rgba(250, 204, 21, .08) !important;
+    box-shadow: 0 4px 12px rgba(250, 204, 21, .18) !important;
+    color: var(--club-header-yellow) !important;
+    font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+    font-size: 55px !important;
+    font-weight: 800 !important;
+    line-height: 1.02 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.top-header .header-clock-box {
+    position: absolute !important;
+    right: var(--club-header-side-gap) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    min-width: var(--club-header-clock-width) !important;
+    min-height: 58px !important;
+    padding: 8px 14px !important;
+    border: 1px solid rgba(250, 204, 21, .55) !important;
+    border-radius: 14px !important;
+    background: rgba(15, 23, 42, .55) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .22) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+.top-header .header-clock-time {
+    color: var(--club-header-yellow) !important;
+    font-size: 22px !important;
+    line-height: 1 !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.top-header .header-clock-date {
+    margin-top: 6px !important;
+    color: #e5e7eb !important;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+}
+
+.layout {
+    min-height: calc(100vh - var(--club-header-height)) !important;
+}
+
+@media (max-width: 1050px) {
+    :root {
+        --club-header-height: 96px;
+        --club-header-logo-size: 76px;
+        --club-header-side-gap: 12px;
+        --club-header-clock-width: 135px;
+    }
+
+    .top-header { padding: 0 165px !important; }
+    .top-header .logo-box { padding: 7px !important; border-radius: 16px !important; }
+    .top-header .club-title { font-size: 24px !important; }
+    .top-header .club-subtitle { font-size: 34px !important; }
+    .top-header .header-clock-box { padding: 7px 10px !important; }
+    .top-header .header-clock-time { font-size: 18px !important; }
+    .top-header .header-clock-date { font-size: 11px !important; }
+}
+
+@media (max-width: 760px) {
+    :root {
+        --club-header-height: 86px;
+        --club-header-logo-size: 56px;
+        --club-header-side-gap: 10px;
+    }
+
+    .top-header { padding: 0 70px !important; }
+    .top-header .logo-box { padding: 5px !important; border-radius: 14px !important; }
+    .top-header .club-title-wrap { width: 62vw !important; max-width: 62vw !important; }
+    .top-header .club-title { font-size: 14px !important; }
+    .top-header .club-subtitle { margin-top: 3px !important; font-size: 22px !important; }
+    .top-header .header-clock-box { display: none !important; }
+}
+
+
+
+/* =========================================================
+   HEADER ADMIN — LẤY STUDENT LÀM MẪU CHÍNH
+   Khối cuối file để khóa toàn bộ kích thước và bảo đảm đồng hồ luôn hiện.
+========================================================= */
+:root {
+    --student-master-header-h: 120px;
+    --student-master-logo: 100px;
+    --student-master-gap: 22px;
+    --student-master-clock: 170px;
+}
+
+.top-header {
+    width: 100% !important;
+    height: var(--student-master-header-h) !important;
+    min-height: var(--student-master-header-h) !important;
+    padding: 0 215px !important;
+    background: linear-gradient(90deg, #071426, #0f2a4a) !important;
+    color: #fff !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+}
+
+.top-header > .logo-box {
+    position: absolute !important;
+    left: var(--student-master-gap) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: var(--student-master-logo) !important;
+    height: var(--student-master-logo) !important;
+    min-width: var(--student-master-logo) !important;
+    min-height: var(--student-master-logo) !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+}
+
+.top-header > .logo-box > img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
+.top-header > .club-title-wrap {
+    width: min(920px, 62vw) !important;
+    max-width: min(920px, 62vw) !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    line-height: 1.12 !important;
+}
+
+.top-header > .club-title-wrap > .club-title {
+    display: block !important;
+    margin: 0 !important;
+    color: #fff !important;
+    font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+    font-size: 35px !important;
+    font-weight: 800 !important;
+    line-height: 1.04 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.top-header > .club-title-wrap > .club-subtitle {
+    display: inline-block !important;
+    max-width: 100% !important;
+    margin: 5px auto 0 !important;
+    padding: 1px 10px 3px !important;
+    border-radius: 8px !important;
+    background: rgba(250, 204, 21, .08) !important;
+    box-shadow: 0 4px 12px rgba(250, 204, 21, .18) !important;
+    color: #facc15 !important;
+    font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+    font-size: 55px !important;
+    font-weight: 800 !important;
+    line-height: 1.02 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.top-header > .header-clock-box {
+    position: absolute !important;
+    right: var(--student-master-gap) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    min-width: var(--student-master-clock) !important;
+    min-height: 58px !important;
+    padding: 8px 14px !important;
+    border: 1px solid rgba(250, 204, 21, .55) !important;
+    border-radius: 14px !important;
+    background: rgba(15, 23, 42, .55) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .22) !important;
+    color: #fff !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    z-index: 5 !important;
+}
+
+.top-header .header-clock-time {
+    color: #facc15 !important;
+    font-size: 22px !important;
+    line-height: 1 !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.top-header .header-clock-date {
+    margin-top: 6px !important;
+    color: #e5e7eb !important;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+}
+
+.layout {
+    min-height: calc(100vh - var(--student-master-header-h)) !important;
+}
+
+@media (max-width: 1050px) and (min-width: 761px) {
+    :root {
+        --student-master-header-h: 96px;
+        --student-master-logo: 76px;
+        --student-master-gap: 12px;
+        --student-master-clock: 135px;
+    }
+
+    .top-header { padding: 0 165px !important; }
+    .top-header > .logo-box { padding: 7px !important; border-radius: 16px !important; }
+    .top-header > .club-title-wrap > .club-title { font-size: 24px !important; }
+    .top-header > .club-title-wrap > .club-subtitle { font-size: 34px !important; }
+    .top-header > .header-clock-box {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        padding: 7px 10px !important;
+    }
+    .top-header .header-clock-time { font-size: 18px !important; }
+    .top-header .header-clock-date { font-size: 11px !important; }
+}
+
+@media (max-width: 760px) {
+    :root {
+        --student-master-header-h: 86px;
+        --student-master-logo: 56px;
+        --student-master-gap: 10px;
+    }
+
+    .top-header { padding: 0 70px !important; }
+    .top-header > .logo-box { padding: 5px !important; border-radius: 14px !important; }
+    .top-header > .club-title-wrap { width: 62vw !important; max-width: 62vw !important; }
+    .top-header > .club-title-wrap > .club-title { font-size: 14px !important; }
+    .top-header > .club-title-wrap > .club-subtitle {
+        margin-top: 3px !important;
+        font-size: 22px !important;
+    }
+    .top-header > .header-clock-box { display: none !important; }
+}

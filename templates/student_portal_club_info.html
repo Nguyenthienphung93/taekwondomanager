@@ -83,6 +83,10 @@
 @media(max-width:760px){.coach-chief-layout{grid-template-columns:1fr;}.coach-chief-photo,.coach-chief-placeholder{width:170px;height:210px;margin:0 auto;}.coach-chief-name,.registrar-name{font-size:24px;}.coach-person-top{align-items:flex-start;}.fee-plan-grid{grid-template-columns:1fr;}.uniform-price-card,.exam-price-card{align-items:flex-start;flex-direction:column;}.uniform-price-card strong,.exam-price-card strong{font-size:18px;}.registrar-layout{grid-template-columns:1fr;text-align:center;}.registrar-photo,.registrar-placeholder{margin:0 auto;}.registrar-badge{justify-content:center;}.registrar-phone{justify-content:center;font-size:18px;}}
 @media(max-width:620px){.club-accordion-head{padding:15px;}.club-accordion-body{padding:0 15px 15px;}.club-section-icon{width:42px;height:42px;border-radius:14px;font-size:19px;}.club-accordion-title h2,.club-section-head h2{font-size:20px;}.club-accordion-title p,.club-section-head p{font-size:13px;}.club-text,.club-intro-main{font-size:14px;}.intro-pillar-grid{grid-template-columns:1fr;}.info-mini-card{grid-template-columns:40px minmax(0,1fr);padding:12px;}.info-mini-icon{width:38px;height:38px;font-size:16px;}}
 @media(max-width:980px){.intro-pillar-grid{grid-template-columns:1fr;}}
+
+.coach-qualification {
+    white-space: pre-line;
+}
 </style>
 {% endblock %}
 
@@ -173,7 +177,14 @@
                         <div>
                             <h3 class="coach-chief-name">{{ head.name or 'Nguyễn Thiên Phụng' }}</h3>
                             <div class="coach-chief-role">{{ head.role or 'HLV Trưởng' }}</div>
-                            {% if head.phone %}<p class="coach-meta"><b>SĐT:</b> {{ head.phone }}</p>{% endif %}
+                            {% if head.phone %}
+                            <p class="coach-meta"><b>SĐT:</b> {{ head.phone }}</p>
+                            {% endif %}
+
+                            {% if head.qualification %}
+                            <p class="coach-meta coach-qualification"><b>Trình độ chuyên môn:</b><br>{{ head.qualification }}</p>
+                            {% endif %}
+
                             <p class="coach-chief-desc">{{ head.description or 'Đang cập nhật thông tin HLV trưởng.' }}</p>
                         </div>
                     </div>
@@ -186,7 +197,15 @@
                             {% for c in coaches_246 %}
                             <div class="coach-person-card"><div class="coach-person-top">
                                 {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
-                                <div><h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4><p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p><p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p></div>
+                                <div>
+                                    <h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4>
+                                    <p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p>
+                                    <p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p>
+
+                                    {% if c.qualification %}
+                                    <p class="coach-meta coach-qualification"><b>Trình độ chuyên môn:</b><br>{{ c.qualification }}</p>
+                                    {% endif %}
+                                </div>
                             </div></div>
                             {% else %}<div class="coach-person-card"><p class="coach-meta">Đang cập nhật HLV lớp 2-4-6.</p></div>{% endfor %}
                         </div>
@@ -198,7 +217,15 @@
                             {% for c in coaches_357 %}
                             <div class="coach-person-card"><div class="coach-person-top">
                                 {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
-                                <div><h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4><p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p><p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p></div>
+                                <div>
+                                    <h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4>
+                                    <p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p>
+                                    <p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p>
+
+                                    {% if c.qualification %}
+                                    <p class="coach-meta coach-qualification"><b>Trình độ chuyên môn:</b><br>{{ c.qualification }}</p>
+                                    {% endif %}
+                                </div>
                             </div></div>
                             {% else %}<div class="coach-person-card"><p class="coach-meta">Đang cập nhật HLV lớp 3-5-7.</p></div>{% endfor %}
                         </div>
@@ -210,7 +237,15 @@
                             {% for c in coaches_weekend %}
                             <div class="coach-person-card"><div class="coach-person-top">
                                 {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
-                                <div><h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4><p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p><p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p></div>
+                                <div>
+                                    <h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4>
+                                    <p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p>
+                                    <p class="coach-meta"><b>SĐT:</b> {{ c.phone or 'Đang cập nhật' }}</p>
+
+                                    {% if c.qualification %}
+                                    <p class="coach-meta coach-qualification"><b>Trình độ chuyên môn:</b><br>{{ c.qualification }}</p>
+                                    {% endif %}
+                                </div>
                             </div></div>
                             {% else %}<div class="coach-person-card"><p class="coach-meta">Đang cập nhật HLV lớp sáng và cuối tuần.</p></div>{% endfor %}
                         </div>
@@ -280,7 +315,7 @@
                         <div class="fee-plan-grid">
                             <div class="fee-plan-card"><div class="fee-plan-title">1 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.monthly_fee or '500.000đ' }}</div><div class="fee-plan-desc">/ tháng / học viên</div></div>
                             <div class="fee-plan-card discount"><div class="fee-plan-title">3 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.three_month_discount or 'Giảm 10%' }}</div><div class="fee-plan-desc">học phí</div></div>
-                            <div class="fee-plan-card discount"><div class="fee-plan-title">6 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.six_month_bonus or 'Tặng 1 tháng' }}</div><div class="fee-plan-desc">miễn phí</div></div>
+                            <div class="fee-plan-card discount"><div class="fee-plan-title">6 tháng</div><div class="fee-plan-price">{{ club_info.fees_info.six_month_bonus or 'Tặng 1 tháng' }}</div></div>
                         </div>
                         <div class="fee-family-note"><i class="fa-solid fa-users"></i><div><b>Gia đình hoặc bạn bè</b><span>{{ club_info.fees_info.family_discount or 'Giảm thêm 10% nếu đóng chung.' }}</span></div></div>
                     </div>

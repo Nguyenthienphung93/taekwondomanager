@@ -195,6 +195,17 @@
                 </div>
 
                 <div class="field-box">
+                    <label>Trình độ chuyên môn</label>
+                    <textarea
+                        name="head_qualification"
+                        rows="4"
+                        placeholder="VD:
+                HLV cấp quốc gia
+                Cử nhân GDTC
+                VĐV đội tuyển Taekwondo Poomsae Việt Nam">{{ head.qualification or '' }}</textarea>
+                </div>
+
+                <div class="field-box">
                     <label>Upload hình HLV trưởng</label>
                     <input type="file" name="head_photo_file" accept="image/png,image/jpeg,image/webp">
                     <input type="hidden" name="head_photo_url" value="{{ head.photo_url or '' }}">
@@ -294,6 +305,17 @@
                         <div class="field-box">
                             <label>SĐT</label>
                             <input type="text" name="coach_phone_{{ i }}" value="{{ c.phone or '' }}">
+                        </div>
+
+                        <div class="field-box">
+                            <label>Trình độ chuyên môn</label>
+                            <textarea
+                                name="coach_qualification_{{ i }}"
+                                rows="4"
+                                placeholder="VD:
+                        HLV cấp thành phố
+                        3 Đẳng Taekwondo
+                        Trợ giảng lớp thiếu nhi">{{ c.qualification or '' }}</textarea>
                         </div>
 
                         <div class="field-box">
@@ -625,6 +647,28 @@
     font-size: 15px;
     font-weight: 750;
     background: #f8fafc;
+}
+
+.setup-card .field-box textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 13px;
+    font-size: 15px;
+    font-weight: 750;
+    background: #f8fafc;
+    resize: vertical;
+    min-height: 96px;
+    line-height: 1.5;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.setup-card .field-box textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
 }
 
 .setup-card .field-box input:focus {
@@ -1140,6 +1184,17 @@ function addCoachRow() {
                     <div class="field-box">
                         <label>SĐT</label>
                         <input type="text" name="coach_phone_${i}" value="">
+                    </div>
+
+                    <div class="field-box">
+                        <label>Trình độ chuyên môn</label>
+                        <textarea
+                            name="coach_qualification_${i}"
+                            rows="4"
+                            placeholder="VD:
+                    HLV cấp thành phố
+                    3 Đẳng Taekwondo
+                    Trợ giảng lớp thiếu nhi"></textarea>
                     </div>
 
                     <div class="field-box">

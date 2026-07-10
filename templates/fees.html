@@ -373,6 +373,9 @@ const STUDENTS = [
 
 let monthIndex = 0;
 let selectedStudent = null;
+let studentSearchTimer = null;
+
+
 
 function onlyNumber(v) {
     return parseInt(String(v || "0").replace(/\D/g, "")) || 0;
@@ -430,6 +433,16 @@ function isFamilyStudent(student) {
     const value = normalizeSearchText(student && student.family);
     return ["co", "yes", "true", "1"].includes(value);
 }
+
+const STUDENT_SEARCH_INDEX = STUDENTS.map(student => {
+    return {
+        ...student,
+        _searchText: normalizeSearchText(
+            `${student.name || ""} ${student.license || ""} ${student.birthdate || ""} ${student.phone || ""}`
+        ),
+        _isFamily: isFamilyStudent(student)
+    };
+});
 
 function studentLabel(student) {
     if (!student) return "";
@@ -489,13 +502,14 @@ function renderStudentSuggestions(keyword) {
         return;
     }
 
-    const matched = STUDENTS.filter(student => {
-        const searchText = normalizeSearchText(
-            `${student.name} ${student.license} ${student.birthdate} ${student.phone}`
-        );
+    const matched = [];
 
-        return searchText.includes(q);
-    }).slice(0, 30);
+    for (const student of STUDENT_SEARCH_INDEX) {
+        if (student._searchText.includes(q)) {
+            matched.push(student);
+            if (matched.length >= 20) break;
+        }
+    }
 
     if (!matched.length) {
         suggestBox.innerHTML = `
@@ -509,26 +523,23 @@ function renderStudentSuggestions(keyword) {
         <button
             type="button"
             class="student-suggest-item"
-            data-license="${student.license}"
+            data-license="${student.license || ""}"
         >
             <b>${student.name || ""}</b>
             <span>${student.license || ""} - ${student.birthdate || ""}</span>
-            ${isFamilyStudent(student) ? `<em>Gia đình - giảm 10%</em>` : ``}
+            ${student._isFamily ? `<em>Gia đình - giảm 10%</em>` : ``}
         </button>
     `).join("");
 
     suggestBox.style.display = "block";
+}
 
-    suggestBox.querySelectorAll(".student-suggest-item").forEach(btn => {
-        btn.addEventListener("click", function () {
-            const license = this.dataset.license;
-            const student = STUDENTS.find(s => s.license === license);
+function debounceStudentSuggestions(value) {
+    clearTimeout(studentSearchTimer);
 
-            if (student) {
-                selectStudent(student);
-            }
-        });
-    });
+    studentSearchTimer = setTimeout(() => {
+        renderStudentSuggestions(value);
+    }, 120);
 }
 
 function initStudentSearch() {
@@ -553,13 +564,28 @@ function initStudentSearch() {
             if (familyText) familyText.textContent = "Chưa áp dụng";
         }
 
-        renderStudentSuggestions(this.value);
-        updateTotal();
+        debounceStudentSuggestions(this.value);
     });
 
     input.addEventListener("focus", function () {
         renderStudentSuggestions(this.value);
     });
+
+    const suggestBox = document.getElementById("studentSuggestBox");
+
+    if (suggestBox) {
+        suggestBox.addEventListener("click", function (e) {
+            const btn = e.target.closest(".student-suggest-item");
+            if (!btn) return;
+
+            const license = btn.dataset.license;
+            const student = STUDENTS.find(s => s.license === license);
+
+            if (student) {
+                selectStudent(student);
+            }
+        });
+    }
 
     document.addEventListener("click", function (e) {
         const box = document.querySelector(".student-search-box");
@@ -573,11 +599,6 @@ function initStudentSearch() {
     const selectedLicense = {{ selected_license|tojson }};
     let defaultStudent = null;
 
-    /*
-        Chỉ tự điền hội viên khi đi từ trang khác sang có ma_hv,
-        ví dụ từ trang Chưa đóng phí bấm "Đóng phí".
-        Còn vào /fees bình thường thì để trống.
-    */
     if (selectedLicense) {
         defaultStudent = STUDENTS.find(s => s.license === selectedLicense);
     }
@@ -907,7 +928,16 @@ document.addEventListener("DOMContentLoaded", function () {
         addMonthRow();
     }
 
-    document.querySelectorAll("input, select").forEach(el => {
+    document.querySelectorAll(".fee-split-form input, .fee-split-form select").forEach(el => {
+        if (
+            el.id === "studentSearchInput" ||
+            el.id === "studentLicenseHidden" ||
+            el.name === "ma_hv" ||
+            el.name === "note"
+        ) {
+            return;
+        }
+
         el.addEventListener("input", updateTotal);
         el.addEventListener("change", updateTotal);
     });

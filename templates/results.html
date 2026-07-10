@@ -23,13 +23,15 @@
     </div>
 
     <div class="field-box">
-        <label>Quý</label>
+        <label>Quý / Lần</label>
         <select name="quarter" onchange="autoFilterResults()">
-            <option value="">Tất cả quý</option>
-            <option value="Q1" {{ 'selected' if quarter=='Q1' }}>Q1</option>
-            <option value="Q2" {{ 'selected' if quarter=='Q2' }}>Q2</option>
-            <option value="Q3" {{ 'selected' if quarter=='Q3' }}>Q3</option>
-            <option value="Q4" {{ 'selected' if quarter=='Q4' }}>Q4</option>
+            <option value="">Tất cả quý / lần</option>
+
+            {% for p in period_options %}
+            <option value="{{ p.value }}" {{ 'selected' if quarter == p.value }}>
+                {{ p.label }}
+            </option>
+            {% endfor %}
         </select>
     </div>
 
@@ -45,8 +47,8 @@
     </div>
 
     <div class="field-box">
-        <label>Cấp thi</label>
-        <select name="cap_thi" onchange="autoFilterResults()">
+        <label>Cấp đẳng thi</label>
+        <select name="cap_thi" id="capThiSelect" onchange="autoFilterResults()">
             <option value="">Tất cả cấp</option>
             {% for c in cap_thi_options %}
             <option value="{{ c }}" {{ 'selected' if cap_thi == c }}>{{ c }}</option>
@@ -77,7 +79,7 @@
             <th>Kỳ thi</th>
             <th>Mã HV</th>
             <th>Họ tên</th>
-            <th>Cấp thi</th>
+            <th>Cấp đẳng thi</th>
             <th>Số thi</th>
             <th>Kết quả</th>
             <th>Ghi chú</th>
@@ -160,7 +162,40 @@
 let resultFilterTimer = null;
 
 function autoFilterResults() {
-    document.getElementById("resultFilterForm").submit();
+    const form = document.getElementById("resultFilterForm");
+    const quarterSelect = form.querySelector('select[name="quarter"]');
+    const capSelect = document.getElementById("capThiSelect");
+
+    if (quarterSelect && capSelect) {
+        const q = quarterSelect.value;
+        const currentCap = capSelect.value;
+
+        const capOptions = [
+            "Cấp 9", "Cấp 8", "Cấp 7", "Cấp 6", "Cấp 5",
+            "Cấp 4", "Cấp 3", "Cấp 2", "Cấp 1"
+        ];
+
+        const danOptions = [
+            "1 Đẳng", "2 Đẳng", "3 Đẳng", "4 Đẳng", "5 Đẳng",
+            "6 Đẳng", "7 Đẳng", "8 Đẳng", "9 Đẳng", "10 Đẳng"
+        ];
+
+        let allowed = [];
+
+        if (["Q1", "Q2", "Q3", "Q4"].includes(q)) {
+            allowed = capOptions;
+        } else if (["L1", "L2", "KVMN", "KVMT", "KVMB", "QG"].includes(q)) {
+            allowed = danOptions;
+        } else {
+            allowed = capOptions.concat(danOptions);
+        }
+
+        if (currentCap && !allowed.includes(currentCap)) {
+            capSelect.value = "";
+        }
+    }
+
+    form.submit();
 }
 
 function debounceResultFilter() {

@@ -531,24 +531,30 @@ body .portal-page-head h1::first-letter {
 {% if activities %}
 <div class="student-activity-list">
     {% for a in activities %}
-        {% set raw_text = ((a.hoat_dong or '') ~ ' ' ~ (a.noi_dung or '') ~ ' ' ~ (a.ket_qua or ''))|lower %}
+        {# Ưu tiên nhận diện theo KẾT QUẢ trước, tránh tên giải có chữ "Vô địch" bị hiểu nhầm là HCV #}
+        {% set result_text = (a.ket_qua or '')|lower %}
+        {% set activity_text = ((a.hoat_dong or '') ~ ' ' ~ (a.noi_dung or ''))|lower %}
+        {% set raw_text = (result_text ~ ' ' ~ activity_text)|lower %}
 
         {% set theme_class = 'theme-normal' %}
         {% set award_icon = '🎯' %}
         {% set award_label = 'Tham gia hoạt động' %}
 
-        {% if 'huy chương vàng' in raw_text or 'hcv' in raw_text or 'hạng nhất' in raw_text or 'hang nhat' in raw_text or 'giải nhất' in raw_text or 'giai nhat' in raw_text or 'vô địch' in raw_text or 'vo dich' in raw_text %}
-            {% set theme_class = 'theme-gold' %}
-            {% set award_icon = '🥇' %}
-            {% set award_label = 'Huy chương vàng' %}
-        {% elif 'huy chương bạc' in raw_text or 'hcb' in raw_text or 'hạng nhì' in raw_text or 'hang nhi' in raw_text or 'giải nhì' in raw_text or 'giai nhi' in raw_text or 'á quân' in raw_text or 'a quan' in raw_text %}
-            {% set theme_class = 'theme-silver' %}
-            {% set award_icon = '🥈' %}
-            {% set award_label = 'Huy chương bạc' %}
-        {% elif 'huy chương đồng' in raw_text or 'hcđ' in raw_text or 'hcd' in raw_text or 'hạng ba' in raw_text or 'hang ba' in raw_text or 'giải ba' in raw_text or 'giai ba' in raw_text %}
+        {% if 'huy chương đồng' in result_text or 'hcđ' in result_text or 'hcd' in result_text or 'hạng ba' in result_text or 'hang ba' in result_text or 'giải ba' in result_text or 'giai ba' in result_text %}
             {% set theme_class = 'theme-bronze' %}
             {% set award_icon = '🥉' %}
             {% set award_label = 'Huy chương đồng' %}
+
+        {% elif 'huy chương bạc' in result_text or 'hcb' in result_text or 'hạng nhì' in result_text or 'hang nhi' in result_text or 'giải nhì' in result_text or 'giai nhi' in result_text or 'á quân' in result_text or 'a quan' in result_text %}
+            {% set theme_class = 'theme-silver' %}
+            {% set award_icon = '🥈' %}
+            {% set award_label = 'Huy chương bạc' %}
+
+        {% elif 'huy chương vàng' in result_text or 'hcv' in result_text or 'hạng nhất' in result_text or 'hang nhat' in result_text or 'giải nhất' in result_text or 'giai nhat' in result_text or 'vô địch' in result_text or 'vo dich' in result_text %}
+            {% set theme_class = 'theme-gold' %}
+            {% set award_icon = '🥇' %}
+            {% set award_label = 'Huy chương vàng' %}
+
         {% elif 'võ sinh xuất sắc' in raw_text or 'vo sinh xuat sac' in raw_text or 'võ sinh ưu tú' in raw_text or 'vo sinh uu tu' in raw_text or 'võ sinh tiêu biểu' in raw_text or 'vo sinh tieu bieu' in raw_text or 'xuất sắc' in raw_text or 'xuat sac' in raw_text or 'ưu tú' in raw_text or 'uu tu' in raw_text or 'tiêu biểu' in raw_text or 'tieu bieu' in raw_text %}
             {% set theme_class = 'theme-honor' %}
             {% set award_icon = '🏆' %}
