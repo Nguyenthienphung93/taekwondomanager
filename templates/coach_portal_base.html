@@ -679,7 +679,6 @@
         }
 
         .portal-topbar .top-clock .clock-time {
-            color: var(--club-header-yellow) !important;
             font-size: 22px !important;
             line-height: 1 !important;
             font-weight: 900 !important;
@@ -928,6 +927,22 @@
             .portal-sidebar { top: 0 !important; height: 100dvh !important; }
         }
 
+
+        /* TOOLTIP MENU THU GỌN - HIỆN SAU 3 GIÂY */
+        .sidebar-delay-tooltip{
+            position:fixed;z-index:999999;max-width:240px;padding:9px 12px;
+            border-radius:10px;background:rgba(15,23,42,.96);color:#fff;
+            border:1px solid rgba(250,204,21,.45);
+            box-shadow:0 10px 26px rgba(0,0,0,.28);
+            font-size:13px;font-weight:850;line-height:1.3;white-space:nowrap;
+            pointer-events:none;opacity:0;
+            transform:translateY(-50%) translateX(-4px);
+            transition:opacity .16s ease,transform .16s ease;
+        }
+        .sidebar-delay-tooltip.show{
+            opacity:1;transform:translateY(-50%) translateX(0);
+        }
+
 </style>
 
     {% block extra_css %}{% endblock %}
@@ -1030,6 +1045,66 @@
 </div>
 
 <script>
+
+function initDelayedSidebarTooltips(options){
+    const tooltip=document.createElement("div");
+    tooltip.className="sidebar-delay-tooltip";
+    document.body.appendChild(tooltip);
+
+    let timer=null;
+    let currentTarget=null;
+
+    function isCollapsed(){
+        try{return options.isCollapsed();}catch(e){return false;}
+    }
+
+    function getText(target){
+        const explicit=(target.getAttribute("data-tooltip")||"").trim();
+        if(explicit)return explicit;
+        const label=target.querySelector(options.textSelector);
+        return (label?.textContent||"").trim();
+    }
+
+    function hideTooltip(){
+        clearTimeout(timer);
+        timer=null;
+        currentTarget=null;
+        tooltip.classList.remove("show");
+    }
+
+    function showTooltip(target){
+        if(!target||!isCollapsed())return;
+        const text=getText(target);
+        if(!text)return;
+
+        const rect=target.getBoundingClientRect();
+        tooltip.textContent=text;
+        tooltip.style.left=Math.min(rect.right+12,window.innerWidth-250)+"px";
+        tooltip.style.top=(rect.top+rect.height/2)+"px";
+        tooltip.classList.add("show");
+    }
+
+    document.querySelectorAll(options.itemSelector).forEach(function(item){
+        item.addEventListener("mouseenter",function(){
+            hideTooltip();
+            if(!isCollapsed())return;
+            currentTarget=item;
+            timer=setTimeout(function(){
+                if(currentTarget===item&&isCollapsed())showTooltip(item);
+            },1500);
+        });
+
+        item.addEventListener("mouseleave",hideTooltip);
+        item.addEventListener("mousedown",hideTooltip);
+        item.addEventListener("click",hideTooltip);
+        item.addEventListener("blur",hideTooltip);
+    });
+
+    window.addEventListener("scroll",hideTooltip,true);
+    window.addEventListener("resize",hideTooltip);
+}
+
+
 function toggleCoachSidebar() {
     const body = document.getElementById("coachPortalBody");
     if (!body) return;
@@ -1161,6 +1236,16 @@ document.addEventListener("DOMContentLoaded", function () {
     setInterval(updateCoachClock, 1000);
 
     autoHidePortalToasts();
+
+    initDelayedSidebarTooltips({
+        itemSelector: ".portal-sidebar .portal-nav a",
+        textSelector: ".nav-text",
+        isCollapsed: function(){
+            const body=document.getElementById("coachPortalBody");
+            return !!body&&body.classList.contains("sidebar-collapsed")
+                && window.innerWidth>860;
+        }
+    });
     document.addEventListener("click", closeCoachMobileSidebarOnClickOutside);
 });
 </script>

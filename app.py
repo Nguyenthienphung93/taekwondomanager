@@ -2316,60 +2316,162 @@ def upload_club_asset_to_supabase(file_storage, folder="club-info"):
 
     return supabase_public_url(CLUB_ASSET_BUCKET, storage_path)
 
-def prepare_student_photo_for_upload(file_storage, target_width=780, target_height=1040, quality=98):
+def prepare_student_photo_for_upload(
+    file_storage,
+    target_width=780,
+    target_height=1040,
+    min_target_kb=300,
+    max_target_kb=480
+):
     """
-    Xử lý ảnh học viên trước khi upload Supabase:
-    - Sửa xoay EXIF
-    - Convert RGB
-    - Crop đúng tỷ lệ 3x4
-    - Resize vừa đủ để hiển thị web, tránh bị sharpen quá mạnh
-    - Làm mềm rất nhẹ để giảm lốm đốm vùng da/áo
-    - Xuất JPEG chất lượng cao
+    Chuẩn hóa ảnh học viên theo tỷ lệ 3x4 và nén thích ứng.
+
+    Quy tắc:
+    - Ảnh xuất ra dưới 300 KB: giữ nguyên mức chất lượng cao, không nén thêm.
+    - Ảnh từ 300 đến 480 KB: giữ nguyên.
+    - Ảnh trên 480 KB: tự giảm chất lượng từng bước.
+    - Không cố ép ảnh nhỏ phải tăng lên 300 KB.
+    - Chỉ giảm độ phân giải thêm khi giảm chất lượng vẫn chưa đủ.
     """
 
     img = Image.open(file_storage.stream)
     img = ImageOps.exif_transpose(img)
     img = img.convert("RGB")
 
+    # =========================
+    # 1. CROP ĐÚNG TỶ LỆ 3x4
+    # =========================
     src_w, src_h = img.size
     target_ratio = target_width / target_height
     src_ratio = src_w / src_h
 
-    # Crop đúng tỷ lệ 3x4
     if src_ratio > target_ratio:
+        # Ảnh quá ngang: cắt hai bên
         new_w = int(src_h * target_ratio)
-        left = (src_w - new_w) // 2
-        img = img.crop((left, 0, left + new_w, src_h))
+        left = max(0, (src_w - new_w) // 2)
+
+        img = img.crop((
+            left,
+            0,
+            left + new_w,
+            src_h
+        ))
 
     elif src_ratio < target_ratio:
+        # Ảnh quá dọc: ưu tiên giữ phần đầu và khuôn mặt
         new_h = int(src_w / target_ratio)
+        extra_h = src_h - new_h
 
-        # Ưu tiên giữ mặt và phần đầu, không cắt quá thấp
-        top = max(0, int((src_h - new_h) * 0.10))
+        top = max(0, int(extra_h * 0.10))
 
         if top + new_h > src_h:
-            top = src_h - new_h
+            top = max(0, src_h - new_h)
 
-        img = img.crop((0, top, src_w, top + new_h))
+        img = img.crop((
+            0,
+            top,
+            src_w,
+            top + new_h
+        ))
 
-    # Dùng BICUBIC mềm hơn LANCZOS, tránh bị rít nét
-    img = img.resize((target_width, target_height), Image.Resampling.BICUBIC)
+    # =========================
+    # 2. CHỈ THU NHỎ, KHÔNG PHÓNG TO
+    # =========================
+    crop_w, crop_h = img.size
 
-    # Làm mềm cực nhẹ, giảm lốm đốm nhưng không mất chi tiết mặt
-    img = img.filter(ImageFilter.GaussianBlur(radius=0.18))
+    if crop_w > target_width or crop_h > target_height:
+        img = img.resize(
+            (target_width, target_height),
+            Image.Resampling.LANCZOS
+        )
 
-    output = BytesIO()
-    img.save(
-        output,
-        format="JPEG",
-        quality=quality,
-        optimize=True,
-        progressive=False,
-        subsampling=0
-    )
-    output.seek(0)
+    # Không GaussianBlur vì dễ làm ảnh mặt bị mềm/mờ.
 
-    return output.getvalue()
+    min_target_bytes = int(min_target_kb * 1024)
+    max_target_bytes = int(max_target_kb * 1024)
+
+    def save_jpeg(image, quality):
+        output = BytesIO()
+
+        image.save(
+            output,
+            format="JPEG",
+            quality=quality,
+            optimize=True,
+            progressive=True,
+            subsampling="4:2:0"
+        )
+
+        return output.getvalue()
+
+    # =========================
+    # 3. THỬ CHẤT LƯỢNG CAO TRƯỚC
+    # =========================
+    content = save_jpeg(img, 95)
+
+    # Ảnh dưới 300 KB hoặc nằm trong 300–480 KB:
+    # giữ nguyên bản quality 95, không giảm thêm.
+    if len(content) <= max_target_bytes:
+        return content
+
+    # =========================
+    # 4. ẢNH TRÊN 480 KB:
+    # GIẢM CHẤT LƯỢNG TỪ TỪ
+    # =========================
+    quality_levels = [
+        93,
+        91,
+        89,
+        87,
+        85,
+        83,
+        81,
+        79
+    ]
+
+    best_content = content
+
+    for quality in quality_levels:
+        test_content = save_jpeg(img, quality)
+
+        # Luôn giữ bản nhỏ nhất đã thử
+        if len(test_content) < len(best_content):
+            best_content = test_content
+
+        # Đạt dưới 480 KB thì dừng ngay
+        if len(test_content) <= max_target_bytes:
+            return test_content
+
+    # =========================
+    # 5. VẪN TRÊN 480 KB:
+    # GIẢM NHẸ ĐỘ PHÂN GIẢI
+    # =========================
+    resize_levels = [
+        (720, 960),
+        (660, 880),
+        (600, 800)
+    ]
+
+    original_img = img
+
+    for width, height in resize_levels:
+        smaller_img = original_img.resize(
+            (width, height),
+            Image.Resampling.LANCZOS
+        )
+
+        for quality in [88, 85, 82, 79]:
+            test_content = save_jpeg(smaller_img, quality)
+
+            if len(test_content) < len(best_content):
+                best_content = test_content
+
+            if len(test_content) <= max_target_bytes:
+                return test_content
+
+    # Trường hợp ảnh cực nhiều chi tiết:
+    # trả về bản nhỏ nhất đã tạo được.
+    return best_content
 
 def get_student_photo_url(license_code):
     license_code = str(license_code or "").strip()
@@ -5553,6 +5655,86 @@ def notifications():
         current_year=now_year,
         year_options=year_options
     )
+
+@app.post("/notifications/delete/<notification_id>")
+def notification_delete(notification_id):
+    """
+    Xóa thủ công một thông báo khỏi Supabase.
+
+    Sau khi xóa:
+    - Học viên thuộc thông báo đó không còn thấy trong danh sách.
+    - Link chi tiết cũ cũng không mở được nữa.
+    - Xóa luôn lịch sử đã đọc liên quan để tránh dữ liệu mồ côi.
+    """
+    notification_id = str(notification_id or "").strip()
+
+    if not notification_id:
+        flash("Thiếu mã thông báo cần xóa.", "danger")
+        return back_to_current_page("notifications")
+
+    try:
+        rows = (
+            supabase.table(NOTIFICATION_TABLE)
+            .select("id,title,target_type,target_license,target_name")
+            .eq("id", notification_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+
+        if not rows:
+            flash(
+                "Thông báo không còn tồn tại hoặc đã được xóa trước đó.",
+                "warning"
+            )
+            return back_to_current_page("notifications")
+
+        notification = rows[0]
+
+        # Xóa lịch sử đã đọc trước để tránh vướng khóa ngoại,
+        # đồng thời không để lại dữ liệu mồ côi.
+        try:
+            (
+                supabase.table(NOTIFICATION_READ_TABLE)
+                .delete()
+                .eq("notification_id", notification_id)
+                .execute()
+            )
+        except Exception as read_error:
+            print("[DELETE NOTIFICATION READ LOG ERROR]", read_error)
+
+        # Xóa thông báo gốc.
+        # Trang học viên đọc trực tiếp từ bảng notifications,
+        # nên sau khi xóa học viên sẽ không còn nhìn thấy.
+        (
+            supabase.table(NOTIFICATION_TABLE)
+            .delete()
+            .eq("id", notification_id)
+            .execute()
+        )
+
+        title = str(
+            notification.get("title") or "Thông báo"
+        ).strip()
+
+        target_name = str(
+            notification.get("target_name")
+            or notification.get("target_license")
+            or "Tất cả học viên"
+        ).strip()
+
+        flash(
+            f"Đã xóa thông báo “{title}” của {target_name}. "
+            f"Học viên sẽ không còn nhìn thấy thông báo này.",
+            "success"
+        )
+
+    except Exception as e:
+        print("[DELETE NOTIFICATION ERROR]", e)
+        flash(f"Lỗi xóa thông báo: {e}", "danger")
+
+    return back_to_current_page("notifications")
     
 @app.route("/student-login", methods=["GET", "POST"])
 def student_login():

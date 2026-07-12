@@ -15,17 +15,38 @@
     text-align: center;
 }
 
-.student-photo {
+.student-photo-wrap {
     width: 260px;
     height: 347px;
+    max-width: 100%;
+    margin: 0 auto;
+    position: relative;
     border-radius: 18px;
-    object-fit: cover;
-    object-position: center top;
+    overflow: hidden;
     background: #f1f5f9;
     border: 1px solid #dbe7f5;
     box-shadow: 0 10px 24px rgba(15,23,42,.12);
+}
+
+.student-photo,
+.student-photo-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    border-radius: 18px;
+}
+
+.student-photo {
+    object-fit: cover;
+    object-position: center top;
     image-rendering: auto;
-    filter: saturate(0.98) contrast(0.98);
+}
+
+.student-photo-canvas {
+    position: absolute;
+    inset: 0;
+    background: #f1f5f9;
 }
 
 .no-photo {
@@ -88,6 +109,25 @@
     font-size: 15px;
 }
 
+.info-personal-name {
+    color: #3C85FFFF !important;
+    font-size: 17px !important;
+    font-weight: 950 !important;
+}
+
+.status-text {
+    font-size: 15px;
+    font-weight: 950;
+}
+
+.status-active {
+    color: #16a34a !important;
+}
+
+.status-paused {
+    color: #dc2626 !important;
+}
+
 @media(max-width: 860px) {
     .info-layout { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
@@ -106,7 +146,22 @@
 <div class="info-layout">
     <section class="portal-card photo-card">
         {% if photo_url %}
-            <img class="student-photo" src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}" alt="Ảnh học viên">
+            <div class="student-photo-wrap">
+                <img
+                    id="studentPhotoSource"
+                    class="student-photo"
+                    src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
+                    alt="Ảnh học viên"
+                    decoding="async"
+                >
+                <canvas
+                    id="studentPhotoCanvas"
+                    class="student-photo-canvas"
+                    width="260"
+                    height="347"
+                    aria-hidden="true"
+                ></canvas>
+            </div>
         {% else %}
             <div class="no-photo">Chưa có ảnh</div>
         {% endif %}
@@ -118,7 +173,7 @@
         <section class="portal-card">
             <h2 class="info-section-title">Thông tin cá nhân</h2>
             <div class="info-grid">
-                <div class="info-item"><span>Họ tên</span><b>{{ student.name or '—' }}</b></div>
+                <div class="info-item"><span>Họ tên</span><b class="info-personal-name">{{ student.name or '—' }}</b></div>
                 <div class="info-item"><span>Ngày sinh</span><b>{{ student.birthdate or '—' }}</b></div>
                 <div class="info-item"><span>Giới tính</span><b>{{ student.gender or '—' }}</b></div>
                 <div class="info-item"><span>Số điện thoại</span><b>{{ student.phonenumber or '—' }}</b></div>
@@ -169,16 +224,96 @@
 
                 <div class="info-item">
                     <span>Tình trạng</span>
-                    <b>
-                        {% if student.active|string|lower in ['có', '1', 'true', 'yes'] %}
-                            Có
-                        {% else %}
-                            Không
-                        {% endif %}
-                    </b>
+                    {% if student.active|string|lower in ['có', '1', 'true', 'yes'] %}
+                        <b class="status-text status-active">Đang hoạt động</b>
+                    {% else %}
+                        <b class="status-text status-paused">Tạm ngưng</b>
+                    {% endif %}
                 </div>
             </div>
         </section>
     </div>
 </div>
+
+<script>
+(function () {
+    function renderStudentPhotoHighQuality() {
+        const img = document.getElementById("studentPhotoSource");
+        const canvas = document.getElementById("studentPhotoCanvas");
+
+        if (!img || !canvas) return;
+
+        const cssWidth = 260;
+        const cssHeight = 347;
+        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 4));
+
+        function draw() {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+
+            canvas.width = Math.round(cssWidth * dpr);
+            canvas.height = Math.round(cssHeight * dpr);
+            canvas.style.width = cssWidth + "px";
+            canvas.style.height = cssHeight + "px";
+
+            const ctx = canvas.getContext("2d", { alpha: false });
+            if (!ctx) return;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.fillStyle = "#f1f5f9";
+            ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+            const srcRatio = img.naturalWidth / img.naturalHeight;
+            const dstRatio = cssWidth / cssHeight;
+
+            let sx = 0;
+            let sy = 0;
+            let sw = img.naturalWidth;
+            let sh = img.naturalHeight;
+
+            if (srcRatio > dstRatio) {
+                sw = img.naturalHeight * dstRatio;
+                sx = (img.naturalWidth - sw) / 2;
+            } else {
+                sh = img.naturalWidth / dstRatio;
+                sy = 0;
+            }
+
+            /* Hạ nhẹ vùng sáng, giữ chi tiết và không làm mờ ảnh */
+            ctx.filter = "brightness(0.96) contrast(1.03) saturate(0.98)";
+
+            ctx.drawImage(
+                img,
+                sx, sy, sw, sh,
+                0, 0, cssWidth, cssHeight
+            );
+
+            ctx.filter = "none";
+            canvas.style.display = "block";
+        }
+
+        function fallback() {
+            canvas.style.display = "none";
+        }
+
+        if (img.complete) {
+            if (img.naturalWidth) draw();
+            else fallback();
+        } else {
+            img.addEventListener("load", draw, { once: true });
+            img.addEventListener("error", fallback, { once: true });
+        }
+
+        window.addEventListener("resize", draw);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", renderStudentPhotoHighQuality);
+    } else {
+        renderStudentPhotoHighQuality();
+    }
+})();
+</script>
+
 {% endblock %}
