@@ -1,5 +1,60 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+.tracking-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 12px 0;
+}
+
+.tracking-summary-row .tracking-stats {
+    margin: 0;
+}
+
+.tracking-export-btn {
+    margin-left: auto;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 950;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid #166534;
+    box-shadow: 0 10px 20px rgba(22, 163, 74, .20);
+    white-space: nowrap;
+    transition: transform .16s ease, filter .16s ease;
+}
+
+.tracking-export-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+}
+
+.tracking-export-btn i {
+    font-size: 18px;
+}
+
+@media (max-width: 760px) {
+    .tracking-summary-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tracking-export-btn {
+        width: 100%;
+    }
+}
+</style>
+
 <h1>Theo dõi học phí</h1>
 
 <form method="get" class="tracking-filter">
@@ -24,21 +79,32 @@
     <button>Lọc</button>
 </form>
 
-<div class="tracking-stats">
-    <div class="stat-card">
-        <div class="stat-label">Tổng ({{ total_count }})</div>
-        <div class="stat-value">{{ total|money }}</div>
+<div class="tracking-summary-row">
+    <div class="tracking-stats">
+        <div class="stat-card">
+            <div class="stat-label">Tổng ({{ total_count }})</div>
+            <div class="stat-value">{{ total|money }}</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Tiền mặt ({{ cash_count }})</div>
+            <div class="stat-value">{{ cash|money }}</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Chuyển khoản ({{ bank_count }})</div>
+            <div class="stat-value">{{ bank|money }}</div>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-label">Tiền mặt ({{ cash_count }})</div>
-        <div class="stat-value">{{ cash|money }}</div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-label">Chuyển khoản ({{ bank_count }})</div>
-        <div class="stat-value">{{ bank|money }}</div>
-    </div>
+    <a
+        class="tracking-export-btn"
+        href="{{ url_for('tracking_export', month=month, year=year) }}"
+        title="Xuất Excel theo bộ lọc đang hiển thị"
+    >
+        <i class="fa-solid fa-file-excel"></i>
+        <span>Xuất Excel</span>
+    </a>
 </div>
 
 <table>

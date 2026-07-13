@@ -109,25 +109,24 @@
     }
 
     .sidebar.collapsed .sidebar-admin-footer{
-        margin:0 7px 12px;
-        padding:8px 6px;
-        flex-direction:column;
-        gap:8px;
-    }
-
-    .sidebar.collapsed .sidebar-admin-user{
+        margin:0;
+        padding:0;
+        border:0;
+        background:transparent;
+        box-shadow:none;
+        display:flex;
         justify-content:center;
     }
 
-    .sidebar.collapsed .sidebar-admin-text{
+    .sidebar.collapsed .sidebar-admin-user{
         display:none;
     }
 
-    .sidebar.collapsed .sidebar-admin-avatar,
     .sidebar.collapsed .sidebar-power-btn{
-        width:34px;
-        height:34px;
-        border-radius:12px;
+        width:42px;
+        height:42px;
+        border-radius:13px;
+        margin:0 auto 12px;
     }
 
 
@@ -393,6 +392,160 @@
             opacity:1;transform:translateY(-50%) translateX(0);
         }
 
+
+    /* =========================
+       ADMIN SIDEBAR RỘNG + THẺ TÀI KHOẢN KIỂU STUDENT
+    ========================= */
+    .layout{
+        display:grid !important;
+        grid-template-columns:300px minmax(0,1fr) !important;
+    }
+
+    .layout.collapsed{
+        grid-template-columns:72px minmax(0,1fr) !important;
+    }
+
+    .sidebar{
+        width:auto !important;
+        min-width:0 !important;
+        display:flex !important;
+        flex-direction:column !important;
+    }
+
+    .admin-profile-card{
+        display:flex;
+        align-items:center;
+        gap:11px;
+        margin:0 8px 14px;
+        padding:10px;
+        border-radius:15px;
+        background:#111c2f;
+        border:1px solid #23324a;
+        min-width:0;
+    }
+
+    .admin-profile-avatar{
+        width:44px;
+        height:44px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#2563eb,#0a58ca);
+        color:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex:0 0 auto;
+        box-shadow:0 8px 16px rgba(37,99,235,.25);
+    }
+
+    .admin-profile-info{
+        min-width:0;
+        line-height:1.18;
+    }
+
+    .admin-profile-info b{
+        display:block;
+        color:#fff;
+        font-size:15px;
+        font-weight:950;
+        white-space:normal;
+        overflow-wrap:anywhere;
+    }
+
+    .admin-profile-info span{
+        display:block;
+        margin-top:4px;
+        color:#facc15;
+        font-size:10px;
+        font-weight:900;
+        letter-spacing:.5px;
+    }
+
+    .admin-logout-wrap{
+        margin-top:12px;
+        padding-top:0;
+    }
+
+    .admin-logout-btn{
+        margin:0 8px 12px;
+        min-height:44px;
+        border-radius:12px;
+        background:#3b1d2c;
+        color:#fff;
+        display:flex;
+        align-items:center;
+        gap:11px;
+        padding:0 13px;
+        text-decoration:none;
+        font-weight:950;
+    }
+
+    .admin-logout-btn i{
+        width:20px;
+        text-align:center;
+        color:#fff;
+    }
+
+    .sidebar.collapsed .admin-profile-card{
+        display:none;
+    }
+
+    .sidebar.collapsed .admin-logout-btn{
+        width:44px;
+        height:44px;
+        min-height:44px;
+        margin:0 auto 12px;
+        padding:0;
+        justify-content:center;
+        border-radius:13px;
+        background:linear-gradient(135deg,#ef4444,#b91c1c);
+    }
+
+    .sidebar.collapsed .admin-logout-btn span{
+        display:none;
+    }
+
+    .sidebar.collapsed .sidebar-admin-divider,
+    .sidebar.collapsed .sidebar-admin-footer{
+        display:none !important;
+    }
+
+
+    /* GẠCH NGANG PHÂN CÁCH TRƯỚC NÚT ĐĂNG XUẤT */
+    .admin-logout-wrap{
+        position:relative;
+        margin-top:22px;
+        padding-top:10px;
+    }
+
+    .admin-logout-wrap::before{
+        content:"";
+        position:absolute;
+        left:18px;
+        right:18px;
+        top:0;
+        height:1px;
+        border-radius:999px;
+        background:linear-gradient(
+            90deg,
+            transparent,
+            rgba(250,204,21,.55),
+            rgba(148,163,184,.65),
+            rgba(250,204,21,.55),
+            transparent
+        );
+        box-shadow:0 0 8px rgba(250,204,21,.12);
+    }
+
+    .sidebar.collapsed .admin-logout-wrap{
+        margin-top:22px;
+        padding-top:10px;
+    }
+
+    .sidebar.collapsed .admin-logout-wrap::before{
+        left:8px;
+        right:8px;
+    }
+
 </style>
 </head>
 <body>
@@ -422,6 +575,19 @@
     <aside id="sidebar" class="sidebar">
         <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
+        {% if admin_logged_in %}
+        <div class="admin-profile-card">
+            <div class="admin-profile-avatar">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+
+            <div class="admin-profile-info">
+                <b>{{ admin_username }}</b>
+                <span>QUẢN TRỊ VIÊN</span>
+            </div>
+        </div>
+        {% endif %}
+
         
         <a href="/students"><span class="mi">👤</span><span>Hội viên</span></a>
         <a href="/fees"><span class="mi">💰</span><span>Nhập học phí</span></a>
@@ -441,24 +607,13 @@
         <a href="/information"><span class="mi">ℹ️</span><span>Information</span></a>
 
         {% if admin_logged_in %}
-        <div class="sidebar-admin-divider"></div>
-
-        <div class="sidebar-admin-footer">
-            <div class="sidebar-admin-user">
-                <div class="sidebar-admin-avatar">
-                    <i class="fa-solid fa-user-shield"></i>
-                </div>
-
-                <div class="sidebar-admin-text">
-                    <span>ADMIN</span>
-                    <b>{{ admin_username }}</b>
-                </div>
-            </div>
-
+        <div class="admin-logout-wrap">
             <a href="{{ url_for('admin_logout') }}"
-               class="sidebar-power-btn"
+               class="admin-logout-btn"
+               data-tooltip="Đăng xuất Admin"
                title="Đăng xuất Admin">
                 <i class="fa-solid fa-power-off"></i>
+                <span>Đăng xuất</span>
             </a>
         </div>
         {% endif %}
@@ -787,7 +942,7 @@ document.addEventListener("visibilitychange", function () {
 
 document.addEventListener("DOMContentLoaded",function(){
     initDelayedSidebarTooltips({
-        itemSelector:"#sidebar > a",
+        itemSelector:"#sidebar > a, .admin-logout-btn",
         textSelector:"span:not(.mi)",
         isCollapsed:function(){
             const sidebar=document.getElementById("sidebar");

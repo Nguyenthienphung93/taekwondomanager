@@ -1095,50 +1095,67 @@ def inject_student_welcome_popup():
             "welcome_months_count": 0,
         }
 
-@app.get('/tracking')
-def tracking():
-    now = datetime.now()
+def build_tracking_rows_web(year, month):
+    """
+    Dùng chung cho:
+    - Trang Theo dõi học phí
+    - File Excel xuất theo bộ lọc
 
-    year = request.args.get('year', str(now.year))
-    month = request.args.get('month', str(now.month))
+    Quy tắc:
+    - Phiếu đóng 1 tháng: hiện tiền ở tháng đó.
+    - Phiếu đóng nhiều tháng: chỉ hiện tiền ở tháng đầu tiên.
+    - Các tháng sau vẫn có dòng nhưng số tiền hiển thị là 0đ.
+    - Tiền thi cấp/đẳng không tính vào học phí.
+    """
 
-    code = f'{int(month):02d}{year}'
+    code = f"{int(month):02d}{year}"
 
-    rows_all = supabase.table(HOCPHI_TABLE).select('*').execute().data or []
+    rows_all = (
+        supabase.table(HOCPHI_TABLE)
+        .select("*")
+        .execute()
+        .data
+        or []
+    )
 
     rows = []
     total = 0
     cash = 0
     bank = 0
 
-    for r in rows_all:
-        ma_thang = str(r.get('ma_thang') or '').strip()
+    for source_row in rows_all:
+        r = dict(source_row)
 
-        # Chỉ xét những phiếu có đóng học phí của tháng đang lọc
+        ma_thang = str(r.get("ma_thang") or "").strip()
+
+        # Chỉ lấy phiếu có tháng đang lọc
         if code not in ma_thang:
             continue
 
-        amount = int(r.get('tong_tien') or 0)
+        amount = int(r.get("tong_tien") or 0)
 
         month_codes = [
             x.strip()
-            for x in re.split(r'\s*-\s*', ma_thang)
+            for x in re.split(r"\s*-\s*", ma_thang)
             if x.strip()
         ]
 
         first_month_code = month_codes[0] if month_codes else ""
 
         # =========================
-        # Tách riêng tiền thi cấp
-        # Theo form hiện tại phí thi cấp là 300.000đ
-        # Tab theo dõi học phí chỉ tính tiền học phí, không tính phí thi cấp
+        # TÁCH TIỀN THI CẤP/ĐẲNG
         # =========================
         exam_fee = 0
 
-        has_exam_fee = bool(str(r.get('ma_quy') or '').strip())
+        has_exam_fee = bool(
+            str(r.get("ma_quy") or "").strip()
+        )
 
         if has_exam_fee:
-            exam_fee = get_app_setting_int("fees.exam_fee", 300000)
+            exam_fee = get_app_setting_int(
+                "fees.exam_fee",
+                300000
+            )
 
         tuition_amount = amount - exam_fee
 
@@ -1146,48 +1163,1146 @@ def tracking():
             tuition_amount = 0
 
         # =========================
-        # Quy tắc hiển thị tiền:
-        # - Đóng 1 tháng: hiện tiền học phí ở tháng đó
-        # - Đóng nhiều tháng 1 lần: chỉ tính tiền ở tháng đầu tiên của chuỗi
-        #   các tháng sau vẫn hiện dòng nhưng số tiền = 0đ
+        # TIỀN HIỂN THỊ THEO THÁNG
         # =========================
         if len(month_codes) <= 1:
             display_amount = tuition_amount
+
         elif code == first_month_code:
             display_amount = tuition_amount
+
         else:
             display_amount = 0
 
-        r['display_tong_tien'] = display_amount
+        r["display_tong_tien"] = display_amount
+        r["_month_codes"] = month_codes
 
         if display_amount > 0:
             total += display_amount
 
-            if r.get('chuyen_khoan') == 'TM':
+            payment_method = str(
+                r.get("chuyen_khoan") or ""
+            ).strip().upper()
+
+            if payment_method == "TM":
                 cash += display_amount
-            elif r.get('chuyen_khoan') == 'CK':
+
+            elif payment_method == "CK":
                 bank += display_amount
 
         rows.append(r)
 
-    rows.sort(key=lambda x: str(x.get('thoi_gian') or ''), reverse=True)
+    rows.sort(
+        key=lambda x: str(x.get("thoi_gian") or ""),
+        reverse=True
+    )
 
-    total_count = len([r for r in rows if int(r.get('display_tong_tien') or 0) > 0])
-    cash_count = len([r for r in rows if int(r.get('display_tong_tien') or 0) > 0 and r.get('chuyen_khoan') == 'TM'])
-    bank_count = len([r for r in rows if int(r.get('display_tong_tien') or 0) > 0 and r.get('chuyen_khoan') == 'CK'])
+    total_count = len([
+        r for r in rows
+        if int(r.get("display_tong_tien") or 0) > 0
+    ])
+
+    cash_count = len([
+        r for r in rows
+        if int(r.get("display_tong_tien") or 0) > 0
+        and str(r.get("chuyen_khoan") or "").strip().upper() == "TM"
+    ])
+
+    bank_count = len([
+        r for r in rows
+        if int(r.get("display_tong_tien") or 0) > 0
+        and str(r.get("chuyen_khoan") or "").strip().upper() == "CK"
+    ])
+
+    return {
+        "rows": rows,
+        "total": total,
+        "cash": cash,
+        "bank": bank,
+        "total_count": total_count,
+        "cash_count": cash_count,
+        "bank_count": bank_count,
+    }
+
+
+def build_tracking_export_note_web(row):
+    """
+    Tạo ghi chú rút gọn cho file Excel.
+
+    Ví dụ:
+    - Gia đình
+    - Đóng nửa tháng
+    - Đóng 3 tháng
+    - Đóng 6 tháng
+    - Đóng nửa tháng - Gia đình
+    """
+
+    raw = str(row.get("ghi_chu") or "").strip()
+    normalized = remove_accents(raw).lower()
+
+    notes = []
+
+    if "nua thang" in normalized:
+        notes.append("Đóng nửa tháng")
+
+    if "dong 3 thang" in normalized:
+        notes.append("Đóng 3 tháng")
+
+    if (
+        "dong 6 thang" in normalized
+        or "tang 1" in normalized
+    ):
+        notes.append("Đóng 6 tháng")
+
+    if "gia dinh" in normalized:
+        notes.append("Gia đình")
+
+    # Dự phòng: dữ liệu cũ không ghi rõ gói tháng
+    month_codes = row.get("_month_codes") or []
+    month_count = len(month_codes)
+
+    has_package_note = any(
+        x in notes
+        for x in [
+            "Đóng nửa tháng",
+            "Đóng 3 tháng",
+            "Đóng 6 tháng",
+        ]
+    )
+
+    if not has_package_note:
+        if month_count == 3:
+            notes.append("Đóng 3 tháng")
+
+        elif month_count in [6, 7]:
+            notes.append("Đóng 6 tháng")
+
+    result = []
+
+    for item in notes:
+        if item not in result:
+            result.append(item)
+
+    return " - ".join(result)
+
+
+def build_tracking_discount_text_web(
+    base_fee,
+    final_amount,
+    raw_note
+):
+    """
+    Hiển thị giảm giá trong Excel.
+
+    Ví dụ:
+    - 50.000 đ
+    - 50.000 đ (10%)
+    - 250.000 đ (50%)
+    """
+
+    base_fee = int(base_fee or 0)
+    final_amount = int(final_amount or 0)
+
+    discount_amount = max(
+        base_fee - final_amount,
+        0
+    )
+
+    raw_note = str(raw_note or "")
+    normalized = remove_accents(raw_note).lower()
+
+    percent_values = re.findall(
+        r"(?:giam(?: gia)?|gia dinh)"
+        r"[^0-9]{0,30}"
+        r"(\d+(?:[.,]\d+)?)\s*%",
+        normalized
+    )
+
+    percent_parts = []
+
+    for value in percent_values:
+        value = value.replace(",", ".")
+
+        try:
+            number = float(value)
+            label = f"{number:g}%"
+
+            if label not in percent_parts:
+                percent_parts.append(label)
+
+        except Exception:
+            pass
+
+    # Đóng nửa tháng tương ứng giảm 50%
+    if (
+        "nua thang" in normalized
+        and "50%" not in percent_parts
+    ):
+        percent_parts.insert(0, "50%")
+
+    if discount_amount <= 0 and not percent_parts:
+        return "—"
+
+    amount_text = (
+        format_money(discount_amount)
+        if discount_amount > 0
+        else ""
+    )
+
+    if amount_text and percent_parts:
+        return (
+            f"{amount_text} "
+            f"({' + '.join(percent_parts)})"
+        )
+
+    return amount_text or " + ".join(percent_parts)
+
+@app.get('/tracking')
+def tracking():
+    now = datetime.now()
+
+    year = request.args.get(
+        "year",
+        str(now.year)
+    )
+
+    month = request.args.get(
+        "month",
+        str(now.month)
+    )
+
+    tracking_data = build_tracking_rows_web(
+        year,
+        month
+    )
 
     return render_template(
-        'tracking.html',
-        rows=rows,
+        "tracking.html",
+
+        rows=tracking_data["rows"],
+
         year=year,
         month=month,
         current_year=now.year,
-        total=total,
-        cash=cash,
-        bank=bank,
-        total_count=total_count,
-        cash_count=cash_count,
-        bank_count=bank_count
+
+        total=tracking_data["total"],
+        cash=tracking_data["cash"],
+        bank=tracking_data["bank"],
+
+        total_count=tracking_data["total_count"],
+        cash_count=tracking_data["cash_count"],
+        bank_count=tracking_data["bank_count"],
+    )
+
+
+
+@app.get("/tracking/export")
+def tracking_export():
+    now = datetime.now()
+
+    year = request.args.get(
+        "year",
+        str(now.year)
+    ).strip()
+
+    month = request.args.get(
+        "month",
+        str(now.month)
+    ).strip()
+
+    try:
+        month_int = int(month)
+        year_int = int(year)
+
+    except Exception:
+        month_int = now.month
+        year_int = now.year
+
+        month = str(month_int)
+        year = str(year_int)
+
+    tracking_data = build_tracking_rows_web(
+        year,
+        month
+    )
+
+    # =========================
+    # LOẠI DÒNG 0Đ
+    # Các dòng này là tháng đã đóng trước
+    # =========================
+    source_rows = [
+        r
+        for r in tracking_data["rows"]
+        if int(r.get("display_tong_tien") or 0) > 0
+    ]
+
+    # =========================
+    # TRA LỚP TỪ BẢNG STUDENT
+    # =========================
+    student_ids = []
+
+    for r in source_rows:
+        license_code = str(
+            r.get("ma_hv") or ""
+        ).strip()
+
+        if (
+            license_code
+            and license_code not in student_ids
+        ):
+            student_ids.append(license_code)
+
+    students_map = {}
+
+    if student_ids:
+        student_rows = (
+            supabase.table(STUDENT_TABLE)
+            .select("license,name,classroom")
+            .in_("license", student_ids)
+            .execute()
+            .data
+            or []
+        )
+
+        students_map = {
+            str(
+                s.get("license") or ""
+            ).strip(): s
+            for s in student_rows
+        }
+
+    monthly_fee = get_app_setting_int(
+        "fees.tuition_fee",
+        500000
+    )
+
+    export_rows = []
+
+    for r in source_rows:
+        license_code = str(
+            r.get("ma_hv") or ""
+        ).strip()
+
+        student = students_map.get(
+            license_code,
+            {}
+        )
+
+        final_amount = int(
+            r.get("display_tong_tien") or 0
+        )
+
+        raw_note = str(
+            r.get("ghi_chu") or ""
+        )
+
+        normalized_note = remove_accents(
+            raw_note
+        ).lower()
+
+        month_codes = (
+            r.get("_month_codes")
+            or []
+        )
+
+        # =========================
+        # TÍNH HỌC PHÍ GỐC
+        # =========================
+        if "nua thang" in normalized_note:
+            billable_months = 1
+
+        elif (
+            "dong 6 thang" in normalized_note
+            or "tang 1" in normalized_note
+        ):
+            billable_months = 6
+
+        elif "dong 3 thang" in normalized_note:
+            billable_months = 3
+
+        elif len(month_codes) == 7:
+            # Đóng 6 tháng, tặng 1 tháng
+            billable_months = 6
+
+        else:
+            billable_months = max(
+                len(month_codes),
+                1
+            )
+
+        base_fee = (
+            monthly_fee
+            * billable_months
+        )
+
+        # Tránh trường hợp dữ liệu thực thu
+        # lớn hơn học phí gốc
+        if final_amount > base_fee:
+            base_fee = final_amount
+
+        export_rows.append({
+            "name": (
+                student.get("name")
+                or r.get("ho_ten")
+                or ""
+            ),
+
+            "classroom": (
+                student.get("classroom")
+                or r.get("lop")
+                or ""
+            ),
+
+            "base_fee": base_fee,
+
+            "discount": (
+                build_tracking_discount_text_web(
+                    base_fee,
+                    final_amount,
+                    raw_note
+                )
+            ),
+
+            "final_amount": final_amount,
+
+            "note": (
+                build_tracking_export_note_web(r)
+            ),
+        })
+
+    # =========================
+    # TẠO FILE EXCEL
+    # =========================
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Theo doi hoc phi"
+
+    headers = [
+        "STT",
+        "Họ và tên",
+        "Lớp",
+        "Học phí",
+        "Giảm giá",
+        "Thành tiền",
+        "Ghi chú",
+    ]
+
+    thin_side = Side(
+        style="thin",
+        color="CBD5E1"
+    )
+
+    medium_side = Side(
+        style="medium",
+        color="64748B"
+    )
+
+    thin_border = Border(
+        left=thin_side,
+        right=thin_side,
+        top=thin_side,
+        bottom=thin_side
+    )
+
+    total_border = Border(
+        left=medium_side,
+        right=medium_side,
+        top=medium_side,
+        bottom=medium_side
+    )
+
+    center = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True
+    )
+
+    left = Alignment(
+        horizontal="left",
+        vertical="center",
+        wrap_text=True
+    )
+
+    right = Alignment(
+        horizontal="right",
+        vertical="center"
+    )
+
+    # =========================
+    # TIÊU ĐỀ CHÍNH
+    # =========================
+    ws.merge_cells("A1:G1")
+
+    ws["A1"] = (
+        f"DANH SÁCH HỌC PHÍ "
+        f"THÁNG {month_int:02d}/{year_int}"
+    )
+
+    ws["A1"].font = Font(
+        bold=True,
+        size=18,
+        color="FFFFFF"
+    )
+
+    ws["A1"].fill = PatternFill(
+        "solid",
+        fgColor="0F2A4A"
+    )
+
+    ws["A1"].alignment = center
+    ws.row_dimensions[1].height = 32
+
+    # =========================
+    # THÔNG TIN BỘ LỌC
+    # =========================
+    ws.merge_cells("A2:G2")
+
+    ws["A2"] = (
+        f"Bộ lọc: Tháng "
+        f"{month_int:02d}/{year_int}"
+        f" | Số học viên: "
+        f"{len(export_rows)}"
+    )
+
+    ws["A2"].font = Font(
+        size=13,
+        italic=True,
+        color="475569"
+    )
+
+    ws["A2"].alignment = center
+    ws.row_dimensions[2].height = 24
+
+    # =========================
+    # HEADER BẢNG
+    # =========================
+    header_row = 4
+
+    for col_idx, header in enumerate(
+        headers,
+        start=1
+    ):
+        cell = ws.cell(
+            row=header_row,
+            column=col_idx,
+            value=header
+        )
+
+        cell.font = Font(
+            bold=True,
+            size=13,
+            color="FFFFFF"
+        )
+
+        cell.fill = PatternFill(
+            "solid",
+            fgColor="1D4ED8"
+        )
+
+        cell.alignment = center
+        cell.border = thin_border
+
+    ws.row_dimensions[header_row].height = 28
+
+    # =========================
+    # DỮ LIỆU
+    # =========================
+    data_start = header_row + 1
+
+    for stt, item in enumerate(
+        export_rows,
+        start=1
+    ):
+        row_idx = data_start + stt - 1
+
+        values = [
+            stt,
+            item["name"],
+            item["classroom"],
+            item["base_fee"],
+            item["discount"],
+            item["final_amount"],
+            item["note"] or "—",
+        ]
+
+        for col_idx, value in enumerate(
+            values,
+            start=1
+        ):
+            cell = ws.cell(
+                row=row_idx,
+                column=col_idx,
+                value=value
+            )
+
+            cell.font = Font(size=13)
+            cell.border = thin_border
+
+            if col_idx in [1, 3]:
+                cell.alignment = center
+
+            elif col_idx in [4, 6]:
+                cell.alignment = right
+
+            else:
+                cell.alignment = left
+
+        # Học phí
+        ws.cell(
+            row=row_idx,
+            column=4
+        ).number_format = '#,##0 "đ"'
+
+        # Thành tiền
+        ws.cell(
+            row=row_idx,
+            column=6
+        ).number_format = '#,##0 "đ"'
+
+        ws.row_dimensions[row_idx].height = 23
+
+    # =========================
+    # TỔNG CỘNG
+    # =========================
+    total_row = (
+        data_start
+        + len(export_rows)
+    )
+
+    ws.merge_cells(
+        start_row=total_row,
+        start_column=1,
+        end_row=total_row,
+        end_column=5
+    )
+
+    total_label = ws.cell(
+        row=total_row,
+        column=1,
+        value="TỔNG CỘNG"
+    )
+
+    total_label.font = Font(
+        bold=True,
+        size=16
+    )
+
+    total_label.fill = PatternFill(
+        "solid",
+        fgColor="FEF3C7"
+    )
+
+    total_label.alignment = center
+
+    total_value = ws.cell(
+        row=total_row,
+        column=6,
+        value=sum(
+            item["final_amount"]
+            for item in export_rows
+        )
+    )
+
+    total_value.font = Font(
+        bold=True,
+        size=16,
+        color="B91C1C"
+    )
+
+    total_value.fill = PatternFill(
+        "solid",
+        fgColor="FEF3C7"
+    )
+
+    total_value.number_format = '#,##0 "đ"'
+    total_value.alignment = right
+
+    total_note = ws.cell(
+        row=total_row,
+        column=7,
+        value=""
+    )
+
+    total_note.fill = PatternFill(
+        "solid",
+        fgColor="FEF3C7"
+    )
+
+    for col_idx in range(1, 8):
+        ws.cell(
+            row=total_row,
+            column=col_idx
+        ).border = total_border
+
+    ws.row_dimensions[total_row].height = 30
+
+    # =========================
+    # ĐỘ RỘNG CỘT
+    # =========================
+    widths = {
+        "A": 8,
+        "B": 28,
+        "C": 18,
+        "D": 17,
+        "E": 22,
+        "F": 18,
+        "G": 32,
+    }
+
+    for column, width in widths.items():
+        ws.column_dimensions[column].width = width
+
+    # =========================
+    # THIẾT LẬP EXCEL
+    # =========================
+    ws.freeze_panes = "A5"
+
+    ws.auto_filter.ref = (
+        f"A4:G{max(total_row - 1, 4)}"
+    )
+
+    ws.sheet_view.showGridLines = False
+
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
+    ws.print_title_rows = "1:4"
+
+    # =========================================================
+    # SHEET 2: TỔNG KẾT TỰ CẬP NHẬT BẰNG CÔNG THỨC
+    # Khi sửa Lớp hoặc Thành tiền ở sheet 1,
+    # sheet Tổng kết sẽ tự tính lại.
+    # =========================================================
+    ws_summary = wb.create_sheet("Tổng kết")
+
+    # Các lớp và mức Thành tiền đang có khi xuất file
+    summary_classes = sorted({
+        str(item.get("classroom") or "Chưa xếp lớp").strip()
+        for item in export_rows
+        if str(item.get("classroom") or "").strip()
+    })
+
+    summary_amounts = sorted({
+        int(item.get("final_amount") or 0)
+        for item in export_rows
+        if int(item.get("final_amount") or 0) > 0
+    })
+
+
+    # =========================
+    # SẮP XẾP LỚP
+    # =========================
+    def tracking_class_sort_key_web(value):
+        normalized = remove_accents(
+            str(value or "")
+        ).lower()
+
+        normalized = re.sub(
+            r"\s+",
+            "",
+            normalized
+        )
+
+        order_map = {
+            "2-4-6": 1,
+            "246": 1,
+
+            "3-5-7": 2,
+            "357": 2,
+
+            "7-cn": 3,
+            "t7-cn": 3,
+            "t7cn": 3,
+            "thu7-chunhat": 3,
+            "thu7chunhat": 3,
+
+            "henho": 4,
+            "hen-ho": 4,
+        }
+
+        return (
+            order_map.get(normalized, 99),
+            normalized
+        )
+
+
+    summary_classes = sorted(
+        summary_classes,
+        key=tracking_class_sort_key_web
+    )
+
+
+    # =========================
+    # SẮP XẾP MỨC TIỀN
+    # Ưu tiên giống mẫu của Ken
+    # =========================
+    preferred_amount_order = {
+        450000: 1,
+        500000: 2,
+        1350000: 3,
+        1200000: 4,
+        225000: 5,
+        250000: 6,
+    }
+
+    summary_amounts = sorted(
+        summary_amounts,
+        key=lambda value: (
+            preferred_amount_order.get(value, 99),
+            value
+        )
+    )
+
+
+    # =========================
+    # STYLE
+    # =========================
+    summary_thin_side = Side(
+        style="thin",
+        color="D9E2F3"
+    )
+
+    summary_border = Border(
+        left=summary_thin_side,
+        right=summary_thin_side,
+        top=summary_thin_side,
+        bottom=summary_thin_side
+    )
+
+    summary_center = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True
+    )
+
+    summary_left = Alignment(
+        horizontal="left",
+        vertical="center"
+    )
+
+    summary_right = Alignment(
+        horizontal="right",
+        vertical="center"
+    )
+
+    summary_class_fill = PatternFill(
+        "solid",
+        fgColor="D9EAF7"
+    )
+
+    summary_grand_fill = PatternFill(
+        "solid",
+        fgColor="BDD7EE"
+    )
+
+
+    # =========================
+    # TIÊU ĐỀ
+    # =========================
+    ws_summary.merge_cells("A1:B1")
+
+    ws_summary["A1"] = (
+        f"TỔNG KẾT HỌC PHÍ "
+        f"THÁNG {month_int:02d}/{year_int}"
+    )
+
+    ws_summary["A1"].font = Font(
+        bold=True,
+        size=18,
+        color="FFFFFF"
+    )
+
+    ws_summary["A1"].fill = PatternFill(
+        "solid",
+        fgColor="0F2A4A"
+    )
+
+    ws_summary["A1"].alignment = summary_center
+    ws_summary.row_dimensions[1].height = 32
+
+
+    ws_summary.merge_cells("A2:B2")
+
+    ws_summary["A2"] = (
+        "Tự cập nhật khi chỉnh Lớp hoặc "
+        "Thành tiền trong sheet Theo doi hoc phi"
+    )
+
+    ws_summary["A2"].font = Font(
+        size=13,
+        italic=True,
+        color="475569"
+    )
+
+    ws_summary["A2"].alignment = summary_center
+    ws_summary.row_dimensions[2].height = 24
+
+
+    # =========================
+    # HEADER
+    # =========================
+    ws_summary["A4"] = "Lớp / Thành tiền"
+    ws_summary["B4"] = "Count of Họ và tên"
+
+    for col_idx in range(1, 3):
+        cell = ws_summary.cell(
+            row=4,
+            column=col_idx
+        )
+
+        cell.font = Font(
+            bold=True,
+            size=13
+        )
+
+        cell.fill = summary_class_fill
+        cell.border = summary_border
+        cell.alignment = summary_center
+
+    ws_summary.row_dimensions[4].height = 26
+
+
+    # =========================
+    # PHẠM VI DỮ LIỆU SHEET 1
+    # Sheet 1:
+    # B = Họ và tên
+    # C = Lớp
+    # F = Thành tiền
+    # =========================
+    data_first_row = 5
+    data_last_row = max(
+        total_row - 1,
+        data_first_row
+    )
+
+
+    # =========================
+    # GHI CÁC NHÓM LỚP
+    # =========================
+    current_row = 5
+
+    for classroom in summary_classes:
+        class_row = current_row
+
+        # Tên lớp
+        ws_summary.cell(
+            row=class_row,
+            column=1,
+            value=classroom
+        )
+
+        # Tổng số HV của lớp có Thành tiền > 0
+        ws_summary.cell(
+            row=class_row,
+            column=2,
+            value=(
+                f'=COUNTIFS('
+                f"'Theo doi hoc phi'!$C${data_first_row}:$C${data_last_row},"
+                f'A{class_row},'
+                f"'Theo doi hoc phi'!$F${data_first_row}:$F${data_last_row},"
+                f'">0"'
+                f')'
+            )
+        )
+
+        for col_idx in range(1, 3):
+            cell = ws_summary.cell(
+                row=class_row,
+                column=col_idx
+            )
+
+            cell.font = Font(
+                bold=True,
+                size=13
+            )
+
+            cell.fill = summary_class_fill
+            cell.border = summary_border
+
+        ws_summary.cell(
+            row=class_row,
+            column=1
+        ).alignment = summary_left
+
+        ws_summary.cell(
+            row=class_row,
+            column=2
+        ).alignment = summary_right
+
+        ws_summary.row_dimensions[
+            class_row
+        ].height = 23
+
+        current_row += 1
+
+        # =========================
+        # CÁC MỨC THÀNH TIỀN
+        # =========================
+        for amount in summary_amounts:
+            amount_row = current_row
+
+            ws_summary.cell(
+                row=amount_row,
+                column=1,
+                value=amount
+            )
+
+            ws_summary.cell(
+                row=amount_row,
+                column=1
+            ).number_format = '#,##0 "đ"'
+
+            # Đếm học viên theo lớp + thành tiền
+            ws_summary.cell(
+                row=amount_row,
+                column=2,
+                value=(
+                    f'=COUNTIFS('
+                    f"'Theo doi hoc phi'!$C${data_first_row}:$C${data_last_row},"
+                    f'$A${class_row},'
+                    f"'Theo doi hoc phi'!$F${data_first_row}:$F${data_last_row},"
+                    f'A{amount_row}'
+                    f')'
+                )
+            )
+
+            for col_idx in range(1, 3):
+                cell = ws_summary.cell(
+                    row=amount_row,
+                    column=col_idx
+                )
+
+                cell.font = Font(size=13)
+                cell.border = summary_border
+
+            ws_summary.cell(
+                row=amount_row,
+                column=1
+            ).alignment = summary_right
+
+            ws_summary.cell(
+                row=amount_row,
+                column=2
+            ).alignment = summary_right
+
+            # Tạo dấu +/- để thu gọn các mức tiền
+            ws_summary.row_dimensions[
+                amount_row
+            ].outlineLevel = 1
+
+            ws_summary.row_dimensions[
+                amount_row
+            ].height = 22
+
+            current_row += 1
+
+
+    # =========================
+    # GRAND TOTAL
+    # =========================
+    grand_total_row = current_row
+
+    ws_summary.cell(
+        row=grand_total_row,
+        column=1,
+        value="Grand Total"
+    )
+
+    # Đếm tất cả các dòng có Thành tiền > 0
+    ws_summary.cell(
+        row=grand_total_row,
+        column=2,
+        value=(
+            f'=COUNTIF('
+            f"'Theo doi hoc phi'!$F${data_first_row}:$F${data_last_row},"
+            f'">0"'
+            f')'
+        )
+    )
+
+    for col_idx in range(1, 3):
+        cell = ws_summary.cell(
+            row=grand_total_row,
+            column=col_idx
+        )
+
+        cell.font = Font(
+            bold=True,
+            size=14
+        )
+
+        cell.fill = summary_grand_fill
+        cell.border = summary_border
+
+    ws_summary.cell(
+        row=grand_total_row,
+        column=1
+    ).alignment = summary_left
+
+    ws_summary.cell(
+        row=grand_total_row,
+        column=2
+    ).alignment = summary_right
+
+    ws_summary.row_dimensions[
+        grand_total_row
+    ].height = 25
+
+
+    # =========================
+    # KÍCH THƯỚC VÀ HIỂN THỊ
+    # =========================
+    ws_summary.column_dimensions["A"].width = 27
+    ws_summary.column_dimensions["B"].width = 22
+
+    ws_summary.freeze_panes = "A5"
+    ws_summary.sheet_view.showGridLines = False
+
+    ws_summary.sheet_properties.outlinePr.summaryBelow = False
+    ws_summary.sheet_properties.outlinePr.showOutlineSymbols = True
+
+    ws_summary.page_setup.orientation = "portrait"
+    ws_summary.page_setup.fitToWidth = 1
+    ws_summary.page_setup.fitToHeight = 0
+
+    ws_summary.print_title_rows = "1:4"
+
+
+    # =========================
+    # BẮT EXCEL TỰ TÍNH LẠI
+    # =========================
+    try:
+        wb.calculation.fullCalcOnLoad = True
+        wb.calculation.forceFullCalc = True
+        wb.calculation.calcMode = "auto"
+    except Exception:
+        pass
+
+    # =========================
+    # XUẤT FILE
+    # =========================
+    output = BytesIO()
+
+
+
+    wb.save(output)
+    output.seek(0)
+
+    filename = (
+        f"theo_doi_hoc_phi_"
+        f"{year_int}_"
+        f"{month_int:02d}.xlsx"
+    )
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        )
     )
 
 def get_exam_info_web(ky_thi):
@@ -1222,7 +2337,6 @@ def get_exam_info_web(ky_thi):
     except Exception as e:
         print("[GET EXAM INFO ERROR]", e)
         return {}
-
 
 def validate_exam_info_form(form):
     exam_date = str(form.get("exam_date") or "").strip()

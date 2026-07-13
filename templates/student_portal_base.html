@@ -283,6 +283,7 @@
 
         .student-mini-name {
             font-weight: 900;
+            font-size: 15px;
             line-height: 1.25;
             white-space: nowrap;
             overflow: hidden;
@@ -2876,6 +2877,118 @@
         }
         .sidebar-delay-tooltip.show{
             opacity:1;transform:translateY(-50%) translateX(0);
+        }
+
+
+        /* GẠCH NGANG PHÂN CÁCH TRƯỚC NÚT ĐĂNG XUẤT */
+        .student-nav .logout-link {
+            position: relative;
+            margin-top: 22px !important;
+        }
+
+        .student-nav .logout-link::before {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            top: -12px;
+            height: 1px;
+            border-radius: 999px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(250, 204, 21, .55),
+                rgba(148, 163, 184, .65),
+                rgba(250, 204, 21, .55),
+                transparent
+            );
+            box-shadow: 0 0 8px rgba(250, 204, 21, .12);
+        }
+
+        body.student-sidebar-collapsed .student-nav .logout-link {
+            margin-top: 22px !important;
+        }
+
+        body.student-sidebar-collapsed .student-nav .logout-link::before {
+            left: 4px;
+            right: 4px;
+        }
+
+
+        /* =========================================================
+           STUDENT SIDEBAR 300PX + GẠCH NGANG ĐĂNG XUẤT RÕ RÀNG
+        ========================================================= */
+        :root {
+            --portal-sidebar-open: 300px !important;
+        }
+
+        .student-layout {
+            grid-template-columns: 300px minmax(0, 1fr) !important;
+        }
+
+        body.student-sidebar-collapsed .student-layout {
+            grid-template-columns: var(--portal-sidebar-close) minmax(0, 1fr) !important;
+        }
+
+        .student-sidebar {
+            width: auto !important;
+            min-width: 0 !important;
+        }
+
+        .student-nav .logout-link {
+            position: relative !important;
+            margin-top: 24px !important;
+            overflow: visible !important;
+        }
+
+        .student-nav .logout-link::before {
+            content: "" !important;
+            position: absolute !important;
+            left: 12px !important;
+            right: 12px !important;
+            top: -13px !important;
+            height: 2px !important;
+            border-radius: 999px !important;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(250,204,21,.18) 12%,
+                rgba(250,204,21,.78) 35%,
+                rgba(148,163,184,.9) 50%,
+                rgba(250,204,21,.78) 65%,
+                rgba(250,204,21,.18) 88%,
+                transparent 100%
+            ) !important;
+            box-shadow:
+                0 0 8px rgba(250,204,21,.22),
+                0 1px 0 rgba(255,255,255,.05) !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
+        }
+
+        body.student-sidebar-collapsed .student-nav .logout-link {
+            margin-top: 24px !important;
+        }
+
+        body.student-sidebar-collapsed .student-nav .logout-link::before {
+            left: 5px !important;
+            right: 5px !important;
+        }
+
+        @media (min-width: 761px) and (max-width: 1050px) {
+            .student-layout {
+                grid-template-columns: 300px minmax(0, 1fr) !important;
+            }
+
+            body.student-sidebar-collapsed .student-layout {
+                grid-template-columns: var(--portal-sidebar-close) minmax(0, 1fr) !important;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .student-sidebar {
+                width: min(300px, 88vw) !important;
+            }
         }
 
 </style>
