@@ -3294,9 +3294,11 @@ def compare_generic_table_backup_web(
 @app.get("/backup-restore/manifests")
 def backup_restore_manifests():
     """
-    Danh sách manifest lưu trong Supabase.
+    Route tương thích với đường dẫn cũ.
 
-    Hoạt động được trên local, không cần rclone.
+    Hệ thống hiện đọc manifest.json trực tiếp từ file backup
+    trên Google Drive, nên không còn dùng danh sách manifest
+    lưu trong Supabase.
     """
     if not restore_password_has_been_created():
         return redirect(
@@ -3307,17 +3309,12 @@ def backup_restore_manifests():
         return redirect(
             url_for(
                 "backup_restore_security",
-                next=request.path
+                next=url_for("backup_restore")
             )
         )
 
-    manifests = get_latest_backup_manifests_web(
-        limit=20
-    )
-
-    return render_template(
-        "backup_restore_manifests.html",
-        manifests=manifests,
+    return redirect(
+        url_for("backup_restore")
     )
 
 
@@ -3346,7 +3343,7 @@ def backup_restore_manifest_detail(manifest_id):
             "danger"
         )
         return redirect(
-            url_for("backup_restore_manifests")
+            url_for("backup_restore")
         )
 
     items = get_backup_manifest_items_web(
