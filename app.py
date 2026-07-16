@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import tarfile
 import sys
 from io import BytesIO
 from PIL import Image, ImageOps, ImageFilter
@@ -5155,6 +5156,640 @@ def backup_restore_app_restore_changed(
         app_name,
         allow_overwrite=True,
     )
+
+# =========================================================
+# BACKUP & RESTORE - MỘT NGUỒN DUY NHẤT
+# Đọc manifest.json trực tiếp trong file tar.gz trên Drive.
+#
+# manifest_id trong các route cũ hiện được dùng như backup_name.
+# Ví dụ:
+# phungtkdsystem_full_2026-07-16_12-30.tar.gz
+# =========================================================
+
+BACKUP_RESTORE_CACHE_DIR = Path(
+    os.environ.get(
+        "BACKUP_RESTORE_CACHE_DIR",
+        "/var/cache/phungtkdsystem/backup_restore",
+    )
+)
+
+BACKUP_RCLONE_BIN = os.environ.get(
+    "RCLONE_BIN",
+    "/usr/bin/rclone",
+)
+
+BACKUP_RCLONE_CONFIG = os.environ.get(
+    "RCLONE_CONFIG",
+    "/root/.config/rclone/rclone.conf",
+)
+
+
+def normalize_backup_archive_name_web(value):
+    """
+    Chỉ chấp nhận đúng tên file backup của hệ thống.
+    Chặn dấu /, .. và các tên file tùy ý.
+    """
+    backup_name = str(value or "").strip()
+
+    if not re.fullmatch(
+        r"phungtkdsystem_full_"
+        r"\d{4}-\d{2}-\d{2}_"
+        r"\d{2}-\d{2}\.tar\.gz",
+        backup_name,
+    ):
+        raise ValueError(
+            "Tên file backup không hợp lệ."
+        )
+
+    return backup_name
+
+
+def get_backup_cache_directory_web(backup_name):
+    """
+    Mỗi file backup có một thư mục cache riêng.
+    Cache nằm ngoài thư mục mã nguồn để không bị backup lồng.
+    """
+    backup_name = normalize_backup_archive_name_web(
+        backup_name
+    )
+
+    cache_key = backup_name[:-7]
+
+    cache_directory = (
+        BACKUP_RESTORE_CACHE_DIR
+        / cache_key
+    )
+
+    return cache_directory
+
+
+def get_backup_cache_archive_web(backup_name):
+    backup_name = normalize_backup_archive_name_web(
+        backup_name
+    )
+
+    cache_directory = (
+        get_backup_cache_directory_web(
+            backup_name
+        )
+    )
+
+    return cache_directory / backup_name
+
+
+def ensure_tar_member_is_safe_web(
+    extract_root,
+    member,
+):
+    """
+    Chặn:
+    - ../../file
+    - đường dẫn tuyệt đối
+    - symbolic link
+    - hard link
+    - file trỏ ra ngoài thư mục cache
+    """
+    extract_root = Path(extract_root).resolve()
+
+    member_name = str(
+        member.name or ""
+    ).replace("\\", "/")
+
+    if not member_name:
+        raise ValueError(
+            "File backup có thành phần không hợp lệ."
+        )
+
+    pure_path = Path(member_name)
+
+    if pure_path.is_absolute():
+        raise ValueError(
+            "File backup chứa đường dẫn tuyệt đối."
+        )
+
+    if ".." in pure_path.parts:
+        raise ValueError(
+            "File backup chứa đường dẫn không an toàn."
+        )
+
+    if member.issym() or member.islnk():
+        raise ValueError(
+            "File backup chứa liên kết không được phép."
+        )
+
+    target_path = (
+        extract_root
+        / member_name
+    ).resolve()
+
+    try:
+        target_path.relative_to(
+            extract_root
+        )
+    except ValueError:
+        raise ValueError(
+            "File backup có dữ liệu nằm ngoài thư mục giải nén."
+        )
+
+
+def safely_extract_backup_archive_web(
+    archive_path,
+    extract_root,
+):
+    """
+    Giải nén archive sau khi kiểm tra toàn bộ đường dẫn.
+    """
+    archive_path = Path(archive_path)
+    extract_root = Path(extract_root)
+
+    if not archive_path.is_file():
+        raise FileNotFoundError(
+            f"Không tìm thấy file backup: {archive_path}"
+        )
+
+    extract_root.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with tarfile.open(
+        archive_path,
+        mode="r:gz",
+    ) as archive:
+        members = archive.getmembers()
+
+        if not members:
+            raise ValueError(
+                "File backup không có dữ liệu."
+            )
+
+        for member in members:
+            ensure_tar_member_is_safe_web(
+                extract_root,
+                member,
+            )
+
+        archive.extractall(
+            path=extract_root,
+            members=members,
+        )
+
+
+def download_backup_from_drive_web(
+    backup_name,
+    destination_file,
+):
+    """
+    Tải đúng một file backup từ Google Drive bằng rclone.
+    """
+    backup_name = normalize_backup_archive_name_web(
+        backup_name
+    )
+
+    destination_file = Path(
+        destination_file
+    )
+
+    destination_file.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    remote_file = (
+        f"{BACKUP_REMOTE_DIR}/"
+        f"{backup_name}"
+    )
+
+    command = [
+        BACKUP_RCLONE_BIN,
+        "copyto",
+        remote_file,
+        str(destination_file),
+        "--config",
+        BACKUP_RCLONE_CONFIG,
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        error_text = (
+            result.stderr
+            or result.stdout
+            or "Không tải được file backup từ Google Drive."
+        ).strip()
+
+        raise RuntimeError(error_text)
+
+    if not destination_file.is_file():
+        raise FileNotFoundError(
+            "rclone chạy xong nhưng không tìm thấy file đã tải."
+        )
+
+    if destination_file.stat().st_size <= 0:
+        raise ValueError(
+            "File backup tải về có dung lượng bằng 0."
+        )
+
+
+def prepare_backup_archive_web(
+    backup_name,
+):
+    """
+    Bảo đảm file đã được tải, giải nén và có manifest.json.
+
+    Nếu cache đã hoàn chỉnh thì dùng lại, không tải lại.
+    """
+    backup_name = normalize_backup_archive_name_web(
+        backup_name
+    )
+
+    cache_directory = (
+        get_backup_cache_directory_web(
+            backup_name
+        )
+    )
+
+    archive_file = (
+        get_backup_cache_archive_web(
+            backup_name
+        )
+    )
+
+    extract_root = (
+        cache_directory
+        / "extracted"
+    )
+
+    manifest_file = (
+        extract_root
+        / "manifest.json"
+    )
+
+    ready_marker = (
+        cache_directory
+        / ".ready"
+    )
+
+    if (
+        ready_marker.is_file()
+        and manifest_file.is_file()
+    ):
+        return {
+            "backup_name": backup_name,
+            "cache_directory": cache_directory,
+            "archive_file": archive_file,
+            "extract_root": extract_root,
+            "manifest_file": manifest_file,
+        }
+
+    BACKUP_RESTORE_CACHE_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary_archive = (
+        cache_directory
+        / f"{backup_name}.downloading"
+    )
+
+    if cache_directory.exists():
+        shutil.rmtree(
+            cache_directory
+        )
+
+    cache_directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    try:
+        download_backup_from_drive_web(
+            backup_name,
+            temporary_archive,
+        )
+
+        temporary_archive.replace(
+            archive_file
+        )
+
+        safely_extract_backup_archive_web(
+            archive_file,
+            extract_root,
+        )
+
+        if not manifest_file.is_file():
+            raise FileNotFoundError(
+                "File backup không có manifest.json."
+            )
+
+        required_paths = [
+            extract_root / "database_exports",
+            extract_root / "storage_exports",
+            extract_root / "app_exports",
+        ]
+
+        missing_paths = [
+            path.name
+            for path in required_paths
+            if not path.exists()
+        ]
+
+        if missing_paths:
+            raise FileNotFoundError(
+                "File backup thiếu thành phần: "
+                + ", ".join(missing_paths)
+            )
+
+        ready_marker.write_text(
+            datetime.now(
+                timezone.utc
+            ).isoformat(),
+            encoding="utf-8",
+        )
+
+        return {
+            "backup_name": backup_name,
+            "cache_directory": cache_directory,
+            "archive_file": archive_file,
+            "extract_root": extract_root,
+            "manifest_file": manifest_file,
+        }
+
+    except Exception:
+        if cache_directory.exists():
+            shutil.rmtree(
+                cache_directory,
+                ignore_errors=True,
+            )
+
+        raise
+
+
+def load_backup_manifest_from_archive_web(
+    backup_name,
+):
+    """
+    Đọc manifest.json trong đúng file backup đã chọn.
+    """
+    context = prepare_backup_archive_web(
+        backup_name
+    )
+
+    manifest = load_json_file_web(
+        context["manifest_file"]
+    )
+
+    if not isinstance(manifest, dict):
+        raise ValueError(
+            "manifest.json không đúng cấu trúc."
+        )
+
+    manifest_backup_name = str(
+        manifest.get("backup_name") or ""
+    ).strip()
+
+    if manifest_backup_name != context["backup_name"]:
+        raise ValueError(
+            "Tên trong manifest không khớp tên file backup."
+        )
+
+    result = dict(manifest)
+
+    # Giữ tương thích với HTML và các route cũ.
+    # Trước đây id là UUID Supabase.
+    # Bây giờ id chính là tên file backup.
+    result["id"] = context["backup_name"]
+    result["local_extract_path"] = str(
+        context["extract_root"]
+    )
+    result["local_archive_path"] = str(
+        context["archive_file"]
+    )
+
+    if not result.get("file_size"):
+        result["file_size"] = (
+            context["archive_file"]
+            .stat()
+            .st_size
+        )
+
+    return result
+
+
+def get_backup_manifest_by_id_web(
+    manifest_id,
+):
+    """
+    Ghi đè hàm cũ:
+    Không còn đọc backup_manifests trên Supabase.
+
+    manifest_id hiện chính là tên file tar.gz.
+    """
+    try:
+        return load_backup_manifest_from_archive_web(
+            manifest_id
+        )
+
+    except Exception as error:
+        print(
+            "[READ MANIFEST FROM ARCHIVE ERROR]",
+            repr(error),
+        )
+
+        return {}
+
+
+def get_backup_manifest_items_web(
+    manifest_id,
+):
+    """
+    Gộp ba nhóm trong manifest.json thành danh sách item.
+    """
+    manifest = get_backup_manifest_by_id_web(
+        manifest_id
+    )
+
+    if not manifest:
+        return []
+
+    items = []
+
+    for group_name in [
+        "tables",
+        "storage",
+        "application",
+    ]:
+        group_items = manifest.get(
+            group_name
+        ) or []
+
+        if not isinstance(
+            group_items,
+            list,
+        ):
+            continue
+
+        for item in group_items:
+            if isinstance(item, dict):
+                items.append(
+                    dict(item)
+                )
+
+    items.sort(
+        key=lambda item: (
+            str(
+                item.get("item_type")
+                or ""
+            ),
+            str(
+                item.get("item_name")
+                or ""
+            ),
+        )
+    )
+
+    return items
+
+
+def get_manifest_table_item_web(
+    manifest_id,
+    table_name,
+):
+    table_name = str(
+        table_name or ""
+    ).strip()
+
+    manifest = get_backup_manifest_by_id_web(
+        manifest_id
+    )
+
+    for item in (
+        manifest.get("tables")
+        if manifest
+        else []
+    ) or []:
+        if (
+            isinstance(item, dict)
+            and item.get("item_type") == "table"
+            and str(
+                item.get("item_name") or ""
+            ).strip() == table_name
+        ):
+            return dict(item)
+
+    return {}
+
+
+def get_manifest_bucket_item_web(
+    manifest_id,
+    bucket_name,
+):
+    bucket_name = str(
+        bucket_name or ""
+    ).strip()
+
+    manifest = get_backup_manifest_by_id_web(
+        manifest_id
+    )
+
+    for item in (
+        manifest.get("storage")
+        if manifest
+        else []
+    ) or []:
+        if (
+            isinstance(item, dict)
+            and item.get("item_type") == "bucket"
+            and str(
+                item.get("item_name") or ""
+            ).strip() == bucket_name
+        ):
+            return dict(item)
+
+    return {}
+
+
+def get_manifest_app_item_web(
+    manifest_id,
+    app_name,
+):
+    app_name = str(
+        app_name or ""
+    ).strip()
+
+    manifest = get_backup_manifest_by_id_web(
+        manifest_id
+    )
+
+    for item in (
+        manifest.get("application")
+        if manifest
+        else []
+    ) or []:
+        if (
+            isinstance(item, dict)
+            and item.get("item_type") == "app"
+            and str(
+                item.get("item_name") or ""
+            ).strip() == app_name
+        ):
+            return dict(item)
+
+    return {}
+
+
+def get_backup_local_root_web(
+    manifest,
+):
+    """
+    Trả về thư mục đã giải nén của chính file backup đang chọn.
+    """
+    local_extract_path = str(
+        (manifest or {}).get(
+            "local_extract_path"
+        ) or ""
+    ).strip()
+
+    if not local_extract_path:
+        raise ValueError(
+            "Bản backup chưa được tải và giải nén."
+        )
+
+    extract_root = Path(
+        local_extract_path
+    ).resolve()
+
+    cache_root = (
+        BACKUP_RESTORE_CACHE_DIR
+        .resolve()
+    )
+
+    try:
+        extract_root.relative_to(
+            cache_root
+        )
+    except ValueError:
+        raise ValueError(
+            "Thư mục giải nén backup không an toàn."
+        )
+
+    manifest_file = (
+        extract_root
+        / "manifest.json"
+    )
+
+    if not manifest_file.is_file():
+        raise FileNotFoundError(
+            "Không tìm thấy manifest.json trong cache."
+        )
+
+    return extract_root
 
 @app.context_processor
 def inject_app_settings():
