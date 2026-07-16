@@ -1,0 +1,803 @@
+{
+  "manifest_version": 2,
+  "backup_name": "phungtkdsystem_manifest_test_003.tar.gz",
+  "backup_type": "full",
+  "created_at": "2026-07-15T14:01:33.907845+00:00",
+  "completed_at": "2026-07-15T14:01:51.672921+00:00",
+  "drive_remote": "gdrive_new:VPS-Backup-PhungTKD",
+  "drive_path": "gdrive_new:VPS-Backup-PhungTKD/phungtkdsystem_manifest_test_003.tar.gz",
+  "file_size": 0,
+  "file_sha256": null,
+  "app_folder": "G:\\My Drive\\taekwondo_web_supabase",
+  "app_version": null,
+  "database_format": "json_exports",
+  "database_file": "database_exports",
+  "table_count": 11,
+  "total_row_count": 978,
+  "bucket_count": 2,
+  "storage_file_count": 23,
+  "storage_size": 9950119,
+  "app_file_count": 52,
+  "app_size": 4781192,
+  "backup_status": "ready",
+  "verification_status": "not_checked",
+  "error_message": null,
+  "notes": "Không bao gồm file .env, rclone.conf, database local, venv, .git và file log.",
+  "created_by": "backup-script",
+  "tables": [
+    {
+      "item_type": "table",
+      "item_name": "student",
+      "source_name": "student",
+      "backup_path": "database_exports/student.json",
+      "record_count": 596,
+      "file_count": 1,
+      "total_size": 8195,
+      "primary_key_columns": [
+        "license"
+      ],
+      "columns_info": [
+        {
+          "name": "active"
+        },
+        {
+          "name": "address"
+        },
+        {
+          "name": "belt"
+        },
+        {
+          "name": "birthdate"
+        },
+        {
+          "name": "classroom"
+        },
+        {
+          "name": "clup"
+        },
+        {
+          "name": "coach_access"
+        },
+        {
+          "name": "family"
+        },
+        {
+          "name": "gender"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "license"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "phonenumber"
+        },
+        {
+          "name": "photo_url"
+        },
+        {
+          "name": "portal_password_hash"
+        },
+        {
+          "name": "portal_username"
+        },
+        {
+          "name": "telegram_id"
+        },
+        {
+          "name": "temp_leave_month"
+        },
+        {
+          "name": "temp_leave_note"
+        },
+        {
+          "name": "temp_leave_year"
+        },
+        {
+          "name": "timeclass"
+        }
+      ],
+      "checksum_sha256": "30f9ea7a20a9a34c1f824487cccd60e9a877ac37286eb935f97ee589ddf7d9b8",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "hocphi",
+      "source_name": "hocphi",
+      "backup_path": "database_exports/hocphi.json",
+      "record_count": 282,
+      "file_count": 1,
+      "total_size": 8195,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "ca"
+        },
+        {
+          "name": "chuyen_khoan"
+        },
+        {
+          "name": "coach_check_note"
+        },
+        {
+          "name": "coach_check_status"
+        },
+        {
+          "name": "coach_checked_at"
+        },
+        {
+          "name": "coach_checked_by"
+        },
+        {
+          "name": "coach_checked_by_name"
+        },
+        {
+          "name": "ghi_chu"
+        },
+        {
+          "name": "gioi_tinh"
+        },
+        {
+          "name": "ho_ten"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "lop"
+        },
+        {
+          "name": "ma_hv"
+        },
+        {
+          "name": "ma_quy"
+        },
+        {
+          "name": "ma_thang"
+        },
+        {
+          "name": "ngay_sinh"
+        },
+        {
+          "name": "thang_dong_phi"
+        },
+        {
+          "name": "thoi_gian"
+        },
+        {
+          "name": "tong_tien"
+        }
+      ],
+      "checksum_sha256": "7d9fa293f48526d0dbbe73afcd700209a24dc0bde557cdf46ecf784939b62eae",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "ketqua",
+      "source_name": "ketqua",
+      "backup_path": "database_exports/ketqua.json",
+      "record_count": 69,
+      "file_count": 1,
+      "total_size": 8198,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "cap_dai_thi"
+        },
+        {
+          "name": "chan"
+        },
+        {
+          "name": "don_vi"
+        },
+        {
+          "name": "ghi_chu"
+        },
+        {
+          "name": "gioi_tinh"
+        },
+        {
+          "name": "ho_ten"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "ket_qua"
+        },
+        {
+          "name": "ky_thi"
+        },
+        {
+          "name": "ma_clb"
+        },
+        {
+          "name": "ma_don_vi"
+        },
+        {
+          "name": "ma_hv"
+        },
+        {
+          "name": "ngay_sinh"
+        },
+        {
+          "name": "phan_the"
+        },
+        {
+          "name": "quyen"
+        },
+        {
+          "name": "so_thi"
+        },
+        {
+          "name": "song_dau"
+        },
+        {
+          "name": "tay"
+        },
+        {
+          "name": "ten_clb"
+        },
+        {
+          "name": "the_luc"
+        }
+      ],
+      "checksum_sha256": "bab4a2238333d8a8bf1f6127190e0d0ff6a5c808d6727ccc78c47be17e451c73",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "hoatdong",
+      "source_name": "hoatdong",
+      "backup_path": "database_exports/hoatdong.json",
+      "record_count": 14,
+      "file_count": 1,
+      "total_size": 5691,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "created_at"
+        },
+        {
+          "name": "dia_diem"
+        },
+        {
+          "name": "ho_ten"
+        },
+        {
+          "name": "hoat_dong"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "ket_qua"
+        },
+        {
+          "name": "ma_hv"
+        },
+        {
+          "name": "noi_dung"
+        },
+        {
+          "name": "thoi_gian"
+        }
+      ],
+      "checksum_sha256": "436a6bd914fd0d3ef4fbdb07bbce07084f8780dd660e3302b6006c4816f00cf6",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "activity_events",
+      "source_name": "activity_events",
+      "backup_path": "database_exports/activity_events.json",
+      "record_count": 1,
+      "file_count": 1,
+      "total_size": 316,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "created_at"
+        },
+        {
+          "name": "end_date"
+        },
+        {
+          "name": "event_name"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "location"
+        },
+        {
+          "name": "start_date"
+        }
+      ],
+      "checksum_sha256": "896bc13129437774ac291055051482968e2c42ef9a32f2c1c4fc0d8a3a1be611",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "notifications",
+      "source_name": "notifications",
+      "backup_path": "database_exports/notifications.json",
+      "record_count": 0,
+      "file_count": 1,
+      "total_size": 2,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [],
+      "checksum_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "notification_reads",
+      "source_name": "notification_reads",
+      "backup_path": "database_exports/notification_reads.json",
+      "record_count": 0,
+      "file_count": 1,
+      "total_size": 2,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [],
+      "checksum_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "payment_settings",
+      "source_name": "payment_settings",
+      "backup_path": "database_exports/payment_settings.json",
+      "record_count": 1,
+      "file_count": 1,
+      "total_size": 277,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "account_name"
+        },
+        {
+          "name": "account_number"
+        },
+        {
+          "name": "bank_code"
+        },
+        {
+          "name": "bank_name"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "transfer_note"
+        },
+        {
+          "name": "updated_at"
+        }
+      ],
+      "checksum_sha256": "359820650e094f5ad1c3216e3e4f2abaede3c091490a80d3f00a43df791633e0",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "app_settings",
+      "source_name": "app_settings",
+      "backup_path": "database_exports/app_settings.json",
+      "record_count": 6,
+      "file_count": 1,
+      "total_size": 8195,
+      "primary_key_columns": [
+        "key"
+      ],
+      "columns_info": [
+        {
+          "name": "key"
+        },
+        {
+          "name": "updated_at"
+        },
+        {
+          "name": "value"
+        }
+      ],
+      "checksum_sha256": "95fb121df97f564ee71d040b3394ecc735ba5147e3754d5d15aceffa082a295e",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "exam_infos",
+      "source_name": "exam_infos",
+      "backup_path": "database_exports/exam_infos.json",
+      "record_count": 2,
+      "file_count": 1,
+      "total_size": 1032,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "created_at"
+        },
+        {
+          "name": "exam_date"
+        },
+        {
+          "name": "exam_time"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "judges_json"
+        },
+        {
+          "name": "ky_thi"
+        },
+        {
+          "name": "quarter"
+        },
+        {
+          "name": "supervisor_active"
+        },
+        {
+          "name": "supervisor_name"
+        },
+        {
+          "name": "updated_at"
+        },
+        {
+          "name": "venue"
+        },
+        {
+          "name": "year"
+        }
+      ],
+      "checksum_sha256": "4ee93916e6da2e6d51fa304be4f7457525e26d2d0eccc5dfed4ceca1ed959aff",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    },
+    {
+      "item_type": "table",
+      "item_name": "coaches",
+      "source_name": "coaches",
+      "backup_path": "database_exports/coaches.json",
+      "record_count": 7,
+      "file_count": 1,
+      "total_size": 2896,
+      "primary_key_columns": [
+        "id"
+      ],
+      "columns_info": [
+        {
+          "name": "active"
+        },
+        {
+          "name": "birthdate"
+        },
+        {
+          "name": "coach_code"
+        },
+        {
+          "name": "created_at"
+        },
+        {
+          "name": "gender"
+        },
+        {
+          "name": "id"
+        },
+        {
+          "name": "name"
+        },
+        {
+          "name": "note"
+        },
+        {
+          "name": "phone"
+        },
+        {
+          "name": "photo_url"
+        },
+        {
+          "name": "role"
+        },
+        {
+          "name": "updated_at"
+        }
+      ],
+      "checksum_sha256": "dced28c5d21f059f081dfa530d4e3bd0d5f1a1b5b07f5cf1dcb10e28409235be",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {}
+    }
+  ],
+  "storage": [
+    {
+      "item_type": "bucket",
+      "item_name": "student-photos",
+      "source_name": "student-photos",
+      "backup_path": "storage_exports/student-photos",
+      "record_count": 0,
+      "file_count": 12,
+      "total_size": 7758875,
+      "primary_key_columns": [],
+      "columns_info": [],
+      "checksum_sha256": "47240f645ce27f1d71eb9fd64f781bb9217156f3296ab32f15eeaf1136c5af5c",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {
+        "index_file": "storage_exports/student-photos/_bucket_manifest.json",
+        "files": [
+          {
+            "path": "V-000008.jpg",
+            "backup_path": "storage_exports/student-photos/V-000008.jpg",
+            "size": 213285,
+            "sha256": "1497ed0cf7a428c57991000fbe3df407ac63a483d215527a83da2e925fa9c088",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-05T08:24:59.788Z"
+          },
+          {
+            "path": "V22-001159.jpg",
+            "backup_path": "storage_exports/student-photos/V22-001159.jpg",
+            "size": 183457,
+            "sha256": "109922f728a6c20fefc99573e4a790f5274079b3f047184139a755381f3d97a5",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:32:34.006Z"
+          },
+          {
+            "path": "V22-010941.jpg",
+            "backup_path": "storage_exports/student-photos/V22-010941.jpg",
+            "size": 403939,
+            "sha256": "9e99de1c4a0225e43d4557a52acc6f9815384ed91680196bf35fa16e6b29a204",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-05T08:41:25.638Z"
+          },
+          {
+            "path": "V22-010956.jpg",
+            "backup_path": "storage_exports/student-photos/V22-010956.jpg",
+            "size": 179854,
+            "sha256": "91742f34af4021153601f5104bd5929ffce980419e0eb0e15e220957b8fa9264",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-11T14:03:29.333Z"
+          },
+          {
+            "path": "V23-119446.jpg",
+            "backup_path": "storage_exports/student-photos/V23-119446.jpg",
+            "size": 137716,
+            "sha256": "79c9edc5523107d05df00bb6c3b564dbb2b9a1878a17882dfff490519748f35a",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:34:15.516Z"
+          },
+          {
+            "path": "V23-124919.jpg",
+            "backup_path": "storage_exports/student-photos/V23-124919.jpg",
+            "size": 481392,
+            "sha256": "43a5f220de3ff70e5e19e98cc9773796db59ffc31cb9d9a88d22ae5470421a6e",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:36:22.501Z"
+          },
+          {
+            "path": "V23-161561.jpg",
+            "backup_path": "storage_exports/student-photos/V23-161561.jpg",
+            "size": 169107,
+            "sha256": "5463b5581c84b3bc71ce918fc61bcabbf96890d6ee838c2ad73c24b81159bac2",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:36:45.170Z"
+          },
+          {
+            "path": "V23-176565.jpg",
+            "backup_path": "storage_exports/student-photos/V23-176565.jpg",
+            "size": 150075,
+            "sha256": "c04071b4e007704500034fa8de95fd824596e842784f5ed80534fcaf38c54648",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:34:34.147Z"
+          },
+          {
+            "path": "V23-179139.jpg",
+            "backup_path": "storage_exports/student-photos/V23-179139.jpg",
+            "size": 4245979,
+            "sha256": "1e9c6ab4ff19147246bae29a18d4576b788660f5e52e16a04b7886ea545cc641",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:36:04.482Z"
+          },
+          {
+            "path": "V24-059631.jpg",
+            "backup_path": "storage_exports/student-photos/V24-059631.jpg",
+            "size": 233029,
+            "sha256": "3621f8e4aa463ad9abf1e7e138521a6835d22b6552648277686654f5567fe340",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T06:33:57.593Z"
+          },
+          {
+            "path": "V25-069394.jpg",
+            "backup_path": "storage_exports/student-photos/V25-069394.jpg",
+            "size": 1031927,
+            "sha256": "19874623479d4658d5e044ea24dfd9499dfebecabdea507cee7dfc3d9bd678ac",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-05T08:24:59.952Z"
+          },
+          {
+            "path": "V26-031985.jpg",
+            "backup_path": "storage_exports/student-photos/V26-031985.jpg",
+            "size": 329115,
+            "sha256": "05bb089d1d7cf5b6995b4ac7e68bd6371ebeebd987980f91b0d6c33ca7a924d3",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-11T01:41:40.813Z"
+          }
+        ]
+      }
+    },
+    {
+      "item_type": "bucket",
+      "item_name": "system-assets",
+      "source_name": "system-assets",
+      "backup_path": "storage_exports/system-assets",
+      "record_count": 0,
+      "file_count": 11,
+      "total_size": 2191244,
+      "primary_key_columns": [],
+      "columns_info": [],
+      "checksum_sha256": "fa0425a05387c34b4ea138a0ebc4e32bdf0866bc369cf2b3ff7ae395e80dd902",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {
+        "index_file": "storage_exports/system-assets/_bucket_manifest.json",
+        "files": [
+          {
+            "path": "chibitkd.png",
+            "backup_path": "storage_exports/system-assets/chibitkd.png",
+            "size": 162942,
+            "sha256": "0b398ddfec8faa7216e398128b436f968970311ea5ec6a22cbcda2050250a853",
+            "mime_type": "image/png",
+            "updated_at": "2026-07-05T08:13:21.986Z"
+          },
+          {
+            "path": "chuky.png",
+            "backup_path": "storage_exports/system-assets/chuky.png",
+            "size": 105120,
+            "sha256": "b70d57a6c3814de1dacc14d49e3819367ce7ed7826e1bdb00330ddafa2c87a49",
+            "mime_type": "image/png",
+            "updated_at": "2026-07-08T09:58:06.177Z"
+          },
+          {
+            "path": "club-info/coaches/20260707215901751567.jpg",
+            "backup_path": "storage_exports/system-assets/club-info/coaches/20260707215901751567.jpg",
+            "size": 27547,
+            "sha256": "795869f681369c7c5cad909b1596c31db28a652f7a1029ed0962aa386f326bc4",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T14:59:02.229Z"
+          },
+          {
+            "path": "club-info/coaches/20260707221319355513.jpeg",
+            "backup_path": "storage_exports/system-assets/club-info/coaches/20260707221319355513.jpeg",
+            "size": 335545,
+            "sha256": "47cfdd2734a1813af26999e075ebffeb95e17a0874c0e3b5022baab7ab4f7e9c",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T15:13:20.024Z"
+          },
+          {
+            "path": "club-info/coaches/20260707221414435868.jpg",
+            "backup_path": "storage_exports/system-assets/club-info/coaches/20260707221414435868.jpg",
+            "size": 41387,
+            "sha256": "2559ac37db7125ebe01c56710484b1c6a5a605f17fd33ed0bca7cc2c2f7bda7b",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-07T15:14:14.568Z"
+          },
+          {
+            "path": "club-info/coaches/20260708161207224304.jpg",
+            "backup_path": "storage_exports/system-assets/club-info/coaches/20260708161207224304.jpg",
+            "size": 85444,
+            "sha256": "2e1c105c30dc425dc9160da1176c3d7e6bc8e72705de8d7d064d028fba3ec15a",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-08T09:12:08.909Z"
+          },
+          {
+            "path": "club-info/coaches/20260709105731928922.jpg",
+            "backup_path": "storage_exports/system-assets/club-info/coaches/20260709105731928922.jpg",
+            "size": 183457,
+            "sha256": "109922f728a6c20fefc99573e4a790f5274079b3f047184139a755381f3d97a5",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-09T03:57:33.395Z"
+          },
+          {
+            "path": "club-info/registrar/20260708162611661653.png",
+            "backup_path": "storage_exports/system-assets/club-info/registrar/20260708162611661653.png",
+            "size": 601951,
+            "sha256": "04e3002fc668a45d5e8ce0545fde2664eda18cef2d3fe524a83a94f4613e4d7b",
+            "mime_type": "image/png",
+            "updated_at": "2026-07-08T09:26:13.785Z"
+          },
+          {
+            "path": "club-info/registrar/20260708163053906902.png",
+            "backup_path": "storage_exports/system-assets/club-info/registrar/20260708163053906902.png",
+            "size": 422550,
+            "sha256": "49fe88c88bec27c418ed07c47216f50c43dee22db6c1e3c318ed62cca51fc26e",
+            "mime_type": "image/png",
+            "updated_at": "2026-07-08T09:30:54.463Z"
+          },
+          {
+            "path": "club-info/registrar/20260708163122383047.jpg",
+            "backup_path": "storage_exports/system-assets/club-info/registrar/20260708163122383047.jpg",
+            "size": 89804,
+            "sha256": "2aaadab7e2329e37ee836eaa19359b339c67a65e8c832087ff3db3e4b5b2b830",
+            "mime_type": "image/jpeg",
+            "updated_at": "2026-07-08T09:31:22.832Z"
+          },
+          {
+            "path": "logo.png",
+            "backup_path": "storage_exports/system-assets/logo.png",
+            "size": 135497,
+            "sha256": "2b1de2ac950f8df8609f632003ab355342f9544d142244a2baa8488334d32d32",
+            "mime_type": "image/png",
+            "updated_at": "2026-07-05T08:13:21.765Z"
+          }
+        ]
+      }
+    }
+  ],
+  "application": [
+    {
+      "item_type": "app",
+      "item_name": "application",
+      "source_name": "taekwondo_web_supabase",
+      "backup_path": "app_exports/application",
+      "record_count": 0,
+      "file_count": 52,
+      "total_size": 4781192,
+      "primary_key_columns": [],
+      "columns_info": [],
+      "checksum_sha256": "fc415c930dc953b5d34749479fdd442493324f637c110d2982adbc7447bb8fae",
+      "item_status": "ready",
+      "error_message": null,
+      "extra_info": {
+        "source_root": "G:\\My Drive\\taekwondo_web_supabase",
+        "index_file": "app_exports/application/_app_manifest.json",
+        "secret_files_excluded": [
+          ".env",
+          ".env.development",
+          ".env.local",
+          ".env.production",
+          "rclone.conf"
+        ]
+      }
+    }
+  ]
+}

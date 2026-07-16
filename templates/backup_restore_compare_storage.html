@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="backup-center-page">
+    <div class="backup-center-header">
+        <div>
+            <div class="backup-center-kicker">SO SÁNH SUPABASE STORAGE</div>
+            <h1>Bucket {{ bucket_name }}</h1>
+            <p>
+                Đối chiếu file trong backup với file hiện có trên Supabase Storage.
+                Chế độ hiện tại chỉ cho phép phục hồi file còn thiếu.
+            </p>
+        </div>
+
+        <div class="backup-header-actions">
+            <a href="{{ url_for('backup_restore_manifest_detail', manifest_id=manifest.id) }}"
+               class="backup-action-btn manifests">
+                <i class="fa-solid fa-arrow-left"></i>
+                Chi tiết manifest
+            </a>
+        </div>
+    </div>
+
+    <div class="compare-source-box">
+        <div>
+            <span>Bản backup</span>
+            <b>{{ manifest.backup_name }}</b>
+        </div>
+        <div>
+            <span>Thư mục backup</span>
+            <b>{{ bucket_item.backup_path or "—" }}</b>
+        </div>
+        <div>
+            <span>Bucket đích</span>
+            <b>{{ bucket_name }}</b>
+        </div>
+    </div>
+
+    <div class="compare-summary-grid">
+        <button type="button" class="compare-summary-card all active" onclick="showStorageTab('all', this)">
+            <span>Trong backup</span>
+            <b>{{ compare_result.backup_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card add" onclick="showStorageTab('missing', this)">
+            <span>File còn thiếu</span>
+            <b>{{ compare_result.missing_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card unchanged" onclick="showStorageTab('existing', this)">
+            <span>Đã tồn tại</span>
+            <b>{{ compare_result.existing_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card current-only" onclick="showStorageTab('current-only', this)">
+            <span>Chỉ có hiện tại</span>
+            <b>{{ compare_result.current_only_count }}</b>
+        </button>
+    </div>
+
+    <div class="compare-notice-box">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+            <b>Chế độ Storage an toàn đang bật.</b>
+            <span>
+                Không ghi đè file cùng tên, không xóa file hiện tại và không thay đổi
+                nội dung file đã tồn tại.
+            </span>
+        </div>
+    </div>
+
+    <section class="backup-section-card storage-panel" data-tab="missing">
+        <div class="backup-section-title">
+            <div>
+                <span>FILE CÒN THIẾU</span>
+                <h2>Có trong backup nhưng chưa có trên Supabase</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.missing_count }} file
+            </div>
+        </div>
+
+        {% if compare_result.missing_files %}
+            <form method="post"
+                  id="restoreMissingStorageForm"
+                  action="{{ url_for(
+                      'backup_restore_storage_restore_missing',
+                      manifest_id=manifest.id,
+                      bucket_name=bucket_name
+                  ) }}">
+
+                <div class="restore-selection-toolbar">
+                    <label class="restore-check-all">
+                        <input type="checkbox"
+                               id="selectAllStorageFiles"
+                               onchange="toggleAllStorageFiles(this.checked)">
+                        <span>Chọn tất cả file còn thiếu</span>
+                    </label>
+
+                    <div class="restore-selection-count">
+                        Đã chọn:
+                        <b id="selectedStorageFileCount">0</b>
+                        / {{ compare_result.missing_count }}
+                    </div>
+
+                    <button type="button"
+                            class="restore-preview-button"
+                            onclick="openStorageRestoreModal()">
+                        <i class="fa-solid fa-magnifying-glass-check"></i>
+                        Xem trước & xác nhận
+                    </button>
+                </div>
+
+                <div class="compare-table-wrap">
+                    <table class="compare-generic-table">
+                        <thead>
+                            <tr>
+                                <th>Chọn</th>
+                                <th>STT</th>
+                                <th>Đường dẫn file</th>
+                                <th>Dung lượng</th>
+                                <th>Loại file</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in compare_result.missing_files %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox"
+                                               class="storage-file-checkbox"
+                                               name="selected_paths"
+                                               value="{{ item.path }}"
+                                               data-size="{{ item.size_text }}"
+                                               onchange="updateStorageSelection()">
+                                    </td>
+                                    <td>{{ loop.index }}</td>
+                                    <td class="text-left"><b>{{ item.path }}</b></td>
+                                    <td>{{ item.size_text }}</td>
+                                    <td>{{ item.mime_type or "—" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        {% else %}
+            <div class="restore-complete-state">
+                <i class="fa-solid fa-circle-check"></i>
+                <div>
+                    <b>Không có file cần phục hồi</b>
+                    <span>Tất cả file trong backup đã tồn tại trên Supabase Storage.</span>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card storage-panel" data-tab="existing">
+        <div class="backup-section-title">
+            <div>
+                <span>ĐÃ TỒN TẠI</span>
+                <h2>File có trong cả backup và Supabase</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.existing_count }} file
+            </div>
+        </div>
+
+        {% if compare_result.existing_files %}
+            <div class="compare-table-wrap">
+                <table class="compare-generic-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Đường dẫn file</th>
+                            <th>Dung lượng backup</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in compare_result.existing_files %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="text-left"><b>{{ item.path }}</b></td>
+                                <td>{{ item.size_text }}</td>
+                                <td>
+                                    <span class="compare-row-status unchanged">
+                                        Đã tồn tại — không ghi đè
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Không có file trùng đường dẫn.</div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card storage-panel" data-tab="current-only">
+        <div class="backup-section-title">
+            <div>
+                <span>CHỈ CÓ HIỆN TẠI</span>
+                <h2>Có trên Supabase nhưng không có trong backup</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.current_only_count }} file
+            </div>
+        </div>
+
+        {% if compare_result.current_only_files %}
+            <div class="compare-table-wrap">
+                <table class="compare-generic-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Đường dẫn file</th>
+                            <th>Dung lượng hiện tại</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in compare_result.current_only_files %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="text-left"><b>{{ item.path }}</b></td>
+                                <td>{{ item.size_text }}</td>
+                                <td>
+                                    <span class="compare-row-status unchanged">
+                                        Giữ nguyên
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">
+                Không có file chỉ tồn tại trên Supabase.
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="restore-confirm-modal"
+     id="storageRestoreModal"
+     onclick="closeStorageModalFromBackground(event)">
+    <div class="restore-confirm-box">
+        <div class="restore-confirm-head">
+            <div>
+                <span>XÁC NHẬN PHỤC HỒI STORAGE</span>
+                <h2>Chỉ thêm file còn thiếu</h2>
+            </div>
+            <button type="button" onclick="closeStorageRestoreModal()">×</button>
+        </div>
+
+        <div class="restore-confirm-body">
+            <div class="restore-confirm-summary">
+                <div><span>Số file sẽ kiểm tra</span><b id="storageModalCount">0</b></div>
+                <div><span>Ghi đè file</span><b class="safe">0</b></div>
+                <div><span>Xóa file</span><b class="safe">0</b></div>
+            </div>
+
+            <div class="restore-confirm-note">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>
+                    Máy chủ sẽ đọc lại Supabase trước khi upload.
+                    File đã xuất hiện sẽ tự động bị bỏ qua.
+                </span>
+            </div>
+
+            <div class="restore-confirm-list" id="storageRestoreConfirmList"></div>
+
+            <label class="restore-final-check">
+                <input type="checkbox"
+                       id="storageFinalConfirm"
+                       onchange="updateStorageSubmitState()">
+                <span>
+                    Tôi xác nhận chỉ thêm file còn thiếu và không ghi đè hoặc xóa file hiện tại.
+                </span>
+            </label>
+        </div>
+
+        <div class="restore-confirm-footer">
+            <button type="button"
+                    class="restore-cancel-button"
+                    onclick="closeStorageRestoreModal()">
+                Hủy
+            </button>
+            <button type="button"
+                    class="restore-submit-button"
+                    id="storageRestoreSubmitButton"
+                    onclick="submitStorageRestore()"
+                    disabled>
+                <i class="fa-solid fa-shield-check"></i>
+                Thực hiện phục hồi
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.restore-selection-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;margin-bottom:14px;background:#f8fafc;border:1px solid #dbeafe;border-radius:14px}.restore-check-all{display:flex;align-items:center;gap:9px;font-weight:800;cursor:pointer}.restore-check-all input,.storage-file-checkbox,.restore-final-check input{width:18px;height:18px;accent-color:#2563eb}.restore-selection-count{margin-left:auto;color:#475569}.restore-selection-count b{color:#1d4ed8;font-size:18px}.restore-preview-button{border:0;border-radius:11px;padding:11px 16px;background:#1d4ed8;color:#fff;font-weight:800;cursor:pointer}.restore-complete-state{display:flex;align-items:center;justify-content:center;gap:13px;padding:28px;border:1px dashed #86efac;background:#f0fdf4;border-radius:14px;color:#166534}.restore-complete-state>i{font-size:28px}.restore-complete-state div{display:flex;flex-direction:column;gap:4px}.restore-confirm-modal{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(2,6,23,.72)}.restore-confirm-modal.show{display:flex}.restore-confirm-box{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.35)}.restore-confirm-head{display:flex;justify-content:space-between;gap:20px;padding:22px 24px;color:#fff;background:linear-gradient(135deg,#0f2a4a,#1d4ed8)}.restore-confirm-head span{font-size:12px;font-weight:900;color:#fde047}.restore-confirm-head h2{margin:4px 0 0}.restore-confirm-head button{width:38px;height:38px;border:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer}.restore-confirm-body{padding:22px}.restore-confirm-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.restore-confirm-summary>div{display:flex;flex-direction:column;gap:6px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:13px}.restore-confirm-summary span{font-size:12px;color:#64748b}.restore-confirm-summary b{font-size:22px;color:#1d4ed8}.restore-confirm-summary b.safe{color:#059669}.restore-confirm-note{display:flex;gap:10px;margin:16px 0;padding:13px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;color:#1e40af}.restore-confirm-list{max-height:240px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px}.restore-confirm-item{display:flex;justify-content:space-between;gap:14px;padding:10px 12px;border-bottom:1px solid #eef2f7}.restore-final-check{display:flex;align-items:flex-start;gap:10px;margin-top:16px;padding:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;font-weight:700;cursor:pointer}.restore-confirm-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid #e2e8f0}.restore-cancel-button,.restore-submit-button{border:0;border-radius:11px;padding:11px 17px;font-weight:800;cursor:pointer}.restore-cancel-button{background:#e2e8f0;color:#334155}.restore-submit-button{background:#16a34a;color:#fff}.restore-submit-button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:700px){.restore-selection-count{margin-left:0}.restore-confirm-summary{grid-template-columns:1fr}.restore-preview-button{width:100%}}
+</style>
+
+<script>
+function showStorageTab(tabName, button) {
+    document.querySelectorAll('.compare-summary-card').forEach(function (item) {
+        item.classList.remove('active');
+    });
+    if (button) button.classList.add('active');
+
+    document.querySelectorAll('.storage-panel').forEach(function (panel) {
+        panel.style.display =
+            tabName === 'all' || panel.dataset.tab === tabName
+            ? ''
+            : 'none';
+    });
+}
+
+function getSelectedStorageFiles() {
+    return Array.from(
+        document.querySelectorAll('.storage-file-checkbox:checked')
+    );
+}
+
+function updateStorageSelection() {
+    const all = Array.from(
+        document.querySelectorAll('.storage-file-checkbox')
+    );
+    const selected = getSelectedStorageFiles();
+    const count = document.getElementById('selectedStorageFileCount');
+    const selectAll = document.getElementById('selectAllStorageFiles');
+
+    if (count) count.textContent = selected.length;
+
+    if (selectAll) {
+        selectAll.checked = all.length > 0 && selected.length === all.length;
+        selectAll.indeterminate =
+            selected.length > 0 && selected.length < all.length;
+    }
+}
+
+function toggleAllStorageFiles(checked) {
+    document.querySelectorAll('.storage-file-checkbox').forEach(function (box) {
+        box.checked = checked;
+    });
+    updateStorageSelection();
+}
+
+function openStorageRestoreModal() {
+    const selected = getSelectedStorageFiles();
+
+    if (!selected.length) {
+        alert('Ken hãy chọn ít nhất 1 file cần phục hồi.');
+        return;
+    }
+
+    document.getElementById('storageModalCount').textContent = selected.length;
+
+    const list = document.getElementById('storageRestoreConfirmList');
+    list.innerHTML = '';
+
+    selected.forEach(function (box) {
+        const item = document.createElement('div');
+        item.className = 'restore-confirm-item';
+
+        const path = document.createElement('b');
+        path.textContent = box.value;
+
+        const size = document.createElement('span');
+        size.textContent = box.dataset.size || '—';
+
+        item.appendChild(path);
+        item.appendChild(size);
+        list.appendChild(item);
+    });
+
+    document.getElementById('storageFinalConfirm').checked = false;
+    updateStorageSubmitState();
+
+    document.getElementById('storageRestoreModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeStorageRestoreModal() {
+    document.getElementById('storageRestoreModal').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function closeStorageModalFromBackground(event) {
+    if (event.target.id === 'storageRestoreModal') {
+        closeStorageRestoreModal();
+    }
+}
+
+function updateStorageSubmitState() {
+    document.getElementById('storageRestoreSubmitButton').disabled =
+        !document.getElementById('storageFinalConfirm').checked;
+}
+
+function submitStorageRestore() {
+    const form = document.getElementById('restoreMissingStorageForm');
+    const button = document.getElementById('storageRestoreSubmitButton');
+
+    if (!form || button.disabled) return;
+
+    button.disabled = true;
+    button.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> Đang phục hồi...';
+
+    form.submit();
+}
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+        closeStorageRestoreModal();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="backup-center-page">
+
+    <div class="backup-center-header">
+        <div>
+            <div class="backup-center-kicker">
+                TRUNG TÂM AN TOÀN DỮ LIỆU
+            </div>
+
+            <h1>
+                Sao lưu & Phục hồi
+            </h1>
+
+            <p>
+                Theo dõi ba bản backup đầy đủ mới nhất của hệ thống.
+                Giai đoạn hiện tại mới chỉ cho phép kiểm tra danh sách,
+                chưa thực hiện phục hồi dữ liệu.
+            </p>
+        </div>
+
+        <div class="backup-header-actions">
+            <a href="{{ url_for('backup_restore_manifests') }}"
+               class="backup-action-btn manifests">
+                <i class="fa-solid fa-list-check"></i>
+                Dữ liệu manifest
+            </a>
+
+            <a href="{{ url_for('backup_restore_refresh') }}"
+               class="backup-action-btn refresh">
+                <i class="fa-solid fa-rotate"></i>
+                Làm mới
+            </a>
+
+            <form method="post"
+                  action="{{ url_for('backup_restore_lock') }}">
+                <button type="submit"
+                        class="backup-action-btn lock">
+                    <i class="fa-solid fa-lock"></i>
+                    Khóa ngay
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="backup-security-strip">
+        <div class="backup-security-item success">
+            <div class="backup-security-icon">
+                <i class="fa-solid fa-shield-check"></i>
+            </div>
+
+            <div>
+                <span>Trạng thái bảo mật</span>
+                <b>Đã xác thực</b>
+            </div>
+        </div>
+
+        <div class="backup-security-item">
+            <div class="backup-security-icon">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+
+            <div>
+                <span>Phiên tự khóa lúc</span>
+                <b>{{ restore_session_expires or "—" }}</b>
+            </div>
+        </div>
+
+        <div class="backup-security-item">
+            <div class="backup-security-icon">
+                <i class="fa-brands fa-google-drive"></i>
+            </div>
+
+            <div>
+                <span>Nguồn dữ liệu</span>
+                <b>Google Drive</b>
+            </div>
+        </div>
+
+        <div class="backup-security-item">
+            <div class="backup-security-icon">
+                <i class="fa-solid fa-box-archive"></i>
+            </div>
+
+            <div>
+                <span>Số bản đang hiển thị</span>
+                <b>{{ backups|length }}/3 bản</b>
+            </div>
+        </div>
+    </div>
+
+    {% if backup_error %}
+        <div class="backup-error-box">
+            <i class="fa-solid fa-circle-exclamation"></i>
+
+            <div>
+                <b>Không đọc được danh sách backup</b>
+                <span>{{ backup_error }}</span>
+            </div>
+
+            <a href="{{ url_for('backup_restore_refresh') }}">
+                Thử lại
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="backup-section-card">
+        <div class="backup-section-title">
+            <div>
+                <span>BẢN SAO LƯU</span>
+                <h2>3 bản backup mới nhất</h2>
+            </div>
+
+            <div class="backup-remote-label">
+                <i class="fa-solid fa-folder-open"></i>
+                {{ backup_remote_dir }}
+            </div>
+        </div>
+
+        {% if backups %}
+            <div class="backup-file-grid">
+                {% for backup in backups %}
+                    <article class="backup-file-card
+                                    {% if loop.first %}latest{% endif %}">
+
+                        <div class="backup-file-card-top">
+                            <div class="backup-file-icon">
+                                <i class="fa-solid fa-file-zipper"></i>
+                            </div>
+
+                            <div class="backup-file-status">
+                                {% if loop.first %}
+                                    <span class="backup-status-badge latest">
+                                        MỚI NHẤT
+                                    </span>
+                                {% else %}
+                                    <span class="backup-status-badge safe">
+                                        AN TOÀN
+                                    </span>
+                                {% endif %}
+
+                                <span class="backup-file-order">
+                                    Bản {{ loop.index }}/3
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="backup-file-name"
+                             title="{{ backup.name }}">
+                            {{ backup.name }}
+                        </div>
+
+                        <div class="backup-file-info-grid">
+                            <div>
+                                <span>
+                                    <i class="fa-regular fa-calendar"></i>
+                                    Thời gian
+                                </span>
+
+                                <b>
+                                    {{ backup.mod_time_text }}
+                                </b>
+                            </div>
+
+                            <div>
+                                <span>
+                                    <i class="fa-solid fa-hard-drive"></i>
+                                    Dung lượng
+                                </span>
+
+                                <b>
+                                    {{ backup.size_text }}
+                                </b>
+                            </div>
+                        </div>
+
+                        <div class="backup-content-list">
+                            <div>
+                                <i class="fa-solid fa-code"></i>
+                                <span>Mã nguồn website VPS</span>
+                                <b>Đã có</b>
+                            </div>
+
+                            <div>
+                                <i class="fa-solid fa-database"></i>
+                                <span>Database Supabase</span>
+                                <b>Đã có</b>
+                            </div>
+
+                            <div>
+                                <i class="fa-regular fa-images"></i>
+                                <span>Supabase Storage</span>
+                                <b>Đã có</b>
+                            </div>
+                        </div>
+
+                        <div class="backup-file-actions">
+                            <button type="button"
+                                    class="backup-detail-btn"
+                                    onclick="openBackupPreview(
+                                        '{{ backup.name|e }}',
+                                        '{{ backup.mod_time_text|e }}',
+                                        '{{ backup.size_text|e }}'
+                                    )">
+                                <i class="fa-solid fa-eye"></i>
+                                Xem thông tin
+                            </button>
+
+                            <button type="button"
+                                    class="backup-restore-disabled"
+                                    disabled
+                                    title="Sẽ mở ở Giai đoạn 4">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                Phục hồi
+                            </button>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="backup-empty-state">
+                <div class="backup-empty-icon">
+                    <i class="fa-solid fa-box-open"></i>
+                </div>
+
+                <h3>Chưa tìm thấy bản backup</h3>
+
+                <p>
+                    Hệ thống chưa đọc được file có tên
+                    <b>phungtkdsystem_full_*.tar.gz</b>
+                    trong thư mục Google Drive.
+                </p>
+
+                <a href="{{ url_for('backup_restore_refresh') }}">
+                    <i class="fa-solid fa-rotate"></i>
+                    Kiểm tra lại
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="backup-roadmap-grid">
+        <div class="backup-roadmap-card active">
+            <span>GIAI ĐOẠN 1</span>
+            <b>Khóa bảo mật & danh sách backup</b>
+            <p>Đang hoạt động.</p>
+        </div>
+
+        <div class="backup-roadmap-card">
+            <span>GIAI ĐOẠN 2</span>
+            <b>Manifest và dữ liệu từng bảng</b>
+            <p>Chuẩn bị triển khai.</p>
+        </div>
+
+        <div class="backup-roadmap-card">
+            <span>GIAI ĐOẠN 3</span>
+            <b>So sánh dữ liệu</b>
+            <p>Chưa mở.</p>
+        </div>
+
+        <div class="backup-roadmap-card">
+            <span>GIAI ĐOẠN 4</span>
+            <b>Phục hồi chọn lọc</b>
+            <p>Chưa mở.</p>
+        </div>
+    </div>
+
+    <div class="backup-history-card">
+        <div class="backup-section-title">
+            <div>
+                <span>BẢO MẬT</span>
+                <h2>Lịch sử truy cập gần đây</h2>
+            </div>
+        </div>
+
+        {% if history_rows %}
+            <div class="backup-history-table-wrap">
+                <table class="backup-history-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Thao tác</th>
+                            <th>Trạng thái</th>
+                            <th>Admin</th>
+                            <th>Thông tin</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in history_rows %}
+                            <tr>
+                                <td>
+                                    {{ item.created_at|datetime_vn }}
+                                </td>
+
+                                <td>
+                                    {% if item.action_type == "unlock_restore_area" %}
+                                        Mở khóa khu vực
+                                    {% elif item.action_type == "lock_restore_area" %}
+                                        Khóa khu vực
+                                    {% elif item.action_type == "create_restore_password" %}
+                                        Tạo mật khẩu
+                                    {% else %}
+                                        {{ item.action_type }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <span class="backup-history-status
+                                        {{ item.status }}">
+                                        {% if item.status == "success" %}
+                                            Thành công
+                                        {% elif item.status == "failed" %}
+                                            Thất bại
+                                        {% elif item.status == "blocked" %}
+                                            Bị chặn
+                                        {% else %}
+                                            {{ item.status }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {{ item.admin_name or "Admin" }}
+                                </td>
+
+                                <td>
+                                    {{ item.error_message or "—" }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">
+                Chưa có lịch sử truy cập.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="backup-preview-modal"
+     id="backupPreviewModal"
+     onclick="closeBackupPreviewFromBackground(event)">
+
+    <div class="backup-preview-box">
+        <div class="backup-preview-header">
+            <div>
+                <span>THÔNG TIN BẢN BACKUP</span>
+                <h2 id="backupPreviewName">—</h2>
+            </div>
+
+            <button type="button"
+                    onclick="closeBackupPreview()">
+                ×
+            </button>
+        </div>
+
+        <div class="backup-preview-body">
+            <div class="backup-preview-summary">
+                <div>
+                    <span>Thời gian tạo</span>
+                    <b id="backupPreviewTime">—</b>
+                </div>
+
+                <div>
+                    <span>Dung lượng</span>
+                    <b id="backupPreviewSize">—</b>
+                </div>
+            </div>
+
+            <div class="backup-preview-content">
+                <h3>Nội dung dự kiến trong file</h3>
+
+                <div>
+                    <i class="fa-solid fa-folder-tree"></i>
+                    <span>
+                        <b>phungtkdsystem/</b>
+                        Mã nguồn ứng dụng trên VPS
+                    </span>
+                </div>
+
+                <div>
+                    <i class="fa-solid fa-database"></i>
+                    <span>
+                        <b>supabase_database.dump</b>
+                        Bản sao Database Supabase
+                    </span>
+                </div>
+
+                <div>
+                    <i class="fa-regular fa-images"></i>
+                    <span>
+                        <b>supabase_storage/</b>
+                        Hình ảnh và file trong Storage
+                    </span>
+                </div>
+            </div>
+
+            <div class="backup-preview-note">
+                <i class="fa-solid fa-circle-info"></i>
+
+                <span>
+                    Giai đoạn 2 sẽ đọc trực tiếp manifest bên trong
+                    để xác nhận số bảng, số dòng và số file thực tế.
+                </span>
+            </div>
+        </div>
+
+        <div class="backup-preview-footer">
+            <button type="button"
+                    onclick="closeBackupPreview()">
+                Đóng
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openBackupPreview(name, time, size) {
+    const modal = document.getElementById(
+        "backupPreviewModal"
+    );
+
+    document.getElementById(
+        "backupPreviewName"
+    ).textContent = name || "—";
+
+    document.getElementById(
+        "backupPreviewTime"
+    ).textContent = time || "—";
+
+    document.getElementById(
+        "backupPreviewSize"
+    ).textContent = size || "—";
+
+    modal.classList.add("show");
+    document.body.style.overflow = "hidden";
+}
+
+function closeBackupPreview() {
+    const modal = document.getElementById(
+        "backupPreviewModal"
+    );
+
+    modal.classList.remove("show");
+    document.body.style.overflow = "";
+}
+
+function closeBackupPreviewFromBackground(event) {
+    if (event.target.id === "backupPreviewModal") {
+        closeBackupPreview();
+    }
+}
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        closeBackupPreview();
+    }
+});
+</script>
+{% endblock %}

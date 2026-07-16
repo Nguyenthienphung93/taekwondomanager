@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="backup-center-page">
+
+    <div class="backup-center-header">
+        <div>
+            <div class="backup-center-kicker">SO SÁNH DỮ LIỆU BACKUP</div>
+            <h1>{{ table_meta.title }}</h1>
+            <p>
+                Đối chiếu {{ table_meta.row_label }} trong bản backup với dữ liệu hiện tại trên Supabase.
+                {% if table_meta.allow_restore %}
+                    Có thể phục hồi chọn lọc theo chế độ an toàn.
+                {% else %}
+                    Bảng này chỉ cho phép xem trước.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="backup-header-actions">
+            <a href="{{ url_for('backup_restore_manifest_detail', manifest_id=manifest.id) }}"
+               class="backup-action-btn manifests">
+                <i class="fa-solid fa-arrow-left"></i>
+                Chi tiết manifest
+            </a>
+        </div>
+    </div>
+
+    <div class="compare-source-box">
+        <div>
+            <span>Bản backup</span>
+            <b>{{ manifest.backup_name }}</b>
+        </div>
+        <div>
+            <span>File dữ liệu</span>
+            <b>{{ table_item.backup_path or "—" }}</b>
+        </div>
+        <div>
+            <span>Khóa đối chiếu</span>
+            <b>{{ compare_result.primary_key or "—" }}</b>
+        </div>
+    </div>
+
+    {% if compare_result.duplicate_backup_keys or compare_result.duplicate_current_keys %}
+        <div class="backup-error-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+                <b>Không thể phục hồi vì khóa đối chiếu bị trùng</b>
+                {% if compare_result.duplicate_backup_keys %}
+                    <span>Trong backup: {{ compare_result.duplicate_backup_keys|join(", ") }}</span>
+                {% endif %}
+                {% if compare_result.duplicate_current_keys %}
+                    <span>Trong dữ liệu hiện tại: {{ compare_result.duplicate_current_keys|join(", ") }}</span>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="compare-summary-grid">
+        <button type="button" class="compare-summary-card all active" onclick="showCompareTab('all', this)">
+            <span>Trong backup</span>
+            <b>{{ compare_result.backup_count or 0 }}</b>
+        </button>
+        <button type="button" class="compare-summary-card add" onclick="showCompareTab('add', this)">
+            <span>Thêm mới</span>
+            <b>{{ compare_result.add_count or 0 }}</b>
+        </button>
+        <button type="button" class="compare-summary-card update" onclick="showCompareTab('update', this)">
+            <span>Thay đổi</span>
+            <b>{{ compare_result.update_count or 0 }}</b>
+        </button>
+        <button type="button" class="compare-summary-card unchanged" onclick="showCompareTab('unchanged', this)">
+            <span>Không đổi</span>
+            <b>{{ compare_result.unchanged_count or 0 }}</b>
+        </button>
+        <button type="button" class="compare-summary-card current-only" onclick="showCompareTab('current-only', this)">
+            <span>Chỉ có hiện tại</span>
+            <b>{{ compare_result.current_only_count or 0 }}</b>
+        </button>
+    </div>
+
+    <div class="compare-notice-box">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+            {% if table_meta.allow_restore %}
+                <b>Chế độ phục hồi an toàn đang bật.</b>
+                <span>
+                    Chỉ thêm dòng còn thiếu hoặc cập nhật đúng trường Ken chọn.
+                    Không xóa dữ liệu hiện tại, không sửa khóa đối chiếu và không ghi đè bằng giá trị trống.
+                </span>
+            {% else %}
+                <b>Bảng hệ thống chỉ được xem trước.</b>
+                <span>Không có thao tác phục hồi cho bảng này.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <section class="backup-section-card compare-panel" data-tab="add">
+        <div class="backup-section-title">
+            <div>
+                <span>THÊM MỚI</span>
+                <h2>{{ table_meta.add_title }}</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.add_count or 0 }} {{ table_meta.row_label }}
+            </div>
+        </div>
+
+        {% if compare_result.add_rows %}
+            {% if table_meta.allow_restore %}
+                <form method="post"
+                      id="genericAddMissingForm"
+                      action="{{ url_for('backup_restore_table_add_missing', manifest_id=manifest.id, table_name=table_name) }}">
+
+                    <div class="restore-selection-toolbar">
+                        <label class="restore-check-all">
+                            <input type="checkbox"
+                                   id="restoreSelectAllRows"
+                                   onchange="toggleAllRestoreRows(this.checked)">
+                            <span>Chọn tất cả {{ table_meta.row_label }} còn thiếu</span>
+                        </label>
+
+                        <div class="restore-selection-count">
+                            Đã chọn:
+                            <b id="restoreSelectedRowCount">0</b>
+                            / {{ compare_result.add_count or 0 }}
+                        </div>
+
+                        <button type="button"
+                                class="restore-preview-button"
+                                onclick="openAddRestoreModal()"
+                                {% if compare_result.duplicate_backup_keys or compare_result.duplicate_current_keys %}disabled{% endif %}>
+                            <i class="fa-solid fa-magnifying-glass-check"></i>
+                            Xem trước & xác nhận
+                        </button>
+                    </div>
+
+                    <div class="compare-table-wrap">
+                        <table class="compare-generic-table">
+                            <thead>
+                                <tr>
+                                    <th>Chọn</th>
+                                    <th>STT</th>
+                                    <th>Khóa</th>
+                                    <th>Thông tin nhận diện</th>
+                                    <th>Dữ liệu backup</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in compare_result.add_rows %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox"
+                                                   class="restore-row-checkbox"
+                                                   name="selected_keys"
+                                                   value="{{ item.key }}"
+                                                   data-name="{{ item.display_name|e }}"
+                                                   onchange="updateRestoreRowSelection()">
+                                        </td>
+                                        <td>{{ loop.index }}</td>
+                                        <td><b>{{ item.key }}</b></td>
+                                        <td class="text-left">{{ item.display_name or "—" }}</td>
+                                        <td class="text-left">
+                                            <details class="compare-json-details">
+                                                <summary>Xem dữ liệu</summary>
+                                                <pre>{{ item.backup_row | tojson(indent=2) }}</pre>
+                                            </details>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            {% else %}
+                <div class="compare-table-wrap">
+                    <table class="compare-generic-table">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Khóa</th>
+                                <th>Thông tin nhận diện</th>
+                                <th>Dữ liệu backup</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in compare_result.add_rows %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><b>{{ item.key }}</b></td>
+                                    <td class="text-left">{{ item.display_name or "—" }}</td>
+                                    <td class="text-left">
+                                        <details class="compare-json-details">
+                                            <summary>Xem dữ liệu</summary>
+                                            <pre>{{ item.backup_row | tojson(indent=2) }}</pre>
+                                        </details>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="restore-complete-state">
+                <i class="fa-solid fa-circle-check"></i>
+                <div>
+                    <b>Không có {{ table_meta.row_label }} cần thêm mới</b>
+                    <span>Tất cả khóa trong backup đã tồn tại trên Supabase.</span>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card compare-panel" data-tab="update">
+        <div class="backup-section-title">
+            <div>
+                <span>THAY ĐỔI</span>
+                <h2>{{ table_meta.update_title }}</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.update_count or 0 }} {{ table_meta.row_label }}
+            </div>
+        </div>
+
+        {% if compare_result.update_rows %}
+            {% if table_meta.allow_restore %}
+                <form method="post"
+                      id="genericSelectedFieldsForm"
+                      action="{{ url_for('backup_restore_table_selected_fields', manifest_id=manifest.id, table_name=table_name) }}">
+
+                    <div class="restore-selection-toolbar field-toolbar">
+                        <label class="restore-check-all">
+                            <input type="checkbox"
+                                   id="restoreSelectAllFields"
+                                   onchange="toggleAllRestoreFields(this.checked)">
+                            <span>Chọn tất cả trường có dữ liệu backup</span>
+                        </label>
+
+                        <div class="restore-selection-count">
+                            Đã chọn:
+                            <b id="restoreSelectedFieldCount">0</b> trường
+                        </div>
+
+                        <button type="button"
+                                class="restore-preview-button"
+                                onclick="openFieldRestoreModal()"
+                                {% if compare_result.duplicate_backup_keys or compare_result.duplicate_current_keys %}disabled{% endif %}>
+                            <i class="fa-solid fa-list-check"></i>
+                            Xem trước & xác nhận
+                        </button>
+                    </div>
+
+                    <div class="student-change-list">
+                        {% for item in compare_result.update_rows %}
+                            <article class="student-change-card">
+                                <div class="student-change-head">
+                                    <div>
+                                        <span>{{ item.key }}</span>
+                                        <h3>{{ item.display_name or table_meta.title }}</h3>
+                                    </div>
+                                    <b>{{ item.change_count }} thay đổi</b>
+                                </div>
+
+                                <div class="student-field-change-list">
+                                    {% for change in item.changes %}
+                                        {% set backup_has_value = change.backup_value is not none and (change.backup_text|string)|trim != "" %}
+                                        {% set protected = change.field in table_meta.protected_fields %}
+                                        {% set selectable = backup_has_value and not protected %}
+
+                                        <label class="student-field-change selectable-field {% if not selectable %}backup-empty{% endif %}">
+                                            <div class="student-change-field with-check">
+                                                <input type="checkbox"
+                                                       class="restore-field-checkbox"
+                                                       name="selected_fields"
+                                                       value="{{ item.key }}|||{{ change.field }}"
+                                                       data-key="{{ item.key|e }}"
+                                                       data-name="{{ item.display_name|e }}"
+                                                       data-field="{{ change.field|e }}"
+                                                       data-backup="{{ change.backup_text|e }}"
+                                                       data-current="{{ change.current_text|e }}"
+                                                       onchange="updateRestoreFieldSelection()"
+                                                       {% if not selectable %}disabled{% endif %}>
+                                                <span>{{ table_meta.field_labels.get(change.field, change.field) }}</span>
+
+                                                {% if protected %}
+                                                    <small>Trường khóa/kỹ thuật không được phục hồi</small>
+                                                {% elif not backup_has_value %}
+                                                    <small>Không thể chọn vì backup đang trống</small>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="student-change-value backup">
+                                                <span>Backup</span>
+                                                <b>{{ change.backup_text or "Trống" }}</b>
+                                            </div>
+
+                                            <div class="student-change-arrow">
+                                                <i class="fa-solid fa-arrow-right"></i>
+                                            </div>
+
+                                            <div class="student-change-value current">
+                                                <span>Hiện tại</span>
+                                                <b>{{ change.current_text or "Trống" }}</b>
+                                            </div>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="compare-row-raw">
+                                    <details class="compare-json-details">
+                                        <summary>Xem toàn bộ hai bản ghi</summary>
+                                        <div class="compare-raw-grid">
+                                            <div>
+                                                <span>Backup</span>
+                                                <pre>{{ item.backup_row | tojson(indent=2) }}</pre>
+                                            </div>
+                                            <div>
+                                                <span>Hiện tại</span>
+                                                <pre>{{ item.current_row | tojson(indent=2) }}</pre>
+                                            </div>
+                                        </div>
+                                    </details>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </form>
+            {% else %}
+                <div class="student-change-list">
+                    {% for item in compare_result.update_rows %}
+                        <article class="student-change-card">
+                            <div class="student-change-head">
+                                <div>
+                                    <span>{{ item.key }}</span>
+                                    <h3>{{ item.display_name or table_meta.title }}</h3>
+                                </div>
+                                <b>{{ item.change_count }} thay đổi</b>
+                            </div>
+
+                            <div class="student-field-change-list">
+                                {% for change in item.changes %}
+                                    <div class="student-field-change">
+                                        <div class="student-change-field">
+                                            {{ table_meta.field_labels.get(change.field, change.field) }}
+                                        </div>
+                                        <div class="student-change-value backup">
+                                            <span>Backup</span>
+                                            <b>{{ change.backup_text or "Trống" }}</b>
+                                        </div>
+                                        <div class="student-change-arrow">
+                                            <i class="fa-solid fa-arrow-right"></i>
+                                        </div>
+                                        <div class="student-change-value current">
+                                            <span>Hiện tại</span>
+                                            <b>{{ change.current_text or "Trống" }}</b>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="backup-history-empty">Không có dữ liệu thay đổi.</div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card compare-panel" data-tab="unchanged">
+        <div class="backup-section-title">
+            <div>
+                <span>KHÔNG THAY ĐỔI</span>
+                <h2>Dữ liệu giống hoàn toàn</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.unchanged_count or 0 }} {{ table_meta.row_label }}
+            </div>
+        </div>
+
+        {% if compare_result.unchanged_rows %}
+            <div class="compare-table-wrap">
+                <table class="compare-generic-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Khóa</th>
+                            <th>Thông tin nhận diện</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in compare_result.unchanged_rows %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td><b>{{ item.key }}</b></td>
+                                <td class="text-left">{{ item.display_name or "—" }}</td>
+                                <td><span class="compare-row-status unchanged">Giống nhau</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Không có dữ liệu giống nhau.</div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card compare-panel" data-tab="current-only">
+        <div class="backup-section-title">
+            <div>
+                <span>CHỈ CÓ HIỆN TẠI</span>
+                <h2>Có trên Supabase nhưng backup không có</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ compare_result.current_only_count or 0 }} {{ table_meta.row_label }}
+            </div>
+        </div>
+
+        {% if compare_result.current_only_rows %}
+            <div class="compare-table-wrap">
+                <table class="compare-generic-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Khóa</th>
+                            <th>Thông tin nhận diện</th>
+                            <th>Dữ liệu hiện tại</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in compare_result.current_only_rows %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td><b>{{ item.key }}</b></td>
+                                <td class="text-left">{{ item.display_name or "—" }}</td>
+                                <td class="text-left">
+                                    <details class="compare-json-details">
+                                        <summary>Xem dữ liệu</summary>
+                                        <pre>{{ item.current_row | tojson(indent=2) }}</pre>
+                                    </details>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Không có dữ liệu chỉ tồn tại ở hiện tại.</div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="restore-confirm-modal" id="genericAddRestoreModal" onclick="closeModalFromBackground(event, 'genericAddRestoreModal')">
+    <div class="restore-confirm-box">
+        <div class="restore-confirm-head">
+            <div>
+                <span>XÁC NHẬN PHỤC HỒI AN TOÀN</span>
+                <h2>Chỉ thêm {{ table_meta.row_label }} còn thiếu</h2>
+            </div>
+            <button type="button" onclick="closeRestoreModal('genericAddRestoreModal')">×</button>
+        </div>
+
+        <div class="restore-confirm-body">
+            <div class="restore-confirm-summary">
+                <div><span>Số dòng sẽ kiểm tra</span><b id="addRestoreModalCount">0</b></div>
+                <div><span>Ghi đè dữ liệu</span><b class="safe">0</b></div>
+                <div><span>Xóa dữ liệu</span><b class="safe">0</b></div>
+            </div>
+
+            <div class="restore-confirm-note">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Máy chủ sẽ đọc lại backup và Supabase trước khi ghi. Dòng đã tồn tại sẽ tự động bị bỏ qua.</span>
+            </div>
+
+            <div class="restore-confirm-list" id="addRestoreConfirmList"></div>
+
+            <label class="restore-final-check">
+                <input type="checkbox" id="addRestoreFinalConfirm" onchange="updateAddRestoreSubmitState()">
+                <span>Tôi xác nhận chỉ thêm dữ liệu còn thiếu và không xóa dữ liệu hiện tại.</span>
+            </label>
+        </div>
+
+        <div class="restore-confirm-footer">
+            <button type="button" class="restore-cancel-button" onclick="closeRestoreModal('genericAddRestoreModal')">Hủy</button>
+            <button type="button" class="restore-submit-button" id="addRestoreSubmitButton" onclick="submitAddRestore()" disabled>
+                <i class="fa-solid fa-shield-check"></i>
+                Thực hiện phục hồi
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="restore-confirm-modal" id="genericFieldRestoreModal" onclick="closeModalFromBackground(event, 'genericFieldRestoreModal')">
+    <div class="restore-confirm-box">
+        <div class="restore-confirm-head">
+            <div>
+                <span>XÁC NHẬN PHỤC HỒI CÓ CHỌN LỌC</span>
+                <h2>Phục hồi từng trường</h2>
+            </div>
+            <button type="button" onclick="closeRestoreModal('genericFieldRestoreModal')">×</button>
+        </div>
+
+        <div class="restore-confirm-body">
+            <div class="restore-confirm-summary">
+                <div><span>Số trường sẽ kiểm tra</span><b id="fieldRestoreModalCount">0</b></div>
+                <div><span>Xóa bản ghi</span><b class="safe">0</b></div>
+                <div><span>Ghi đè bằng dữ liệu trống</span><b class="safe">0</b></div>
+            </div>
+
+            <div class="restore-confirm-note">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Chỉ trường còn khác, không bị bảo vệ và có dữ liệu trong backup mới được cập nhật.</span>
+            </div>
+
+            <div class="restore-confirm-list" id="fieldRestoreConfirmList"></div>
+
+            <label class="restore-final-check">
+                <input type="checkbox" id="fieldRestoreFinalConfirm" onchange="updateFieldRestoreSubmitState()">
+                <span>Tôi xác nhận chỉ phục hồi các trường đã chọn và không xóa dữ liệu hiện tại.</span>
+            </label>
+        </div>
+
+        <div class="restore-confirm-footer">
+            <button type="button" class="restore-cancel-button" onclick="closeRestoreModal('genericFieldRestoreModal')">Hủy</button>
+            <button type="button" class="restore-submit-button" id="fieldRestoreSubmitButton" onclick="submitFieldRestore()" disabled>
+                <i class="fa-solid fa-shield-check"></i>
+                Phục hồi trường đã chọn
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.restore-selection-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;margin-bottom:14px;background:#f8fafc;border:1px solid #dbeafe;border-radius:14px}.restore-check-all{display:flex;align-items:center;gap:9px;font-weight:800;cursor:pointer}.restore-check-all input,.restore-row-checkbox,.restore-field-checkbox,.restore-final-check input{width:18px;height:18px;accent-color:#2563eb}.restore-selection-count{margin-left:auto;color:#475569}.restore-selection-count b{color:#1d4ed8;font-size:18px}.restore-preview-button{border:0;border-radius:11px;padding:11px 16px;background:#1d4ed8;color:#fff;font-weight:800;cursor:pointer}.restore-preview-button:disabled{opacity:.45;cursor:not-allowed}.restore-complete-state{display:flex;align-items:center;justify-content:center;gap:13px;padding:28px;border:1px dashed #86efac;background:#f0fdf4;border-radius:14px;color:#166534}.restore-complete-state>i{font-size:28px}.restore-complete-state div{display:flex;flex-direction:column;gap:4px}.selectable-field{cursor:pointer}.selectable-field:hover{outline:2px solid #bfdbfe;outline-offset:2px}.selectable-field.backup-empty{opacity:.68;cursor:not-allowed}.selectable-field.backup-empty:hover{outline:none}.student-change-field.with-check{display:flex;align-items:center;gap:9px}.student-change-field small{display:block;margin-top:5px;color:#b45309;font-size:11px}.restore-confirm-modal{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(2,6,23,.72)}.restore-confirm-modal.show{display:flex}.restore-confirm-box{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.35)}.restore-confirm-head{display:flex;justify-content:space-between;gap:20px;padding:22px 24px;color:#fff;background:linear-gradient(135deg,#0f2a4a,#1d4ed8)}.restore-confirm-head span{font-size:12px;font-weight:900;color:#fde047}.restore-confirm-head h2{margin:4px 0 0}.restore-confirm-head button{width:38px;height:38px;border:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer}.restore-confirm-body{padding:22px}.restore-confirm-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.restore-confirm-summary>div{display:flex;flex-direction:column;gap:6px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:13px}.restore-confirm-summary span{font-size:12px;color:#64748b}.restore-confirm-summary b{font-size:22px;color:#1d4ed8}.restore-confirm-summary b.safe{color:#059669}.restore-confirm-note{display:flex;gap:10px;margin:16px 0;padding:13px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;color:#1e40af}.restore-confirm-list{max-height:240px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px}.restore-confirm-item{display:flex;justify-content:space-between;gap:14px;padding:10px 12px;border-bottom:1px solid #eef2f7}.restore-confirm-item:last-child{border-bottom:0}.restore-final-check{display:flex;align-items:flex-start;gap:10px;margin-top:16px;padding:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;font-weight:700;cursor:pointer}.restore-confirm-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid #e2e8f0}.restore-cancel-button,.restore-submit-button{border:0;border-radius:11px;padding:11px 17px;font-weight:800;cursor:pointer}.restore-cancel-button{background:#e2e8f0;color:#334155}.restore-submit-button{background:#16a34a;color:#fff}.restore-submit-button:disabled{opacity:.45;cursor:not-allowed}.field-toolbar{position:sticky;top:8px;z-index:4}@media(max-width:700px){.restore-selection-count{margin-left:0}.restore-confirm-summary{grid-template-columns:1fr}.restore-preview-button{width:100%}.field-toolbar{position:static}}
+</style>
+
+<script>
+function showCompareTab(tabName, button) {
+    document.querySelectorAll('.compare-summary-card').forEach(function (item) {
+        item.classList.remove('active');
+    });
+    if (button) button.classList.add('active');
+
+    document.querySelectorAll('.compare-panel').forEach(function (panel) {
+        panel.style.display = tabName === 'all' || panel.dataset.tab === tabName ? '' : 'none';
+    });
+}
+
+function getSelectedRows() {
+    return Array.from(document.querySelectorAll('.restore-row-checkbox:checked'));
+}
+
+function updateRestoreRowSelection() {
+    const all = Array.from(document.querySelectorAll('.restore-row-checkbox'));
+    const selected = getSelectedRows();
+    const count = document.getElementById('restoreSelectedRowCount');
+    const selectAll = document.getElementById('restoreSelectAllRows');
+
+    if (count) count.textContent = selected.length;
+    if (selectAll) {
+        selectAll.checked = all.length > 0 && selected.length === all.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < all.length;
+    }
+}
+
+function toggleAllRestoreRows(checked) {
+    document.querySelectorAll('.restore-row-checkbox').forEach(function (box) {
+        box.checked = checked;
+    });
+    updateRestoreRowSelection();
+}
+
+function openAddRestoreModal() {
+    const selected = getSelectedRows();
+    if (!selected.length) {
+        alert('Ken hãy chọn ít nhất 1 dòng cần phục hồi.');
+        return;
+    }
+
+    document.getElementById('addRestoreModalCount').textContent = selected.length;
+    const list = document.getElementById('addRestoreConfirmList');
+    list.innerHTML = '';
+
+    selected.forEach(function (box) {
+        const item = document.createElement('div');
+        item.className = 'restore-confirm-item';
+        const key = document.createElement('b');
+        key.textContent = box.value;
+        const name = document.createElement('span');
+        name.textContent = box.dataset.name || '—';
+        item.appendChild(key);
+        item.appendChild(name);
+        list.appendChild(item);
+    });
+
+    document.getElementById('addRestoreFinalConfirm').checked = false;
+    updateAddRestoreSubmitState();
+    openRestoreModal('genericAddRestoreModal');
+}
+
+function getSelectedFields() {
+    return Array.from(document.querySelectorAll('.restore-field-checkbox:checked'));
+}
+
+function updateRestoreFieldSelection() {
+    const all = Array.from(document.querySelectorAll('.restore-field-checkbox:not(:disabled)'));
+    const selected = getSelectedFields();
+    const count = document.getElementById('restoreSelectedFieldCount');
+    const selectAll = document.getElementById('restoreSelectAllFields');
+
+    if (count) count.textContent = selected.length;
+    if (selectAll) {
+        selectAll.checked = all.length > 0 && selected.length === all.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < all.length;
+    }
+}
+
+function toggleAllRestoreFields(checked) {
+    document.querySelectorAll('.restore-field-checkbox:not(:disabled)').forEach(function (box) {
+        box.checked = checked;
+    });
+    updateRestoreFieldSelection();
+}
+
+function openFieldRestoreModal() {
+    const selected = getSelectedFields();
+    if (!selected.length) {
+        alert('Ken hãy chọn ít nhất 1 trường dữ liệu cần phục hồi.');
+        return;
+    }
+
+    document.getElementById('fieldRestoreModalCount').textContent = selected.length;
+    const list = document.getElementById('fieldRestoreConfirmList');
+    list.innerHTML = '';
+
+    selected.forEach(function (box) {
+        const item = document.createElement('div');
+        item.className = 'restore-confirm-item';
+        const left = document.createElement('div');
+        left.innerHTML = '<b>' + escapeRestoreHtml(box.dataset.field || '') + '</b><br><span>' + escapeRestoreHtml(box.dataset.name || box.dataset.key || '') + '</span>';
+        const right = document.createElement('div');
+        right.innerHTML = '<span>Hiện tại: ' + escapeRestoreHtml(box.dataset.current || 'Trống') + '</span><br><b>Backup: ' + escapeRestoreHtml(box.dataset.backup || 'Trống') + '</b>';
+        item.appendChild(left);
+        item.appendChild(right);
+        list.appendChild(item);
+    });
+
+    document.getElementById('fieldRestoreFinalConfirm').checked = false;
+    updateFieldRestoreSubmitState();
+    openRestoreModal('genericFieldRestoreModal');
+}
+
+function escapeRestoreHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value || '');
+    return div.innerHTML;
+}
+
+function openRestoreModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeRestoreModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function closeModalFromBackground(event, id) {
+    if (event.target.id === id) closeRestoreModal(id);
+}
+
+function updateAddRestoreSubmitState() {
+    document.getElementById('addRestoreSubmitButton').disabled =
+        !document.getElementById('addRestoreFinalConfirm').checked;
+}
+
+function updateFieldRestoreSubmitState() {
+    document.getElementById('fieldRestoreSubmitButton').disabled =
+        !document.getElementById('fieldRestoreFinalConfirm').checked;
+}
+
+function submitAddRestore() {
+    const form = document.getElementById('genericAddMissingForm');
+    const button = document.getElementById('addRestoreSubmitButton');
+    if (!form || button.disabled) return;
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang phục hồi...';
+    form.submit();
+}
+
+function submitFieldRestore() {
+    const form = document.getElementById('genericSelectedFieldsForm');
+    const button = document.getElementById('fieldRestoreSubmitButton');
+    if (!form || button.disabled) return;
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang phục hồi...';
+    form.submit();
+}
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+        closeRestoreModal('genericAddRestoreModal');
+        closeRestoreModal('genericFieldRestoreModal');
+    }
+});
+</script>
+{% endblock %}

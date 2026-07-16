@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="backup-center-page">
+
+    <div class="backup-center-header">
+        <div>
+            <div class="backup-center-kicker">
+                DỮ LIỆU QUẢN LÝ BACKUP
+            </div>
+
+            <h1>Danh sách Manifest</h1>
+
+            <p>
+                Danh sách này đọc trực tiếp từ Supabase,
+                nên hoạt động được cả trên máy local và VPS.
+            </p>
+        </div>
+
+        <div class="backup-header-actions">
+            <a href="{{ url_for('backup_restore') }}"
+               class="backup-action-btn manifests">
+                <i class="fa-solid fa-arrow-left"></i>
+                Trang backup
+            </a>
+
+            <a href="{{ url_for('backup_restore_manifests') }}"
+               class="backup-action-btn refresh">
+                <i class="fa-solid fa-rotate"></i>
+                Làm mới
+            </a>
+        </div>
+    </div>
+
+    <div class="backup-section-card">
+        <div class="backup-section-title">
+            <div>
+                <span>SUPABASE</span>
+                <h2>Các manifest đã lưu</h2>
+            </div>
+
+            <div class="backup-remote-label">
+                {{ manifests|length }} manifest
+            </div>
+        </div>
+
+        {% if manifests %}
+            <div class="manifest-list-grid">
+                {% for manifest in manifests %}
+                    <article class="manifest-list-card">
+                        <div class="manifest-card-head">
+                            <div class="manifest-file-icon">
+                                <i class="fa-solid fa-file-shield"></i>
+                            </div>
+
+                            <div class="manifest-badges">
+                                <span class="manifest-type-badge">
+                                    {{ manifest.backup_type or "full" }}
+                                </span>
+
+                                <span class="manifest-status-badge
+                                    {{ manifest.backup_status }}">
+                                    {{ manifest.backup_status or "pending" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <h3 title="{{ manifest.backup_name }}">
+                            {{ manifest.backup_name }}
+                        </h3>
+
+                        <div class="manifest-info-list">
+                            <div>
+                                <span>Ngày tạo</span>
+                                <b>
+                                    {{ manifest.created_at|datetime_vn }}
+                                </b>
+                            </div>
+
+                            <div>
+                                <span>Số bảng</span>
+                                <b>
+                                    {{ manifest.table_count or 0 }}
+                                </b>
+                            </div>
+
+                            <div>
+                                <span>Tổng số dòng</span>
+                                <b>
+                                    {{ manifest.total_row_count or 0 }}
+                                </b>
+                            </div>
+
+                            <div>
+                                <span>File Storage</span>
+                                <b>
+                                    {{ manifest.storage_file_count or 0 }}
+                                </b>
+                            </div>
+                        </div>
+
+                        <a href="{{ url_for(
+                            'backup_restore_manifest_detail',
+                            manifest_id=manifest.id
+                        ) }}"
+                           class="manifest-open-btn">
+                            <i class="fa-solid fa-folder-open"></i>
+                            Mở chi tiết
+                        </a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="backup-empty-state">
+                <div class="backup-empty-icon">
+                    <i class="fa-solid fa-file-circle-xmark"></i>
+                </div>
+
+                <h3>Chưa có manifest</h3>
+
+                <p>
+                    Chưa có dữ liệu trong bảng
+                    <b>backup_manifests</b>.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="backup-center-page">
+
+    <div class="backup-center-header">
+        <div>
+            <div class="backup-center-kicker">SO SÁNH MÃ NGUỒN</div>
+            <h1>{{ app_name }}</h1>
+            <p>
+                So sánh theo đường dẫn, dung lượng và checksum.
+                Không so từng dòng code.
+            </p>
+        </div>
+
+        <div class="backup-header-actions">
+            <a href="{{ url_for('backup_restore_manifest_detail', manifest_id=manifest.id) }}"
+               class="backup-action-btn manifests">
+                <i class="fa-solid fa-arrow-left"></i>
+                Chi tiết manifest
+            </a>
+        </div>
+    </div>
+
+    <div class="compare-source-box">
+        <div>
+            <span>Bản backup</span>
+            <b>{{ manifest.backup_name }}</b>
+        </div>
+        <div>
+            <span>Thư mục backup</span>
+            <b>{{ app_item.backup_path or "—" }}</b>
+        </div>
+        <div>
+            <span>Ứng dụng hiện tại</span>
+            <b>{{ current_app_root }}</b>
+        </div>
+    </div>
+
+    <div class="compare-summary-grid">
+        <button type="button" class="compare-summary-card all active" onclick="showAppTab('all', this)">
+            <span>Trong backup</span>
+            <b>{{ compare_result.backup_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card add" onclick="showAppTab('missing', this)">
+            <span>File còn thiếu</span>
+            <b>{{ compare_result.missing_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card update" onclick="showAppTab('changed', this)">
+            <span>Đã thay đổi</span>
+            <b>{{ compare_result.changed_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card unchanged" onclick="showAppTab('same', this)">
+            <span>Giống nhau</span>
+            <b>{{ compare_result.same_count }}</b>
+        </button>
+        <button type="button" class="compare-summary-card current-only" onclick="showAppTab('current-only', this)">
+            <span>Chỉ có hiện tại</span>
+            <b>{{ compare_result.current_only_count }}</b>
+        </button>
+    </div>
+
+    <div class="compare-notice-box">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+            <b>Chế độ phục hồi mã nguồn an toàn.</b>
+            <span>
+                File bị thay đổi sẽ được sao lưu vào restore_rollback trước khi ghi đè.
+                File Python được kiểm tra cú pháp; nếu lỗi sẽ tự hoàn tác.
+            </span>
+        </div>
+    </div>
+
+    <section class="backup-section-card app-panel" data-tab="missing">
+        <div class="backup-section-title">
+            <div>
+                <span>FILE CÒN THIẾU</span>
+                <h2>Có trong backup nhưng chưa có trong ứng dụng hiện tại</h2>
+            </div>
+            <div class="backup-remote-label">{{ compare_result.missing_count }} file</div>
+        </div>
+
+        {% if compare_result.missing_files %}
+            <form method="post"
+                  id="restoreMissingAppForm"
+                  action="{{ url_for(
+                      'backup_restore_app_restore_missing',
+                      manifest_id=manifest.id,
+                      app_name=app_name
+                  ) }}">
+
+                <div class="restore-selection-toolbar">
+                    <label class="restore-check-all">
+                        <input type="checkbox"
+                               id="selectAllMissingAppFiles"
+                               onchange="toggleAppFiles('missing-app-checkbox', this.checked)">
+                        <span>Chọn tất cả file còn thiếu</span>
+                    </label>
+
+                    <div class="restore-selection-count">
+                        Đã chọn: <b id="missingAppCount">0</b>
+                    </div>
+
+                    <button type="button"
+                            class="restore-preview-button"
+                            onclick="confirmAppRestore('restoreMissingAppForm', 'missing-app-checkbox', 'file còn thiếu')">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        Phục hồi file đã chọn
+                    </button>
+                </div>
+
+                <div class="compare-table-wrap">
+                    <table class="compare-generic-table">
+                        <thead>
+                            <tr>
+                                <th>Chọn</th>
+                                <th>STT</th>
+                                <th>File</th>
+                                <th>Dung lượng backup</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in compare_result.missing_files %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox"
+                                               class="missing-app-checkbox"
+                                               name="selected_paths"
+                                               value="{{ item.path }}"
+                                               onchange="updateAppCount('missing-app-checkbox', 'missingAppCount')">
+                                    </td>
+                                    <td>{{ loop.index }}</td>
+                                    <td class="text-left"><b>{{ item.path }}</b></td>
+                                    <td>{{ item.backup_size_text }}</td>
+                                    <td><span class="compare-row-status add">Còn thiếu</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        {% else %}
+            <div class="restore-complete-state">
+                <i class="fa-solid fa-circle-check"></i>
+                <div>
+                    <b>Không có file còn thiếu</b>
+                    <span>Tất cả file backup đã có trong ứng dụng hiện tại.</span>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card app-panel" data-tab="changed">
+        <div class="backup-section-title">
+            <div>
+                <span>FILE ĐÃ THAY ĐỔI</span>
+                <h2>Cùng đường dẫn nhưng nội dung khác</h2>
+            </div>
+            <div class="backup-remote-label">{{ compare_result.changed_count }} file</div>
+        </div>
+
+        {% if compare_result.changed_files %}
+            <form method="post"
+                  id="restoreChangedAppForm"
+                  action="{{ url_for(
+                      'backup_restore_app_restore_changed',
+                      manifest_id=manifest.id,
+                      app_name=app_name
+                  ) }}">
+
+                <div class="restore-selection-toolbar">
+                    <label class="restore-check-all">
+                        <input type="checkbox"
+                               id="selectAllChangedAppFiles"
+                               onchange="toggleAppFiles('changed-app-checkbox', this.checked)">
+                        <span>Chọn tất cả file đã thay đổi</span>
+                    </label>
+
+                    <div class="restore-selection-count">
+                        Đã chọn: <b id="changedAppCount">0</b>
+                    </div>
+
+                    <button type="button"
+                            class="restore-preview-button danger"
+                            onclick="confirmAppRestore('restoreChangedAppForm', 'changed-app-checkbox', 'file đã thay đổi')">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        Phục hồi file đã chọn
+                    </button>
+                </div>
+
+                <div class="compare-table-wrap">
+                    <table class="compare-generic-table">
+                        <thead>
+                            <tr>
+                                <th>Chọn</th>
+                                <th>STT</th>
+                                <th>File</th>
+                                <th>Backup</th>
+                                <th>Hiện tại</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in compare_result.changed_files %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox"
+                                               class="changed-app-checkbox"
+                                               name="selected_paths"
+                                               value="{{ item.path }}"
+                                               onchange="updateAppCount('changed-app-checkbox', 'changedAppCount')">
+                                    </td>
+                                    <td>{{ loop.index }}</td>
+                                    <td class="text-left"><b>{{ item.path }}</b></td>
+                                    <td>{{ item.backup_size_text }}</td>
+                                    <td>{{ item.current_size_text }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        {% else %}
+            <div class="backup-history-empty">Không có file mã nguồn thay đổi.</div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card app-panel" data-tab="same">
+        <div class="backup-section-title">
+            <div>
+                <span>GIỐNG NHAU</span>
+                <h2>Cùng đường dẫn và checksum</h2>
+            </div>
+            <div class="backup-remote-label">{{ compare_result.same_count }} file</div>
+        </div>
+
+        {% if compare_result.same_files %}
+            <div class="compare-table-wrap">
+                <table class="compare-generic-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>File</th>
+                            <th>Dung lượng</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in compare_result.same_files %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="text-left"><b>{{ item.path }}</b></td>
+                                <td>{{ item.backup_size_text }}</td>
+                                <td><span class="compare-row-status unchanged">Giống nhau</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Không có file giống nhau.</div>
+        {% endif %}
+    </section>
+
+    <section class="backup-section-card app-panel" data-tab="current-only">
+        <div class="backup-section-title">
+            <div>
+                <span>CHỈ CÓ HIỆN TẠI</span>
+                <h2>Có trong ứng dụng hiện tại nhưng backup không có</h2>
+            </div>
+            <div class="backup-remote-label">{{ compare_result.current_only_count }} file</div>
+        </div>
+
+        {% if compare_result.current_only_files %}
+            <div class="compare-table-wrap">
+                <table class="compare-generic-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>File</th>
+                            <th>Dung lượng hiện tại</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in compare_result.current_only_files %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="text-left"><b>{{ item.path }}</b></td>
+                                <td>{{ item.current_size_text }}</td>
+                                <td><span class="compare-row-status unchanged">Giữ nguyên</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Không có file chỉ tồn tại ở hiện tại.</div>
+        {% endif %}
+    </section>
+</div>
+
+<style>
+.restore-selection-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;margin-bottom:14px;background:#f8fafc;border:1px solid #dbeafe;border-radius:14px}.restore-check-all{display:flex;align-items:center;gap:9px;font-weight:800;cursor:pointer}.restore-check-all input,.missing-app-checkbox,.changed-app-checkbox{width:18px;height:18px;accent-color:#2563eb}.restore-selection-count{margin-left:auto;color:#475569}.restore-selection-count b{color:#1d4ed8;font-size:18px}.restore-preview-button{border:0;border-radius:11px;padding:11px 16px;background:#1d4ed8;color:#fff;font-weight:800;cursor:pointer}.restore-preview-button.danger{background:#b91c1c}.restore-complete-state{display:flex;align-items:center;justify-content:center;gap:13px;padding:28px;border:1px dashed #86efac;background:#f0fdf4;border-radius:14px;color:#166534}
+</style>
+
+<script>
+function showAppTab(tabName, button) {
+    document.querySelectorAll('.compare-summary-card').forEach(function (item) {
+        item.classList.remove('active');
+    });
+    if (button) button.classList.add('active');
+
+    document.querySelectorAll('.app-panel').forEach(function (panel) {
+        panel.style.display =
+            tabName === 'all' || panel.dataset.tab === tabName
+            ? ''
+            : 'none';
+    });
+}
+
+function updateAppCount(className, targetId) {
+    const selected = document.querySelectorAll('.' + className + ':checked').length;
+    const target = document.getElementById(targetId);
+    if (target) target.textContent = selected;
+}
+
+function toggleAppFiles(className, checked) {
+    document.querySelectorAll('.' + className).forEach(function (box) {
+        box.checked = checked;
+    });
+
+    if (className === 'missing-app-checkbox') {
+        updateAppCount(className, 'missingAppCount');
+    } else {
+        updateAppCount(className, 'changedAppCount');
+    }
+}
+
+function confirmAppRestore(formId, className, label) {
+    const selected = document.querySelectorAll('.' + className + ':checked').length;
+
+    if (!selected) {
+        alert('Ken chưa chọn file cần phục hồi.');
+        return;
+    }
+
+    const message =
+        'Xác nhận phục hồi ' + selected + ' ' + label + '?\n\n' +
+        'File hiện tại sẽ được sao lưu trước khi ghi đè. ' +
+        'File Python lỗi cú pháp sẽ tự hoàn tác.';
+
+    if (confirm(message)) {
+        const form = document.getElementById(formId);
+        if (form) form.submit();
+    }
+}
+</script>
+{% endblock %}

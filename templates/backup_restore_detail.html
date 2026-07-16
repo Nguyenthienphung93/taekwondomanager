@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="backup-center-page">
+
+    <div class="backup-center-header">
+        <div>
+            <div class="backup-center-kicker">CHI TIẾT MANIFEST</div>
+            <h1>{{ manifest.backup_name }}</h1>
+            <p>
+                Chọn bảng, bucket hoặc mã nguồn cần đối chiếu.
+                Mọi thao tác phục hồi đều yêu cầu chọn dữ liệu và xác nhận an toàn.
+            </p>
+        </div>
+
+        <div class="backup-header-actions">
+            <a href="{{ url_for('backup_restore_manifests') }}"
+               class="backup-action-btn manifests">
+                <i class="fa-solid fa-arrow-left"></i>
+                Danh sách manifest
+            </a>
+        </div>
+    </div>
+
+    <div class="manifest-summary-grid">
+        <div class="manifest-summary-card">
+            <span>Số bảng</span>
+            <b>{{ table_items|length }}</b>
+        </div>
+        <div class="manifest-summary-card">
+            <span>Tổng số dòng</span>
+            <b>{{ manifest.total_row_count or 0 }}</b>
+        </div>
+        <div class="manifest-summary-card">
+            <span>Số bucket</span>
+            <b>{{ bucket_items|length }}</b>
+        </div>
+        <div class="manifest-summary-card">
+            <span>Trạng thái kiểm tra</span>
+            <b>{{ manifest.verification_status or "not_checked" }}</b>
+        </div>
+    </div>
+
+    <div class="backup-section-card">
+        <div class="backup-section-title">
+            <div>
+                <span>DATABASE</span>
+                <h2>Các bảng trong bản backup</h2>
+            </div>
+            <div class="backup-remote-label">
+                {{ comparable_tables|length }} bảng có thể so sánh
+            </div>
+        </div>
+
+        {% if table_items %}
+            <div class="manifest-table-grid">
+                {% for item in table_items %}
+                    {% set config = table_compare_configs.get(item.item_name) %}
+                    <article class="manifest-table-card">
+                        <div class="manifest-table-icon">
+                            <i class="fa-solid fa-table"></i>
+                        </div>
+
+                        <div class="manifest-table-main">
+                            <h3>{{ item.item_name }}</h3>
+                            <div class="manifest-table-meta">
+                                <span>{{ item.record_count or 0 }} dòng</span>
+                                <span title="{{ item.backup_path or '—' }}">
+                                    {{ item.backup_path or "—" }}
+                                </span>
+                            </div>
+
+                            {% if config %}
+                                <div class="manifest-key-note">
+                                    Khóa đối chiếu:
+                                    <b>{{ config.key_columns|join(" + ") }}</b>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if config %}
+                            <a href="{{ url_for(
+                                'backup_restore_compare_table',
+                                manifest_id=manifest.id,
+                                table_name=item.item_name
+                            ) }}"
+                               class="manifest-compare-btn">
+                                <i class="fa-solid fa-code-compare"></i>
+                                So sánh
+                            </a>
+                        {% else %}
+                            <button type="button"
+                                    class="manifest-compare-disabled"
+                                    disabled>
+                                Chưa hỗ trợ
+                            </button>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Manifest chưa có dữ liệu bảng.</div>
+        {% endif %}
+    </div>
+
+    <div class="backup-section-card">
+        <div class="backup-section-title">
+            <div>
+                <span>STORAGE</span>
+                <h2>Các bucket trong bản backup</h2>
+            </div>
+            <div class="backup-remote-label">{{ bucket_items|length }} bucket</div>
+        </div>
+
+        {% if bucket_items %}
+            <div class="manifest-table-grid">
+                {% for item in bucket_items %}
+                    <article class="manifest-table-card">
+                        <div class="manifest-table-icon storage">
+                            <i class="fa-regular fa-images"></i>
+                        </div>
+
+                        <div class="manifest-table-main">
+                            <h3>{{ item.item_name }}</h3>
+                            <div class="manifest-table-meta">
+                                <span>{{ item.file_count or 0 }} file</span>
+                                <span>{{ item.total_size or 0 }} byte</span>
+                            </div>
+                            <div class="manifest-key-note">
+                                Chế độ:
+                                <b>Chỉ phục hồi file còn thiếu</b>
+                            </div>
+                        </div>
+
+                        {% if item.item_status == "ready" %}
+                            <a href="{{ url_for(
+                                'backup_restore_compare_storage',
+                                manifest_id=manifest.id,
+                                bucket_name=item.item_name
+                            ) }}"
+                               class="manifest-compare-btn">
+                                <i class="fa-solid fa-code-compare"></i>
+                                So sánh
+                            </a>
+                        {% else %}
+                            <button type="button"
+                                    class="manifest-compare-disabled"
+                                    disabled>
+                                Có lỗi
+                            </button>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Manifest hiện chưa có dữ liệu bucket.</div>
+        {% endif %}
+    </div>
+
+    <div class="backup-section-card">
+        <div class="backup-section-title">
+            <div>
+                <span>MÃ NGUỒN</span>
+                <h2>Ứng dụng trong bản backup</h2>
+            </div>
+            <div class="backup-remote-label">{{ app_items|length }} gói mã nguồn</div>
+        </div>
+
+        {% if app_items %}
+            <div class="manifest-table-grid">
+                {% for item in app_items %}
+                    <article class="manifest-table-card">
+                        <div class="manifest-table-icon">
+                            <i class="fa-solid fa-code"></i>
+                        </div>
+
+                        <div class="manifest-table-main">
+                            <h3>{{ item.item_name }}</h3>
+                            <div class="manifest-table-meta">
+                                <span>{{ item.file_count or 0 }} file</span>
+                                <span>{{ item.backup_path or "—" }}</span>
+                            </div>
+                            <div class="manifest-key-note">
+                                Đối chiếu:
+                                <b>Tên file, dung lượng và checksum</b>
+                            </div>
+                        </div>
+
+                        {% if item.item_status == "ready" %}
+                            <a href="{{ url_for(
+                                'backup_restore_compare_app',
+                                manifest_id=manifest.id,
+                                app_name=item.item_name
+                            ) }}"
+                               class="manifest-compare-btn">
+                                <i class="fa-solid fa-code-compare"></i>
+                                So sánh
+                            </a>
+                        {% else %}
+                            <button type="button"
+                                    class="manifest-compare-disabled"
+                                    disabled>
+                                Có lỗi
+                            </button>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="backup-history-empty">Manifest chưa có backup mã nguồn.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

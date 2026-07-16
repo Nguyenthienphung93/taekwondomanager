@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}HLV Portal{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #f1f5f9;
+            color: #0f172a;
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-weight: 700;
+        }
+
+        /* =========================
+           HEADER FULL NGANG
+        ========================= */
+        .portal-topbar {
+            height: 118px;
+            width: 100%;
+            background: linear-gradient(135deg, #07162a, #0f2a4a);
+            color: #ffffff;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 10px 24px rgba(15,23,42,.16);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 180px;
+        }
+
+        .portal-topbar .portal-logo {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 92px;
+            height: 92px;
+            border-radius: 18px;
+            background: #ffffff;
+            padding: 8px;
+            display: grid;
+            place-items: center;
+        }
+
+        .portal-topbar .portal-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .club-title {
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        .club-title small {
+            display: block;
+            font-size: 24px;
+            font-weight: 950;
+        }
+
+        .club-title b {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 34px;
+            color: #facc15;
+            font-weight: 1000;
+            text-shadow: 0 4px 14px rgba(250,204,21,.25);
+        }
+
+        .top-clock {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            min-width: 140px;
+            border: 1px solid #facc15;
+            border-radius: 12px;
+            padding: 9px 12px;
+            text-align: center;
+            background: rgba(15, 42, 74, .66);
+            box-shadow: 0 10px 22px rgba(0,0,0,.14);
+        }
+
+        .top-clock .clock-time {
+            color: #facc15;
+            font-size: 20px;
+            font-weight: 1000;
+            line-height: 1;
+        }
+
+        .top-clock .clock-date {
+            margin-top: 5px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .mobile-sidebar-btn {
+            position: absolute;
+            left: 126px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 12px;
+            background: rgba(250, 204, 21, .16);
+            color: #facc15;
+            font-size: 18px;
+            cursor: pointer;
+            display: none;
+            place-items: center;
+        }
+
+
+
+        /* =========================
+           BODY: MENU + CONTENT
+        ========================= */
+        .portal-body {
+            display: grid;
+            grid-template-columns: 230px minmax(0, 1fr);
+            min-height: calc(100vh - 118px);
+            transition: grid-template-columns .22s ease;
+        }
+
+        .portal-body.sidebar-collapsed {
+            grid-template-columns: 72px minmax(0, 1fr);
+        }
+
+        .portal-sidebar {
+            background: #07111f;
+            color: #ffffff;
+            padding: 12px 8px;
+            height: calc(100vh - 118px);
+            position: sticky;
+            top: 118px;
+            overflow: hidden;
+            z-index: 20;
+        }
+
+
+        .sidebar-collapsed .portal-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-toggle {
+            width: 100%;
+            height: 36px;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(250, 204, 21, .16);
+            color: #facc15;
+            font-size: 17px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 12px;
+            font-weight: 950;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(250, 204, 21, .24);
+        }
+
+        .sidebar-collapsed .sidebar-toggle {
+            width: 48px;
+        }
+
+        .coach-mini-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #111c2f;
+            border: 1px solid #23324a;
+            border-radius: 16px;
+            padding: 10px;
+            margin-bottom: 14px;
+            min-width: 0;
+        }
+
+        .coach-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 999px;
+            background: #facc15;
+            color: #0f2a4a;
+            display: grid;
+            place-items: center;
+            font-weight: 950;
+            flex-shrink: 0;
+        }
+
+        .coach-mini-info {
+            min-width: 0;
+        }
+
+        .coach-mini-card b {
+            display: block;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 1.2;
+            max-width: 135px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .coach-mini-card span {
+            display: block;
+            color: #cbd5e1;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        .sidebar-collapsed .coach-mini-card {
+            justify-content: center;
+            padding: 8px;
+        }
+
+        .sidebar-collapsed .coach-mini-info {
+            display: none;
+        }
+
+        .portal-nav {
+            display: grid;
+            gap: 8px;
+        }
+
+        .portal-nav a {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            height: 46px;
+            border-radius: 12px;
+            padding: 0 13px;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 950;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .portal-nav a i {
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .portal-nav a.active {
+            background: #1d4ed8;
+        }
+
+        .portal-nav a.logout {
+            margin-top: 8px;
+            background: #3b1d2c;
+        }
+
+        /* FOOTER HLV GIỐNG BASE ADMIN */
+        .coach-sidebar-divider{
+            height:1px;
+            margin:14px 12px 12px;
+            background:linear-gradient(90deg,transparent,rgba(148,163,184,.45),transparent);
+        }
+
+        .coach-sidebar-footer{
+            margin:0 10px 12px;
+            padding:10px;
+            border-radius:16px;
+            background:rgba(15,23,42,.72);
+            border:1px solid rgba(148,163,184,.22);
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+        }
+
+        .coach-sidebar-user{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-width:0;
+        }
+
+        .coach-sidebar-avatar{
+            width:34px;
+            height:34px;
+            border-radius:12px;
+            background:linear-gradient(135deg,#0a58ca,#1d4ed8);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex:0 0 auto;
+            box-shadow:0 8px 16px rgba(37,99,235,.24);
+        }
+
+        .coach-sidebar-text{
+            min-width:0;
+            line-height:1.15;
+        }
+
+        .coach-sidebar-text span{
+            display:block;
+            font-size:10px;
+            font-weight:950;
+            color:#facc15;
+            letter-spacing:.7px;
+        }
+
+        .coach-sidebar-text b{
+            display:block;
+            max-width:112px;
+            margin-top:3px;
+            color:#e5e7eb;
+            font-size:12px;
+            font-weight:900;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+
+        .coach-power-btn{
+            width:38px;
+            height:38px;
+            border-radius:14px;
+            background:linear-gradient(135deg,#ef4444,#b91c1c);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            text-decoration:none;
+            flex:0 0 auto;
+            box-shadow:0 10px 20px rgba(239,68,68,.28);
+            transition:.16s ease;
+        }
+
+        .coach-power-btn:hover{
+            transform:translateY(-1px);
+            filter:brightness(1.03);
+        }
+
+        .sidebar-collapsed .coach-sidebar-divider{
+            margin:12px 8px;
+        }
+
+        .sidebar-collapsed .coach-sidebar-footer{
+            margin:0;
+            padding:0;
+            border:0;
+            background:transparent;
+            box-shadow:none;
+            display:flex;
+            justify-content:center;
+        }
+
+        .sidebar-collapsed .coach-sidebar-user{
+            display:none;
+        }
+
+        .sidebar-collapsed .coach-power-btn{
+            width:42px;
+            height:42px;
+            border-radius:13px;
+            margin:0 auto 12px;
+        }
+
+        .sidebar-collapsed .portal-nav a {
+            justify-content: center;
+            padding: 0;
+            width: 46px;
+            margin: 0 auto;
+        }
+
+        .sidebar-collapsed .nav-text {
+            display: none;
+        }
+
+        .portal-main {
+            min-width: 0;
+        }
+
+        .portal-content {
+            padding: 22px;
+        }
+
+        .portal-page-head {
+            margin-bottom: 16px;
+        }
+
+        .portal-page-head h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 950;
+        }
+
+        .portal-page-head p {
+            margin: 5px 0 0;
+            color: #64748b;
+            font-weight: 750;
+        }
+
+        .portal-card {
+            background: #ffffff;
+            border: 1px solid #dbe7f5;
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 12px 28px rgba(15,23,42,.07);
+        }
+
+
+
+        /* =========================
+           SIDEBAR ACTIVE DESKTOP / COLLAPSED
+           Khi menu thu gọn: icon tab đang mở vẫn nổi bật, không tự mở menu khi chuyển trang.
+        ========================= */
+        .portal-nav a.active {
+            background: linear-gradient(135deg, #1d4ed8, #0a58ca) !important;
+            box-shadow: inset 4px 0 0 #facc15, 0 8px 18px rgba(29,78,216,.24);
+        }
+
+        .portal-nav a.active i {
+            color: #facc15;
+            text-shadow: 0 0 10px rgba(250,204,21,.35);
+        }
+
+        .sidebar-collapsed .portal-nav a.active {
+            position: relative;
+            box-shadow: inset 0 0 0 2px rgba(250,204,21,.82), 0 8px 18px rgba(29,78,216,.24);
+        }
+
+        .sidebar-collapsed .portal-nav a.active::after {
+            content: "";
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 24px;
+            border-radius: 999px;
+            background: #facc15;
+        }
+
+        @media(max-width: 860px) {
+            .sidebar-collapsed .portal-nav a.active::after {
+                display: none;
+            }
+        }
+
+        /* =========================
+           TOAST THÔNG BÁO - GIỐNG STUDENT PORTAL
+        ========================= */
+        .portal-toast-wrap {
+            position: fixed;
+            top: 128px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: min(520px, calc(100vw - 28px));
+            pointer-events: none;
+        }
+
+        .portal-toast {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .96);
+            border: 1px solid rgba(255, 255, 255, .55);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, .20);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            pointer-events: auto;
+            animation: portalToastIn .28s ease;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+
+        .portal-toast.toast-success,
+        .portal-toast.toast-message {
+            background: rgba(220, 252, 231, .96);
+            border-left: 6px solid #22c55e;
+            color: #14532d;
+        }
+
+        .portal-toast.toast-danger,
+        .portal-toast.toast-error {
+            background: rgba(254, 226, 226, .96);
+            border-left: 6px solid #ef4444;
+            color: #7f1d1d;
+        }
+
+        .portal-toast.toast-warning {
+            background: rgba(254, 243, 199, .96);
+            border-left: 6px solid #f59e0b;
+            color: #78350f;
+        }
+
+        .portal-toast.toast-info {
+            background: rgba(219, 234, 254, .96);
+            border-left: 6px solid #3b82f6;
+            color: #1e3a8a;
+        }
+
+        .portal-toast-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .82);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 1000;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+
+        .portal-toast-message {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 850;
+            line-height: 1.45;
+        }
+
+        .portal-toast-close {
+            width: 28px;
+            height: 28px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .82);
+            color: #334155;
+            font-size: 18px;
+            font-weight: 1000;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .portal-toast.hide {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        @keyframes portalToastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px) scale(.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media(max-width: 860px) {
+            .portal-topbar {
+                height: 96px;
+                padding: 0 116px 0 116px;
+            }
+
+            .portal-topbar .portal-logo {
+                left: 12px;
+                width: 72px;
+                height: 72px;
+                border-radius: 16px;
+                padding: 7px;
+            }
+
+            .mobile-sidebar-btn {
+                display: grid;
+                left: 92px;
+            }
+
+            .club-title small {
+                font-size: 18px;
+            }
+
+            .club-title b {
+                font-size: 25px;
+            }
+
+            .top-clock {
+                right: 10px;
+                min-width: 102px;
+                padding: 7px 8px;
+            }
+
+            .top-clock .clock-time {
+                font-size: 15px;
+            }
+
+            .top-clock .clock-date {
+                font-size: 10px;
+            }
+        }
+
+        @media(max-width: 520px) {
+            .portal-topbar {
+                height: 104px;
+                padding: 0 8px;
+                justify-content: center;
+            }
+
+            .portal-topbar .portal-logo {
+                left: 8px;
+                top: 12px;
+                transform: none;
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                padding: 5px;
+            }
+
+            .mobile-sidebar-btn {
+                left: 8px;
+                top: 66px;
+                transform: none;
+                width: 48px;
+                height: 30px;
+                border-radius: 10px;
+            }
+
+            .club-title {
+                max-width: 58%;
+                margin: 0 auto;
+            }
+
+            .club-title small {
+                font-size: 14px;
+            }
+
+            .club-title b {
+                font-size: 20px;
+            }
+
+            .top-clock {
+                top: 14px;
+                right: 8px;
+                transform: none;
+                min-width: 96px;
+            }
+        }
+
+
+        UNIFIED HEADER - THEO BASE ADMIN
+
+    
+
+        /* =========================================================
+           UNIFIED CLUB HEADER — ADMIN / COACH / STUDENT
+        ========================================================= */
+        :root {
+            --club-header-height: 120px;
+            --club-header-bg-start: #071426;
+            --club-header-bg-end: #0f2a4a;
+            --club-header-yellow: #facc15;
+            --club-header-logo-size: 100px;
+            --club-header-side-gap: 22px;
+            --club-header-clock-width: 170px;
+        }
+
+        .portal-topbar {
+            width: 100% !important;
+            height: var(--club-header-height) !important;
+            min-height: var(--club-header-height) !important;
+            padding: 0 215px !important;
+            background: linear-gradient(90deg, var(--club-header-bg-start), var(--club-header-bg-end)) !important;
+            color: #fff !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+        }
+
+        .portal-topbar .portal-logo {
+            position: absolute !important;
+            left: var(--club-header-side-gap) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: var(--club-header-logo-size) !important;
+            height: var(--club-header-logo-size) !important;
+            padding: 8px !important;
+            border-radius: 18px !important;
+            background: #fff !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: none !important;
+        }
+
+        .portal-topbar .portal-logo img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+        }
+
+        .portal-topbar .club-title {
+            width: min(920px, 62vw) !important;
+            max-width: min(920px, 62vw) !important;
+            min-width: 0 !important;
+            margin: 0 auto !important;
+            text-align: center !important;
+            line-height: 1.12 !important;
+        }
+
+        .portal-topbar .club-title small {
+            display: block !important;
+            margin: 0 !important;
+            color: #fff !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 35px !important;
+            font-weight: 800 !important;
+            line-height: 1.04 !important;
+            letter-spacing: 0 !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .portal-topbar .club-title b {
+            display: inline-block !important;
+            max-width: 100% !important;
+            margin: 5px auto 0 !important;
+            padding: 1px 10px 3px !important;
+            border-radius: 8px !important;
+            background: rgba(250, 204, 21, .08) !important;
+            box-shadow: 0 4px 12px rgba(250, 204, 21, .18) !important;
+            color: var(--club-header-yellow) !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 55px !important;
+            font-weight: 800 !important;
+            line-height: 1.02 !important;
+            letter-spacing: 0 !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .portal-topbar .top-clock {
+            position: absolute !important;
+            right: var(--club-header-side-gap) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            min-width: var(--club-header-clock-width) !important;
+            min-height: 58px !important;
+            padding: 8px 14px !important;
+            border: 1px solid rgba(250, 204, 21, .55) !important;
+            border-radius: 14px !important;
+            background: rgba(15, 23, 42, .55) !important;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, .22) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+        }
+
+        .portal-topbar .top-clock .clock-time {
+            font-size: 22px !important;
+            line-height: 1 !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px !important;
+            font-variant-numeric: tabular-nums !important;
+        }
+
+        .portal-topbar .top-clock .clock-date {
+            margin-top: 6px !important;
+            color: #e5e7eb !important;
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            font-weight: 800 !important;
+            white-space: nowrap !important;
+        }
+
+        .portal-topbar .mobile-sidebar-btn { display: none !important; }
+        .portal-body { min-height: calc(100vh - var(--club-header-height)) !important; }
+        .portal-sidebar { height: calc(100vh - var(--club-header-height)) !important; top: var(--club-header-height) !important; }
+
+        @media (max-width: 1050px) {
+            :root {
+                --club-header-height: 96px;
+                --club-header-logo-size: 76px;
+                --club-header-side-gap: 12px;
+                --club-header-clock-width: 135px;
+            }
+            .portal-topbar { padding: 0 165px !important; }
+            .portal-topbar .portal-logo { padding: 7px !important; border-radius: 16px !important; }
+            .portal-topbar .club-title small { font-size: 24px !important; }
+            .portal-topbar .club-title b { font-size: 34px !important; }
+            .portal-topbar .top-clock { padding: 7px 10px !important; }
+            .portal-topbar .top-clock .clock-time { font-size: 18px !important; }
+            .portal-topbar .top-clock .clock-date { font-size: 11px !important; }
+        }
+
+        @media (max-width: 760px) {
+            :root {
+                --club-header-height: 86px;
+                --club-header-logo-size: 56px;
+                --club-header-side-gap: 10px;
+            }
+            .portal-topbar { padding: 0 70px !important; }
+            .portal-topbar .portal-logo { padding: 5px !important; border-radius: 14px !important; }
+            .portal-topbar .club-title { width: 62vw !important; max-width: 62vw !important; }
+            .portal-topbar .club-title small { font-size: 14px !important; }
+            .portal-topbar .club-title b { margin-top: 3px !important; font-size: 22px !important; }
+            .portal-topbar .top-clock { display: none !important; }
+            .portal-topbar .mobile-sidebar-btn {
+                display: grid !important;
+                left: auto !important;
+                right: 10px !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                width: 38px !important;
+                height: 38px !important;
+                border-radius: 12px !important;
+            }
+            .portal-sidebar { top: 0 !important; height: 100dvh !important; }
+        }
+
+
+
+        /* =========================================================
+           HEADER COACH — LẤY STUDENT LÀM MẪU CHÍNH
+           Khóa lại logo, tiêu đề và đồng hồ đúng bằng Student.
+        ========================================================= */
+        :root {
+            --student-master-header-h: 120px;
+            --student-master-logo: 100px;
+            --student-master-gap: 22px;
+            --student-master-clock: 170px;
+        }
+
+        .portal-topbar {
+            width: 100% !important;
+            height: var(--student-master-header-h) !important;
+            min-height: var(--student-master-header-h) !important;
+            padding: 0 215px !important;
+            background: linear-gradient(90deg, #071426, #0f2a4a) !important;
+            color: #fff !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+        }
+
+        .portal-topbar > .portal-logo {
+            position: absolute !important;
+            left: var(--student-master-gap) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: var(--student-master-logo) !important;
+            height: var(--student-master-logo) !important;
+            min-width: var(--student-master-logo) !important;
+            min-height: var(--student-master-logo) !important;
+            max-width: var(--student-master-logo) !important;
+            max-height: var(--student-master-logo) !important;
+            padding: 8px !important;
+            border-radius: 18px !important;
+            background: #fff !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: none !important;
+        }
+
+        .portal-topbar > .portal-logo > img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+        }
+
+        .portal-topbar > .club-title {
+            width: min(920px, 62vw) !important;
+            max-width: min(920px, 62vw) !important;
+            min-width: 0 !important;
+            margin: 0 auto !important;
+            text-align: center !important;
+            line-height: 1.12 !important;
+        }
+
+        .portal-topbar > .club-title > small {
+            display: block !important;
+            margin: 0 !important;
+            color: #fff !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 35px !important;
+            font-weight: 800 !important;
+            line-height: 1.04 !important;
+            letter-spacing: 0 !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .portal-topbar > .club-title > b {
+            display: inline-block !important;
+            max-width: 100% !important;
+            margin: 5px auto 0 !important;
+            padding: 1px 10px 3px !important;
+            border-radius: 8px !important;
+            background: rgba(250, 204, 21, .08) !important;
+            box-shadow: 0 4px 12px rgba(250, 204, 21, .18) !important;
+            color: #facc15 !important;
+            font-family: "Segoe UI", Arial, Tahoma, sans-serif !important;
+            font-size: 55px !important;
+            font-weight: 800 !important;
+            line-height: 1.02 !important;
+            letter-spacing: 0 !important;
+            text-shadow: none !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .portal-topbar > .top-clock {
+            position: absolute !important;
+            right: var(--student-master-gap) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            min-width: var(--student-master-clock) !important;
+            min-height: 58px !important;
+            padding: 8px 14px !important;
+            border: 1px solid rgba(250, 204, 21, .55) !important;
+            border-radius: 14px !important;
+            background: rgba(15, 23, 42, .55) !important;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, .22) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+        }
+
+        .portal-topbar .clock-time {
+            color: #facc15 !important;
+            font-size: 22px !important;
+            line-height: 1 !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px !important;
+            font-variant-numeric: tabular-nums !important;
+        }
+
+        .portal-topbar .clock-date {
+            margin-top: 6px !important;
+            color: #e5e7eb !important;
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            font-weight: 800 !important;
+            white-space: nowrap !important;
+        }
+
+        .portal-topbar > .mobile-sidebar-btn { display: none !important; }
+        .portal-body { min-height: calc(100vh - var(--student-master-header-h)) !important; }
+        .portal-sidebar {
+            height: calc(100vh - var(--student-master-header-h)) !important;
+            top: var(--student-master-header-h) !important;
+        }
+
+        @media (max-width: 1050px) and (min-width: 761px) {
+            :root {
+                --student-master-header-h: 96px;
+                --student-master-logo: 76px;
+                --student-master-gap: 12px;
+                --student-master-clock: 135px;
+            }
+            .portal-topbar { padding: 0 165px !important; }
+            .portal-topbar > .portal-logo { padding: 7px !important; border-radius: 16px !important; }
+            .portal-topbar > .club-title > small { font-size: 24px !important; }
+            .portal-topbar > .club-title > b { font-size: 34px !important; }
+            .portal-topbar > .top-clock { padding: 7px 10px !important; }
+            .portal-topbar .clock-time { font-size: 18px !important; }
+            .portal-topbar .clock-date { font-size: 11px !important; }
+        }
+
+        @media (max-width: 760px) {
+            :root {
+                --student-master-header-h: 86px;
+                --student-master-logo: 56px;
+                --student-master-gap: 10px;
+            }
+            .portal-topbar { padding: 0 70px !important; }
+            .portal-topbar > .portal-logo { padding: 5px !important; border-radius: 14px !important; }
+            .portal-topbar > .club-title { width: 62vw !important; max-width: 62vw !important; }
+            .portal-topbar > .club-title > small { font-size: 14px !important; }
+            .portal-topbar > .club-title > b { margin-top: 3px !important; font-size: 22px !important; }
+            .portal-topbar > .top-clock { display: none !important; }
+            .portal-topbar > .mobile-sidebar-btn {
+                display: grid !important;
+                left: auto !important;
+                right: 10px !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                width: 38px !important;
+                height: 38px !important;
+                border-radius: 12px !important;
+            }
+            .portal-sidebar { top: 0 !important; height: 100dvh !important; }
+        }
+
+
+        /* TOOLTIP MENU THU GỌN - HIỆN SAU 3 GIÂY */
+        .sidebar-delay-tooltip{
+            position:fixed;z-index:999999;max-width:240px;padding:9px 12px;
+            border-radius:10px;background:rgba(15,23,42,.96);color:#fff;
+            border:1px solid rgba(250,204,21,.45);
+            box-shadow:0 10px 26px rgba(0,0,0,.28);
+            font-size:13px;font-weight:850;line-height:1.3;white-space:nowrap;
+            pointer-events:none;opacity:0;
+            transform:translateY(-50%) translateX(-4px);
+            transition:opacity .16s ease,transform .16s ease;
+        }
+        .sidebar-delay-tooltip.show{
+            opacity:1;transform:translateY(-50%) translateX(0);
+        }
+
+
+        /* =========================
+           COACH SIDEBAR RỘNG + THẺ TÀI KHOẢN KIỂU STUDENT
+        ========================= */
+        .portal-body{
+            grid-template-columns:300px minmax(0,1fr) !important;
+        }
+
+        .portal-body.sidebar-collapsed{
+            grid-template-columns:72px minmax(0,1fr) !important;
+        }
+
+        .portal-sidebar{
+            display:flex !important;
+            flex-direction:column !important;
+            min-width:0 !important;
+        }
+
+        .coach-profile-card{
+            display:flex;
+            align-items:center;
+            gap:11px;
+            margin:0 0 14px;
+            padding:10px;
+            border-radius:15px;
+            background:#111c2f;
+            border:1px solid #23324a;
+            min-width:0;
+        }
+
+        .coach-profile-avatar{
+            width:44px;
+            height:44px;
+            border-radius:50%;
+            background:linear-gradient(135deg,#2563eb,#0a58ca);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex:0 0 auto;
+            box-shadow:0 8px 16px rgba(37,99,235,.25);
+        }
+
+        .coach-profile-info{
+            min-width:0;
+            line-height:1.18;
+        }
+
+        .coach-profile-info b{
+            display:block;
+            color:#fff;
+            font-size:15px;
+            font-weight:950;
+            white-space:normal;
+            overflow-wrap:anywhere;
+        }
+
+        .coach-profile-info span{
+            display:block;
+            margin-top:4px;
+            color:#facc15;
+            font-size:10px;
+            font-weight:900;
+            letter-spacing:.5px;
+        }
+
+        .coach-logout-wrap{
+            margin-top:12px;
+            padding-top:0;
+        }
+
+        .coach-logout-btn{
+            min-height:44px;
+            border-radius:12px;
+            background:#3b1d2c;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            gap:11px;
+            padding:0 13px;
+            text-decoration:none;
+            font-weight:950;
+        }
+
+        .coach-logout-btn i{
+            width:20px;
+            text-align:center;
+        }
+
+        .sidebar-collapsed .coach-profile-card{
+            display:none;
+        }
+
+        .sidebar-collapsed .coach-logout-btn{
+            width:44px;
+            height:44px;
+            min-height:44px;
+            margin:0 auto 12px;
+            padding:0;
+            justify-content:center;
+            border-radius:13px;
+            background:linear-gradient(135deg,#ef4444,#b91c1c);
+        }
+
+        .sidebar-collapsed .coach-logout-btn span{
+            display:none;
+        }
+
+        .sidebar-collapsed .coach-sidebar-divider,
+        .sidebar-collapsed .coach-sidebar-footer{
+            display:none !important;
+        }
+
+
+        /* GẠCH NGANG PHÂN CÁCH TRƯỚC NÚT ĐĂNG XUẤT */
+        .coach-logout-wrap{
+            position:relative;
+            margin-top:22px;
+            padding-top:10px;
+        }
+
+        .coach-logout-wrap::before{
+            content:"";
+            position:absolute;
+            left:10px;
+            right:10px;
+            top:0;
+            height:1px;
+            border-radius:999px;
+            background:linear-gradient(
+                90deg,
+                transparent,
+                rgba(250,204,21,.55),
+                rgba(148,163,184,.65),
+                rgba(250,204,21,.55),
+                transparent
+            );
+            box-shadow:0 0 8px rgba(250,204,21,.12);
+        }
+
+        .sidebar-collapsed .coach-logout-wrap{
+            margin-top:22px;
+            padding-top:10px;
+        }
+
+        .sidebar-collapsed .coach-logout-wrap::before{
+            left:4px;
+            right:4px;
+        }
+
+</style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<header class="portal-topbar">
+    <button type="button" class="mobile-sidebar-btn" onclick="toggleCoachMobileSidebar()" title="Mở menu">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="portal-logo">
+        <img src="{{ app_settings.header.logo_url }}" alt="Logo">
+    </div>
+
+    <div class="club-title">
+        <small>{{ app_settings.header.club_small_title }}</small>
+        <b>{{ app_settings.header.club_name }}</b>
+    </div>
+
+    <div class="top-clock">
+        <div class="clock-time" id="coachClockTime">--:--:--</div>
+        <div class="clock-date" id="coachClockDate">--/--/----</div>
+    </div>
+</header>
+
+<div class="portal-body" id="coachPortalBody">
+    <aside class="portal-sidebar">
+        
+
+        <button type="button" class="sidebar-toggle" onclick="toggleCoachSidebar()" title="Thu/phóng menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="coach-profile-card">
+            <div class="coach-profile-avatar">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+
+            <div class="coach-profile-info">
+                <b>{{ coach.name or 'HLV' }}</b>
+                <span>{{ coach.coach_code or 'HUẤN LUYỆN VIÊN' }}</span>
+            </div>
+        </div>
+
+        <nav class="portal-nav">
+            <a class="{{ 'active' if active_page == 'coach_exam' else '' }}"
+               href="{{ url_for('coach_exam') }}">
+                <i class="fa-solid fa-clipboard-check"></i>
+                <span class="nav-text">Kiểm tra thi cấp</span>
+            </a>
+
+            <a class="{{ 'active' if active_page == 'coach_dan' else '' }}"
+               href="{{ url_for('coach_dan') }}">
+                <i class="fa-solid fa-award"></i>
+                <span class="nav-text">Kiểm tra thi đẳng</span>
+            </a>
+
+        </nav>
+
+        <div class="coach-logout-wrap">
+            <a href="{{ url_for('coach_logout') }}"
+               class="coach-logout-btn"
+               data-tooltip="Đăng xuất HLV"
+               title="Đăng xuất HLV">
+                <i class="fa-solid fa-power-off"></i>
+                <span>Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="portal-main">
+        <section class="portal-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="portal-toast-wrap">
+                        {% for category, message in messages %}
+                            {% set toast_category = 'success' if category == 'message' else category %}
+                            <div class="portal-toast toast-{{ toast_category }}">
+                                <div class="portal-toast-icon">
+                                    {% if toast_category == 'success' %}
+                                        ✓
+                                    {% elif toast_category == 'danger' or toast_category == 'error' %}
+                                        !
+                                    {% elif toast_category == 'warning' %}
+                                        ⚠
+                                    {% else %}
+                                        i
+                                    {% endif %}
+                                </div>
+
+                                <div class="portal-toast-message">
+                                    {{ message }}
+                                </div>
+
+                                <button type="button" class="portal-toast-close" onclick="closePortalToast(this)">
+                                    ×
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block coach_content %}{% endblock %}
+        </section>
+    </main>
+</div>
+
+<script>
+
+function initDelayedSidebarTooltips(options){
+    const tooltip=document.createElement("div");
+    tooltip.className="sidebar-delay-tooltip";
+    document.body.appendChild(tooltip);
+
+    let timer=null;
+    let currentTarget=null;
+
+    function isCollapsed(){
+        try{return options.isCollapsed();}catch(e){return false;}
+    }
+
+    function getText(target){
+        const explicit=(target.getAttribute("data-tooltip")||"").trim();
+        if(explicit)return explicit;
+        const label=target.querySelector(options.textSelector);
+        return (label?.textContent||"").trim();
+    }
+
+    function hideTooltip(){
+        clearTimeout(timer);
+        timer=null;
+        currentTarget=null;
+        tooltip.classList.remove("show");
+    }
+
+    function showTooltip(target){
+        if(!target||!isCollapsed())return;
+        const text=getText(target);
+        if(!text)return;
+
+        const rect=target.getBoundingClientRect();
+        tooltip.textContent=text;
+        tooltip.style.left=Math.min(rect.right+12,window.innerWidth-250)+"px";
+        tooltip.style.top=(rect.top+rect.height/2)+"px";
+        tooltip.classList.add("show");
+    }
+
+    document.querySelectorAll(options.itemSelector).forEach(function(item){
+        item.addEventListener("mouseenter",function(){
+            hideTooltip();
+            if(!isCollapsed())return;
+            currentTarget=item;
+            timer=setTimeout(function(){
+                if(currentTarget===item&&isCollapsed())showTooltip(item);
+            },1500);
+        });
+
+        item.addEventListener("mouseleave",hideTooltip);
+        item.addEventListener("mousedown",hideTooltip);
+        item.addEventListener("click",hideTooltip);
+        item.addEventListener("blur",hideTooltip);
+    });
+
+    window.addEventListener("scroll",hideTooltip,true);
+    window.addEventListener("resize",hideTooltip);
+}
+
+
+function toggleCoachSidebar() {
+    const body = document.getElementById("coachPortalBody");
+    if (!body) return;
+
+    body.classList.toggle("sidebar-collapsed");
+
+    try {
+        localStorage.setItem(
+            "coach_sidebar_collapsed",
+            body.classList.contains("sidebar-collapsed") ? "1" : "0"
+        );
+    } catch (e) {}
+}
+
+function toggleCoachMobileSidebar() {
+    const body = document.getElementById("coachPortalBody");
+    if (!body) return;
+
+    body.classList.toggle("mobile-sidebar-open");
+}
+
+function closeCoachMobileSidebarOnClickOutside(e) {
+    const body = document.getElementById("coachPortalBody");
+    if (!body || !body.classList.contains("mobile-sidebar-open")) return;
+
+    const sidebar = body.querySelector(".portal-sidebar");
+    const btn = document.querySelector(".mobile-sidebar-btn");
+
+    if (
+        sidebar &&
+        !sidebar.contains(e.target) &&
+        btn &&
+        !btn.contains(e.target)
+    ) {
+        body.classList.remove("mobile-sidebar-open");
+    }
+}
+
+function updateCoachClock() {
+    const timeEl = document.getElementById("coachClockTime");
+    const dateEl = document.getElementById("coachClockDate");
+
+    if (!timeEl || !dateEl) return;
+
+    const now = new Date();
+
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+
+    const weekdays = [
+        "Chủ nhật",
+        "Thứ Hai",
+        "Thứ Ba",
+        "Thứ Tư",
+        "Thứ Năm",
+        "Thứ Sáu",
+        "Thứ Bảy"
+    ];
+
+    const dd = String(now.getDate()).padStart(2, "0");
+    const mo = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+
+    timeEl.textContent = `${hh}:${mm}:${ss}`;
+    dateEl.textContent = `${weekdays[now.getDay()]}, ${dd}/${mo}/${yyyy}`;
+}
+
+
+
+function initCoachActiveNavFallback() {
+    const body = document.getElementById("coachPortalBody");
+    if (!body) return;
+
+    const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+
+    body.querySelectorAll(".portal-nav a").forEach(function (link) {
+        if (link.classList.contains("logout")) return;
+
+        const href = (link.getAttribute("href") || "").split("?")[0].replace(/\/+$/, "") || "/";
+        const matched = href !== "/" && (currentPath === href || currentPath.startsWith(href + "/"));
+
+        if (matched) {
+            link.classList.add("active");
+        }
+    });
+}
+
+function closePortalToast(button) {
+    const toast = button.closest(".portal-toast");
+
+    if (!toast) return;
+
+    toast.classList.add("hide");
+
+    setTimeout(function () {
+        toast.remove();
+    }, 250);
+}
+
+function autoHidePortalToasts() {
+    document.querySelectorAll(".portal-toast").forEach(function (toast) {
+        setTimeout(function () {
+            toast.classList.add("hide");
+
+            setTimeout(function () {
+                toast.remove();
+            }, 250);
+        }, 3000);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const body = document.getElementById("coachPortalBody");
+
+    try {
+        if (
+            body &&
+            localStorage.getItem("coach_sidebar_collapsed") === "1" &&
+            window.innerWidth > 860
+        ) {
+            body.classList.add("sidebar-collapsed");
+        }
+    } catch (e) {}
+
+    initCoachActiveNavFallback();
+
+    updateCoachClock();
+    setInterval(updateCoachClock, 1000);
+
+    autoHidePortalToasts();
+
+    initDelayedSidebarTooltips({
+        itemSelector: ".portal-sidebar .portal-nav a, .coach-logout-btn",
+        textSelector: ".nav-text",
+        isCollapsed: function(){
+            const body=document.getElementById("coachPortalBody");
+            return !!body&&body.classList.contains("sidebar-collapsed")
+                && window.innerWidth>860;
+        }
+    });
+    document.addEventListener("click", closeCoachMobileSidebarOnClickOutside);
+});
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

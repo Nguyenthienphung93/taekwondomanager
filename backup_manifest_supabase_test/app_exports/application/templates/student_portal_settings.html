@@ -1,0 +1,119 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'settings' %}
+{% block title %}Cài đặt tài khoản{% endblock %}
+
+{% block extra_css %}
+<style>
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+.settings-card h2 {
+    margin: 0 0 14px;
+    color: #0f172a;
+    font-size: 22px;
+}
+
+.setting-field {
+    margin-bottom: 14px;
+}
+
+.setting-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: #334155;
+    font-weight: 900;
+}
+
+.setting-field input {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    background: #f8fafc;
+    font-weight: 750;
+    outline: none;
+}
+
+.setting-field input:focus {
+    background: #fff;
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 4px rgba(251,191,36,.18);
+}
+
+.setting-save-btn {
+    width: 100%;
+    height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: #16a34a;
+    color: #fff;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.setting-note {
+    color: #64748b;
+    line-height: 1.65;
+    font-weight: 700;
+}
+
+@media(max-width: 860px) {
+    .settings-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>⚙️ Cài đặt</h1>
+        <p>Đổi tên đăng nhập và mật khẩu tài khoản học viên.</p>
+    </div>
+</div>
+
+<div class="settings-grid">
+    <section class="portal-card settings-card">
+        <h2>Đổi tên đăng nhập</h2>
+        <form method="post" action="{{ url_for('student_portal_settings') }}">
+            <div class="setting-field">
+                <label>Tên đăng nhập mới</label>
+                <input name="portal_username" value="{{ student.portal_username or student.license }}" placeholder="Tên đăng nhập">
+            </div>
+            <button class="setting-save-btn" type="submit">Lưu tên đăng nhập</button>
+        </form>
+    </section>
+
+    <section class="portal-card settings-card">
+        <h2>Đổi mật khẩu</h2>
+        <form method="post" action="{{ url_for('student_portal_settings') }}">
+            <div class="setting-field">
+                <label>Mật khẩu cũ</label>
+                <input type="password" name="old_password" placeholder="Nhập mật khẩu cũ">
+            </div>
+            <div class="setting-field">
+                <label>Mật khẩu mới</label>
+                <input type="password" name="new_password" placeholder="Nhập mật khẩu mới">
+            </div>
+            <div class="setting-field">
+                <label>Xác nhận mật khẩu mới</label>
+                <input type="password" name="confirm_password" placeholder="Nhập lại mật khẩu mới">
+            </div>
+            <button class="setting-save-btn" type="submit">Lưu mật khẩu</button>
+        </form>
+    </section>
+
+    <section class="portal-card settings-card" style="grid-column:1/-1;">
+        <h2>Lưu ý</h2>
+        <div class="setting-note">
+            Tên đăng nhập mặc định là mã hội viên. Mật khẩu mặc định là số điện thoại của học viên.
+            Sau khi đổi mật khẩu, học viên nên ghi nhớ để đăng nhập các lần sau.
+        </div>
+    </section>
+</div>
+{% endblock %}

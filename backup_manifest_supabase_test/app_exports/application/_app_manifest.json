@@ -1,0 +1,326 @@
+{
+  "source_root": "G:\\My Drive\\taekwondo_web_supabase",
+  "file_count": 52,
+  "total_size": 4781192,
+  "excluded_secret_files": [
+    ".env",
+    ".env.development",
+    ".env.local",
+    ".env.production",
+    "rclone.conf"
+  ],
+  "files": [
+    {
+      "path": "app.py",
+      "backup_path": "app_exports/application/app.py",
+      "size": 310497,
+      "sha256": "2676a1f799f57b5136ea80ad8078083367bd32699470fa0ca9cdfc6797bf7c28"
+    },
+    {
+      "path": "app_settings.json",
+      "backup_path": "app_exports/application/app_settings.json",
+      "size": 1086,
+      "sha256": "353b9c52b13e4549146dd293abdb760d123c1ee35bbe337022ea76cddee33225"
+    },
+    {
+      "path": "export_backup_manifest.py",
+      "backup_path": "app_exports/application/export_backup_manifest.py",
+      "size": 31443,
+      "sha256": "235be8e216a4c8e2a3cc25463e71ebbd47404bdaf3283df86cdc561f2b66ec48"
+    },
+    {
+      "path": "requirements.txt",
+      "backup_path": "app_exports/application/requirements.txt",
+      "size": 112,
+      "sha256": "cb087719b7757ca56c75e220ebb843e08c2d85888beefe2a7fc4ad16bbfff865"
+    },
+    {
+      "path": "schema_supabase.sql",
+      "backup_path": "app_exports/application/schema_supabase.sql",
+      "size": 2956,
+      "sha256": "4104724dfa2d22f3720fafc2c8ed29a314341333aae93a19dd64639cd4b1ab99"
+    },
+    {
+      "path": "static/chibitkd.png",
+      "backup_path": "app_exports/application/static/chibitkd.png",
+      "size": 162942,
+      "sha256": "0b398ddfec8faa7216e398128b436f968970311ea5ec6a22cbcda2050250a853"
+    },
+    {
+      "path": "static/chuky.png",
+      "backup_path": "app_exports/application/static/chuky.png",
+      "size": 105062,
+      "sha256": "22a247c23ddb70a174b36e4661b48cf9ab7c282f40d92caa8924fdf269f0b94a"
+    },
+    {
+      "path": "static/filechibitkd.png",
+      "backup_path": "app_exports/application/static/filechibitkd.png",
+      "size": 1170206,
+      "sha256": "af4db7618e8a6eae806689a3d9d25953e01667f9e7344217ace7fb8e5be34b94"
+    },
+    {
+      "path": "static/logo.png",
+      "backup_path": "app_exports/application/static/logo.png",
+      "size": 135497,
+      "sha256": "2b1de2ac950f8df8609f632003ab355342f9544d142244a2baa8488334d32d32"
+    },
+    {
+      "path": "static/student_photos/HV_hatn_240401.jpg",
+      "backup_path": "app_exports/application/static/student_photos/HV_hatn_240401.jpg",
+      "size": 183457,
+      "sha256": "109922f728a6c20fefc99573e4a790f5274079b3f047184139a755381f3d97a5"
+    },
+    {
+      "path": "static/student_photos/HV_hieupt_300418.jpg",
+      "backup_path": "app_exports/application/static/student_photos/HV_hieupt_300418.jpg",
+      "size": 41387,
+      "sha256": "2559ac37db7125ebe01c56710484b1c6a5a605f17fd33ed0bca7cc2c2f7bda7b"
+    },
+    {
+      "path": "static/student_photos/HV_thaopt_110706.jpg",
+      "backup_path": "app_exports/application/static/student_photos/HV_thaopt_110706.jpg",
+      "size": 183457,
+      "sha256": "109922f728a6c20fefc99573e4a790f5274079b3f047184139a755381f3d97a5"
+    },
+    {
+      "path": "static/student_photos/V-000008.jpg",
+      "backup_path": "app_exports/application/static/student_photos/V-000008.jpg",
+      "size": 213285,
+      "sha256": "1497ed0cf7a428c57991000fbe3df407ac63a483d215527a83da2e925fa9c088"
+    },
+    {
+      "path": "static/student_photos/V22-001159.jpg",
+      "backup_path": "app_exports/application/static/student_photos/V22-001159.jpg",
+      "size": 183457,
+      "sha256": "109922f728a6c20fefc99573e4a790f5274079b3f047184139a755381f3d97a5"
+    },
+    {
+      "path": "static/student_photos/V25-069394.jpg",
+      "backup_path": "app_exports/application/static/student_photos/V25-069394.jpg",
+      "size": 1031927,
+      "sha256": "19874623479d4658d5e044ea24dfd9499dfebecabdea507cee7dfc3d9bd678ac"
+    },
+    {
+      "path": "static/style.css",
+      "backup_path": "app_exports/application/static/style.css",
+      "size": 87909,
+      "sha256": "ebcacfbea9cb4f7b20c394fc8a8164e00e855e4619c0b4499d0b785b3a06a453"
+    },
+    {
+      "path": "static/uploads/logos/club_logo.jpg",
+      "backup_path": "app_exports/application/static/uploads/logos/club_logo.jpg",
+      "size": 135497,
+      "sha256": "2b1de2ac950f8df8609f632003ab355342f9544d142244a2baa8488334d32d32"
+    },
+    {
+      "path": "supabase_client.py",
+      "backup_path": "app_exports/application/supabase_client.py",
+      "size": 767,
+      "sha256": "36a0a02726151a7c84bfef79b267edcd0e2882e20d5ea54082e0917abf0f1a14"
+    },
+    {
+      "path": "templates/activities.html",
+      "backup_path": "app_exports/application/templates/activities.html",
+      "size": 50708,
+      "sha256": "31123625d940dbecc18f35c968ccd456ab7142ce16740206b3942e0b9038e818"
+    },
+    {
+      "path": "templates/admin_login.html",
+      "backup_path": "app_exports/application/templates/admin_login.html",
+      "size": 10775,
+      "sha256": "114c4d037646c56367f1c2aed9a67429228a0c5212258881834e1b19d9789ae7"
+    },
+    {
+      "path": "templates/backup_restore.html",
+      "backup_path": "app_exports/application/templates/backup_restore.html",
+      "size": 15841,
+      "sha256": "cdd0c2cbd9b643afa0954c84d0686c22f65d2009ae1750a1b2e6f52395f8b796"
+    },
+    {
+      "path": "templates/backup_restore_compare_table.html",
+      "backup_path": "app_exports/application/templates/backup_restore_compare_table.html",
+      "size": 36942,
+      "sha256": "7e188e6c6f84705e417046d8de2f9a683e9b1738605c187b2654c87cdbd0d081"
+    },
+    {
+      "path": "templates/backup_restore_detail.html",
+      "backup_path": "app_exports/application/templates/backup_restore_detail.html",
+      "size": 7145,
+      "sha256": "7b457031cdbf3edb7ca2df73ca7973fd92479b8cbb8d326784aaad52c7a9be2a"
+    },
+    {
+      "path": "templates/backup_restore_login.html",
+      "backup_path": "app_exports/application/templates/backup_restore_login.html",
+      "size": 9416,
+      "sha256": "1eca272d4af9b5ea3c57309be4ec704fa1e20741c9a9d01155bca97ccb2a55a4"
+    },
+    {
+      "path": "templates/backup_restore_manifests.html",
+      "backup_path": "app_exports/application/templates/backup_restore_manifests.html",
+      "size": 4522,
+      "sha256": "c55fccbddf0081eb04c7a7ecac3bb3dd9d5edf1d00b5de84ea7583fd46b65be3"
+    },
+    {
+      "path": "templates/base.html",
+      "backup_path": "app_exports/application/templates/base.html",
+      "size": 26318,
+      "sha256": "f31dccad9376f1f4093514fdacd21c15fc9b79e892ac93ce776bb90fb0dffd0c"
+    },
+    {
+      "path": "templates/coach_dan.html",
+      "backup_path": "app_exports/application/templates/coach_dan.html",
+      "size": 13466,
+      "sha256": "7b52ccfba36b27bf95640fa17717fddd6891088cfb155048814ddec64c482d7e"
+    },
+    {
+      "path": "templates/coach_exam.html",
+      "backup_path": "app_exports/application/templates/coach_exam.html",
+      "size": 13399,
+      "sha256": "082e1dd6b5976bba82b1460288476e0dbdadb50ee778ab46398aaa5762f48a0c"
+    },
+    {
+      "path": "templates/coach_login.html",
+      "backup_path": "app_exports/application/templates/coach_login.html",
+      "size": 6186,
+      "sha256": "17c57a1a3e74b541ebe1b790a311edd2a26e8af83b968f57878f51ac739ecbe0"
+    },
+    {
+      "path": "templates/coach_portal_base.html",
+      "backup_path": "app_exports/application/templates/coach_portal_base.html",
+      "size": 47207,
+      "sha256": "54db17635d7366d34fec23a4320176f6bb6a0b595aac1ec5ea83e8e1086b11a1"
+    },
+    {
+      "path": "templates/dan_list.html",
+      "backup_path": "app_exports/application/templates/dan_list.html",
+      "size": 49348,
+      "sha256": "a194f13223f933afc3a87ea28964c4fefedee1d69c5bee5d5ef3f15c19bc56c4"
+    },
+    {
+      "path": "templates/exam_list.html",
+      "backup_path": "app_exports/application/templates/exam_list.html",
+      "size": 49837,
+      "sha256": "d385e76c04c4fb4999b1ff642e4ed75033e247d0ba48c098a96a77b91d8fdd8c"
+    },
+    {
+      "path": "templates/exam_tracking.html",
+      "backup_path": "app_exports/application/templates/exam_tracking.html",
+      "size": 13446,
+      "sha256": "d75048575bf5171cb275cd300d2517382f2c4ae0806146325f34abb3fd5634ac"
+    },
+    {
+      "path": "templates/fees.html",
+      "backup_path": "app_exports/application/templates/fees.html",
+      "size": 54678,
+      "sha256": "2e67d0b589bfb3626918d5f74b4e0b11e2cd84a644a117fc96b01d0445c1ef1d"
+    },
+    {
+      "path": "templates/information.html",
+      "backup_path": "app_exports/application/templates/information.html",
+      "size": 4066,
+      "sha256": "fcdc7809078a32977011691b8dd23abdb8d8891df9f9c40b2045a85403526299"
+    },
+    {
+      "path": "templates/notifications.html",
+      "backup_path": "app_exports/application/templates/notifications.html",
+      "size": 25257,
+      "sha256": "f2e8b5cd3a245da0b36feb919a180c461a8f71206808a9900ed66830ba5c28fc"
+    },
+    {
+      "path": "templates/results.html",
+      "backup_path": "app_exports/application/templates/results.html",
+      "size": 8221,
+      "sha256": "715370dd0ad2271e39025b0626374848d0e7cc3e73f0f8c084d6ffb9cb819b89"
+    },
+    {
+      "path": "templates/setup.html",
+      "backup_path": "app_exports/application/templates/setup.html",
+      "size": 43698,
+      "sha256": "5cb7548b90899c84471e179abee4c09b78bfc453702d4f85739194152deb11aa"
+    },
+    {
+      "path": "templates/student_login.html",
+      "backup_path": "app_exports/application/templates/student_login.html",
+      "size": 13890,
+      "sha256": "0e17b7e2d89bbccbd4dbb1805d1522c380060c2228466f3fe72cd21d564ef966"
+    },
+    {
+      "path": "templates/student_portal_activities.html",
+      "backup_path": "app_exports/application/templates/student_portal_activities.html",
+      "size": 16088,
+      "sha256": "24b5e792118340b947f890431aa907733ed52b5531b08d356bdccc0f0244ed4a"
+    },
+    {
+      "path": "templates/student_portal_base.html",
+      "backup_path": "app_exports/application/templates/student_portal_base.html",
+      "size": 105341,
+      "sha256": "283ec6730c87b12fc29dc950d2cf2403abb8a9d466b304c8bae171968b39076f"
+    },
+    {
+      "path": "templates/student_portal_club_info.html",
+      "backup_path": "app_exports/application/templates/student_portal_club_info.html",
+      "size": 34405,
+      "sha256": "ea34550a8660620090d432adfa024d58f707a7c6273ae5410e59ed84f3ea8d36"
+    },
+    {
+      "path": "templates/student_portal_exams.html",
+      "backup_path": "app_exports/application/templates/student_portal_exams.html",
+      "size": 14755,
+      "sha256": "bd2dbcd10893eb69c26f9a3ed62987f47b86a7c5ff72e8b76fdbbc5db566c8c5"
+    },
+    {
+      "path": "templates/student_portal_fees.html",
+      "backup_path": "app_exports/application/templates/student_portal_fees.html",
+      "size": 35992,
+      "sha256": "3fd7e813e20bf4a8c2bd6bad61986397a3badecab6e6120b6a4d22995c39985a"
+    },
+    {
+      "path": "templates/student_portal_info.html",
+      "backup_path": "app_exports/application/templates/student_portal_info.html",
+      "size": 8798,
+      "sha256": "b178af9387ffa16c0997aa3bcf4b83ebc611641dd38b0ef493a6c214031e4150"
+    },
+    {
+      "path": "templates/student_portal_notification_detail.html",
+      "backup_path": "app_exports/application/templates/student_portal_notification_detail.html",
+      "size": 2401,
+      "sha256": "8e2cbb111284875cbcabbcebe67a4997d0f8d96105eaa08786c4c5c29d71f0f6"
+    },
+    {
+      "path": "templates/student_portal_notifications.html",
+      "backup_path": "app_exports/application/templates/student_portal_notifications.html",
+      "size": 2520,
+      "sha256": "cf37a965458a967478abf2874ee56284c006dc4f9d1071f0f95867e2fc719587"
+    },
+    {
+      "path": "templates/student_portal_settings.html",
+      "backup_path": "app_exports/application/templates/student_portal_settings.html",
+      "size": 3389,
+      "sha256": "22e287dd9248bdbd6f88d23da2d05f886a7a3f47d28fd3c99ad856fbfd7e2ec9"
+    },
+    {
+      "path": "templates/students.html",
+      "backup_path": "app_exports/application/templates/students.html",
+      "size": 50993,
+      "sha256": "27bc9523d9f8ad4ee3ef8868992825b94f2dbde0daf2ac0ef60981f301b72c8d"
+    },
+    {
+      "path": "templates/tracking.html",
+      "backup_path": "app_exports/application/templates/tracking.html",
+      "size": 3321,
+      "sha256": "6fe3bfccb089327060bd74a8caf1ceeeedf57fcdb480aa7e2c1fcf167100a0d1"
+    },
+    {
+      "path": "templates/unpaid.html",
+      "backup_path": "app_exports/application/templates/unpaid.html",
+      "size": 15546,
+      "sha256": "c40dff7d8924460c7254ad626ba89adaacd862eadf67c13b8be9f40f6bbd66ae"
+    },
+    {
+      "path": "utils.py",
+      "backup_path": "app_exports/application/utils.py",
+      "size": 2333,
+      "sha256": "4077f6fc2ce25aa4ff9aff51993d84ae7f5e1f0678276b1c31f3eadf970a38ba"
+    }
+  ]
+}

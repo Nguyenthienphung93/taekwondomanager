@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="restore-security-page">
+
+    <div class="restore-security-card">
+        <div class="restore-security-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+        </div>
+
+        {% if not password_created %}
+            <div class="restore-security-heading">
+                <span>THIẾT LẬP LẦN ĐẦU</span>
+                <h1>Tạo mật khẩu phục hồi</h1>
+                <p>
+                    Đây là mật khẩu riêng để bảo vệ khu vực sao lưu và phục hồi.
+                    Mật khẩu này không dùng chung với tài khoản Admin.
+                </p>
+            </div>
+
+            <div class="restore-security-warning">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                    <b>Ken cần ghi nhớ mật khẩu này.</b>
+                    <span>
+                        Hệ thống chỉ lưu bản mã hóa, không lưu mật khẩu dạng chữ.
+                    </span>
+                </div>
+            </div>
+
+            <form method="post"
+                  action="{{ url_for('backup_restore_security') }}"
+                  class="restore-security-form"
+                  autocomplete="off">
+
+                <input type="hidden"
+                       name="action"
+                       value="create_password">
+
+                <input type="hidden"
+                       name="next"
+                       value="{{ next_url }}">
+
+                <div class="restore-password-field">
+                    <label for="restorePassword">
+                        Mật khẩu mới
+                    </label>
+
+                    <div class="restore-password-input-wrap">
+                        <i class="fa-solid fa-key"></i>
+
+                        <input type="password"
+                               id="restorePassword"
+                               name="password"
+                               minlength="8"
+                               required
+                               autocomplete="new-password"
+                               placeholder="Nhập tối thiểu 8 ký tự">
+
+                        <button type="button"
+                                class="restore-password-toggle"
+                                onclick="toggleRestorePassword(
+                                    'restorePassword',
+                                    this
+                                )"
+                                aria-label="Hiện mật khẩu">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="restore-password-field">
+                    <label for="restorePasswordConfirm">
+                        Nhập lại mật khẩu
+                    </label>
+
+                    <div class="restore-password-input-wrap">
+                        <i class="fa-solid fa-lock"></i>
+
+                        <input type="password"
+                               id="restorePasswordConfirm"
+                               name="confirm_password"
+                               minlength="8"
+                               required
+                               autocomplete="new-password"
+                               placeholder="Nhập lại mật khẩu">
+
+                        <button type="button"
+                                class="restore-password-toggle"
+                                onclick="toggleRestorePassword(
+                                    'restorePasswordConfirm',
+                                    this
+                                )"
+                                aria-label="Hiện mật khẩu">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="restore-security-submit">
+                    <i class="fa-solid fa-shield"></i>
+                    Tạo mật khẩu và mở khu vực phục hồi
+                </button>
+            </form>
+
+        {% else %}
+            <div class="restore-security-heading">
+                <span>KHU VỰC BẢO MẬT</span>
+                <h1>Xác thực phục hồi</h1>
+                <p>
+                    Nhập mật khẩu riêng để mở Trung tâm Sao lưu & Phục hồi.
+                    Phiên xác thực có hiệu lực trong 10 phút.
+                </p>
+            </div>
+
+            {% if restore_locked %}
+                <div class="restore-security-locked">
+                    <i class="fa-solid fa-lock"></i>
+
+                    <div>
+                        <b>Khu vực đang bị khóa</b>
+                        <span>
+                            Mở lại lúc:
+                            {{ locked_until_text }}
+                        </span>
+
+                        <span id="restoreCountdown"
+                              data-seconds="{{ remaining_seconds }}">
+                            Thời gian còn lại:
+                            <b id="restoreCountdownText">--:--</b>
+                        </span>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('students') }}"
+                   class="restore-security-back">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Quay về trang Hội viên
+                </a>
+
+            {% else %}
+                <form method="post"
+                      action="{{ url_for('backup_restore_security') }}"
+                      class="restore-security-form"
+                      autocomplete="off">
+
+                    <input type="hidden"
+                           name="action"
+                           value="unlock">
+
+                    <input type="hidden"
+                           name="next"
+                           value="{{ next_url }}">
+
+                    <div class="restore-password-field">
+                        <label for="restorePassword">
+                            Mật khẩu phục hồi
+                        </label>
+
+                        <div class="restore-password-input-wrap">
+                            <i class="fa-solid fa-key"></i>
+
+                            <input type="password"
+                                   id="restorePassword"
+                                   name="password"
+                                   required
+                                   autofocus
+                                   autocomplete="current-password"
+                                   placeholder="Nhập mật khẩu bảo mật">
+
+                            <button type="button"
+                                    class="restore-password-toggle"
+                                    onclick="toggleRestorePassword(
+                                        'restorePassword',
+                                        this
+                                    )"
+                                    aria-label="Hiện mật khẩu">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="restore-security-submit">
+                        <i class="fa-solid fa-unlock-keyhole"></i>
+                        Xác nhận và mở khóa
+                    </button>
+                </form>
+
+                <div class="restore-security-rule">
+                    <div>
+                        <i class="fa-solid fa-clock"></i>
+                        <span>
+                            Tự khóa sau 10 phút
+                        </span>
+                    </div>
+
+                    <div>
+                        <i class="fa-solid fa-ban"></i>
+                        <span>
+                            Sai 5 lần khóa 15 phút
+                        </span>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleRestorePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector("i");
+
+    if (!input || !icon) return;
+
+    const showPassword = input.type === "password";
+
+    input.type = showPassword ? "text" : "password";
+
+    icon.classList.toggle("fa-eye", !showPassword);
+    icon.classList.toggle("fa-eye-slash", showPassword);
+}
+
+(function initRestoreCountdown() {
+    const box = document.getElementById("restoreCountdown");
+    const text = document.getElementById("restoreCountdownText");
+
+    if (!box || !text) return;
+
+    let remaining = parseInt(
+        box.dataset.seconds || "0",
+        10
+    );
+
+    function render() {
+        if (remaining <= 0) {
+            text.textContent = "00:00";
+
+            setTimeout(function () {
+                window.location.reload();
+            }, 700);
+
+            return;
+        }
+
+        const minutes = Math.floor(remaining / 60);
+        const seconds = remaining % 60;
+
+        text.textContent =
+            String(minutes).padStart(2, "0")
+            + ":"
+            + String(seconds).padStart(2, "0");
+
+        remaining -= 1;
+        setTimeout(render, 1000);
+    }
+
+    render();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1917 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-title-row">
+    <h1>Hoạt động</h1>
+
+    <button type="button" class="add-activity-btn" onclick="openActivityModal()">
+        + Thêm hoạt động
+    </button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Mã HV</th>
+            <th>Họ tên</th>
+            <th>Hoạt động</th>
+            <th>Thời gian</th>
+            <th>Địa điểm</th>
+            <th>Nội dung</th>
+            <th>Kết quả</th>
+            <th class="action-col">Thao tác</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for r in rows %}
+        <tr class="activity-row {{ r._activity_group_class }} {{ r._activity_medal_class }}">
+            <td>{{ r.ma_hv }}</td>
+            <td>{{ r.ho_ten }}</td>
+            <td>{{ r.hoat_dong }}</td>
+            <td>{{ r.thoi_gian }}</td>
+            <td>{{ r.dia_diem }}</td>
+            <td>{{ r.noi_dung }}</td>
+            <td>{{ r.ket_qua }}</td>
+            <td class="activity-table-actions">
+                <button
+                    type="button"
+                    class="mini-action-btn edit"
+                    title="Sửa hoạt động"
+                    onclick='openEditActivityModal({
+                        id: {{ r.id|tojson }},
+                        ma_hv: {{ r.ma_hv|tojson }},
+                        ho_ten: {{ r.ho_ten|tojson }},
+                        hoat_dong: {{ r.hoat_dong|tojson }},
+                        thoi_gian: {{ r.thoi_gian|tojson }},
+                        dia_diem: {{ r.dia_diem|tojson }},
+                        noi_dung: {{ r.noi_dung|tojson }},
+                        ket_qua: {{ r.ket_qua|tojson }}
+                    })'
+                >✏️</button>
+
+                <form
+                    method="post"
+                    action="/activities/delete/{{ r.id }}"
+                    class="inline-delete-form"
+                    onsubmit="return confirm('Ken chắc chắn muốn xóa hoạt động này không?');"
+                >
+                    <button type="submit" class="mini-action-btn delete" title="Xóa hoạt động">🗑️</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script id="activityStudentsData" type="application/json">
+[
+    {% for s in students %}
+    {
+        "license": {{ s.license|tojson }},
+        "name": {{ s.name|tojson }},
+        "birthdate": {{ s.birthdate|tojson }},
+        "gender": {{ s.gender|tojson }},
+        "classroom": {{ s.classroom|tojson }},
+        "timeclass": {{ s.timeclass|tojson }},
+        "phone": {{ s.phonenumber|tojson }},
+        "belt": {{ s.belt|tojson }},
+        "family": {{ s.family|tojson }},
+        "active": {{ s.active|tojson }}
+    }{{ "," if not loop.last }}
+    {% endfor %}
+]
+</script>
+
+<script id="activityEventsData" type="application/json">
+[
+    {% for ev in events %}
+    {
+        "id": {{ ev.id|tojson }},
+        "event_name": {{ ev.event_name|tojson }},
+        "start_date": {{ ev.start_date|tojson }},
+        "end_date": {{ ev.end_date|tojson }},
+        "location": {{ ev.location|tojson }}
+    }{{ "," if not loop.last }}
+    {% endfor %}
+]
+</script>
+
+<div id="activityModal" class="activity-modal">
+    <div class="activity-modal-inner activity-bulk-inner">
+
+        <div class="activity-modal-head">
+            <h2>Thêm hoạt động theo sự kiện</h2>
+            <button type="button" onclick="closeActivityModal()">×</button>
+        </div>
+
+        <div class="activity-bulk-layout">
+
+            <section class="activity-box activity-box-full">
+                <div class="activity-box-title">1. Chọn hoặc tạo sự kiện</div>
+
+                <div class="event-grid">
+                    <div class="field-box">
+                        <label>Sự kiện đã lưu</label>
+                        <select id="activityEventSelect" onchange="applySelectedActivityEvent()">
+                            <option value="">Chọn sự kiện</option>
+                        </select>
+                    </div>
+
+                    <div class="field-box">
+                        <label>Tên sự kiện mới</label>
+                        <input id="newEventName" placeholder="VD: Giải Taekwondo Vô địch Trẻ và NK TPHCM năm 2026">
+                    </div>
+
+                    <div class="field-box">
+                        <label>Từ ngày</label>
+                        <input type="date" id="newEventStartDate">
+                    </div>
+
+                    <div class="field-box">
+                        <label>Đến ngày</label>
+                        <input type="date" id="newEventEndDate">
+                    </div>
+
+                    <div class="field-box">
+                        <label>Địa điểm</label>
+                        <input id="newEventLocation" placeholder="VD: Trung tâm CUDVC P. Tân Thới Hiệp">
+                    </div>
+
+                    <button type="button" class="save-event-btn" onclick="saveActivityEvent()">
+                        💾 Lưu sự kiện
+                    </button>
+                </div>
+
+                <div id="selectedEventPreview" class="selected-event-preview">
+                    Chưa chọn sự kiện.
+                </div>
+            </section>
+
+            <section class="activity-box activity-box-full">
+                <div class="activity-box-title content-title-row">
+                    <span>2. Nội dung thi đấu / hoạt động</span>
+
+                    <button type="button" class="add-content-btn" onclick="addActivityContentBlock()">
+                        + Thêm nội dung
+                    </button>
+                </div>
+
+                <div id="activityContentBlocks" class="activity-content-blocks"></div>
+            </section>
+
+        </div>
+
+        <div class="activity-actions">
+            <button type="button" class="cancel-btn" onclick="closeActivityModal()">
+                Hủy
+            </button>
+
+            <button type="button" class="save-btn" onclick="saveBulkActivities()">
+                💾 Lưu tất cả hoạt động
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="editActivityModal" class="activity-modal">
+    <div class="activity-modal-inner edit-activity-inner">
+
+        <div class="activity-modal-head">
+            <h2>Sửa hoạt động</h2>
+            <button type="button" onclick="closeEditActivityModal()">×</button>
+        </div>
+
+        <form method="post" id="editActivityForm" class="activity-form" onsubmit="return checkEditActivityBeforeSubmit()">
+            <input type="hidden" name="ma_hv" id="editActivityMaHv" required>
+
+            <div class="activity-grid edit-activity-grid">
+
+                <section class="activity-box">
+                    <div class="activity-box-title">1. Hội viên</div>
+
+                    <div class="field-box">
+                        <label>Mã hội viên / Họ tên</label>
+                        <input
+                            type="text"
+                            id="editActivityStudentSearch"
+                            placeholder="Dán mã HV hoặc nhập tên hội viên..."
+                            autocomplete="off"
+                            oninput="searchEditActivityStudent()"
+                        >
+
+                        <div id="editActivityStudentStatus" class="student-search-status">
+                            Dán mã HV hoặc nhập tên/mã HV để đổi hội viên.
+                        </div>
+
+                        <div id="editActivityStudentResults" class="student-search-results"></div>
+                    </div>
+                </section>
+
+                <section class="activity-box">
+                    <div class="activity-box-title">2. Thông tin hoạt động</div>
+
+                    <div class="activity-input-grid edit-input-grid">
+                        <div class="field-box">
+                            <label>Hoạt động</label>
+                            <input name="hoat_dong" id="editHoatDong" required>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Thời gian</label>
+                            <input name="thoi_gian" id="editThoiGian" placeholder="VD: 23 - 17/07/2026" required>
+                        </div>
+
+                        <div class="field-box">
+                            <label>Địa điểm</label>
+                            <input name="dia_diem" id="editDiaDiem">
+                        </div>
+
+                        <div class="field-box activity-wide">
+                            <label>Nội dung</label>
+                            <textarea name="noi_dung" id="editNoiDung" rows="3"></textarea>
+                        </div>
+
+                        <div class="field-box activity-wide">
+                            <label>Kết quả</label>
+                            <textarea name="ket_qua" id="editKetQua" rows="3"></textarea>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="activity-actions">
+                <button type="button" class="cancel-btn" onclick="closeEditActivityModal()">
+                    Hủy
+                </button>
+
+                <button type="submit" class="save-btn">
+                    💾 Cập nhật
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+async function openActivityModal() {
+    document.getElementById("activityModal").style.display = "flex";
+
+    await loadActivityEventsFromServer();
+
+    if (document.getElementById("activityContentBlocks").children.length === 0) {
+        addActivityContentBlock();
+    }
+}
+
+function closeActivityModal() {
+    document.getElementById("activityModal").style.display = "none";
+}
+
+function setInfo(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.textContent = value || "...";
+    }
+}
+
+function setActivityStatus(text, type) {
+    const el = document.getElementById("activityStudentStatus");
+    if (!el) return;
+
+    el.textContent = text || "";
+    el.className = "student-search-status";
+
+    if (type) {
+        el.classList.add(type);
+    }
+}
+
+function getActivityStudents() {
+    const el = document.getElementById("activityStudentsData");
+
+    if (!el) {
+        console.error("Thiếu activityStudentsData trong activities.html");
+        return [];
+    }
+
+    try {
+        const students = JSON.parse(el.textContent || "[]");
+        return Array.isArray(students) ? students : [];
+    } catch (e) {
+        console.error("Không đọc được danh sách hội viên:", e);
+        return [];
+    }
+}
+
+function normalizeSearchText(text) {
+    return String(text || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+}
+
+function clearStudentResults() {
+    const box = document.getElementById("activityStudentResults");
+    if (box) {
+        box.innerHTML = "";
+    }
+}
+
+function clearStudentInfo() {
+    document.getElementById("activityStudentLicense").value = "";
+
+    setInfo("infoLicense", "");
+    setInfo("infoName", "");
+    setInfo("infoBirthdate", "");
+    setInfo("infoGender", "");
+    setInfo("infoClassroom", "");
+    setInfo("infoTimeclass", "");
+    setInfo("infoPhone", "");
+    setInfo("infoBelt", "");
+    setInfo("infoFamily", "");
+    setInfo("infoActive", "");
+}
+
+function applyActivityStudent(student) {
+    document.getElementById("activityStudentLicense").value = student.license || "";
+
+    setInfo("infoLicense", student.license);
+    setInfo("infoName", student.name);
+    setInfo("infoBirthdate", student.birthdate);
+    setInfo("infoGender", student.gender);
+    setInfo("infoClassroom", student.classroom);
+    setInfo("infoTimeclass", student.timeclass);
+    setInfo("infoPhone", student.phone);
+    setInfo("infoBelt", student.belt);
+    setInfo("infoFamily", student.family);
+    setInfo("infoActive", student.active);
+
+    document.getElementById("activityStudentSearch").value =
+        (student.license || "") + " - " + (student.name || "");
+
+    clearStudentResults();
+
+    setActivityStatus(
+        "Đã chọn: " + (student.license || "") + " - " + (student.name || ""),
+        "ok"
+    );
+}
+
+function renderStudentChoices(students) {
+    const box = document.getElementById("activityStudentResults");
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    students.forEach((student, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "student-choice-btn";
+
+        btn.innerHTML = `
+            <b>${student.name || ""}</b>
+            <span>${student.gender || "..."} - ${student.birthdate || "..."} - ${student.license || ""}</span>
+        `;
+
+        btn.addEventListener("click", function () {
+            applyActivityStudent(student);
+        });
+
+        box.appendChild(btn);
+    });
+}
+
+function searchActivityStudent() {
+    const input = document.getElementById("activityStudentSearch");
+    const keyword = normalizeSearchText(input.value);
+
+    clearStudentResults();
+
+    if (!keyword) {
+        clearStudentInfo();
+        setActivityStatus("Dán mã HV hoặc nhập tên/mã HV để tìm hội viên.", "");
+        return;
+    }
+
+    const students = getActivityStudents();
+
+    // 1. Nếu nhập/dán đúng mã HV thì chọn luôn, vì mã là duy nhất
+    const exactLicense = students.find(s =>
+        normalizeSearchText(s.license) === keyword
+    );
+
+    if (exactLicense) {
+        applyActivityStudent(exactLicense);
+        return;
+    }
+
+    // 2. Nếu nhập đúng tên và chỉ có 1 người thì chọn luôn
+    const exactNameMatches = students.filter(s =>
+        normalizeSearchText(s.name) === keyword
+    );
+
+    if (exactNameMatches.length === 1) {
+        applyActivityStudent(exactNameMatches[0]);
+        return;
+    }
+
+    if (exactNameMatches.length > 1) {
+        clearStudentInfo();
+        renderStudentChoices(exactNameMatches);
+        setActivityStatus("Có nhiều hội viên trùng tên. Ken chọn đúng người bên dưới.", "warning");
+        return;
+    }
+
+    // 3. Nếu nhập gần đúng tên/mã thì hiện danh sách để chọn
+    const nearMatches = students.filter(s =>
+        normalizeSearchText(s.license).includes(keyword) ||
+        normalizeSearchText(s.name).includes(keyword)
+    ).slice(0, 10);
+
+    if (nearMatches.length === 1) {
+        applyActivityStudent(nearMatches[0]);
+        return;
+    }
+
+    if (nearMatches.length > 1) {
+        clearStudentInfo();
+        renderStudentChoices(nearMatches);
+        setActivityStatus("Tìm thấy nhiều hội viên phù hợp. Ken chọn đúng người bên dưới.", "warning");
+        return;
+    }
+
+    clearStudentInfo();
+    setActivityStatus("Chưa tìm thấy hội viên phù hợp.", "error");
+}
+
+function applyEditActivityStudent(student) {
+    document.getElementById("editActivityMaHv").value = student.license || "";
+    document.getElementById("editActivityStudentSearch").value =
+        (student.license || "") + " - " + (student.name || "");
+
+    const box = document.getElementById("editActivityStudentResults");
+    if (box) box.innerHTML = "";
+
+    const status = document.getElementById("editActivityStudentStatus");
+    if (status) {
+        status.textContent = "Đã chọn: " + (student.license || "") + " - " + (student.name || "");
+        status.className = "student-search-status ok";
+    }
+}
+
+function renderEditStudentChoices(students) {
+    const box = document.getElementById("editActivityStudentResults");
+    if (!box) return;
+
+    box.innerHTML = "";
+
+    students.forEach((student) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "student-choice-btn";
+
+        btn.innerHTML = `
+            <b>${student.name || ""}</b>
+            <span>${student.gender || "..."} - ${student.birthdate || "..."} - ${student.license || ""}</span>
+        `;
+
+        btn.addEventListener("click", function () {
+            applyEditActivityStudent(student);
+        });
+
+        box.appendChild(btn);
+    });
+}
+
+function searchEditActivityStudent() {
+    const input = document.getElementById("editActivityStudentSearch");
+    const keyword = normalizeSearchText(input.value);
+    const status = document.getElementById("editActivityStudentStatus");
+    const box = document.getElementById("editActivityStudentResults");
+
+    if (box) box.innerHTML = "";
+
+    if (!keyword) {
+        document.getElementById("editActivityMaHv").value = "";
+        if (status) {
+            status.textContent = "Dán mã HV hoặc nhập tên/mã HV để đổi hội viên.";
+            status.className = "student-search-status";
+        }
+        return;
+    }
+
+    const students = getActivityStudents();
+
+    const exactLicense = students.find(s => normalizeSearchText(s.license) === keyword);
+    if (exactLicense) {
+        applyEditActivityStudent(exactLicense);
+        return;
+    }
+
+    const exactNameMatches = students.filter(s => normalizeSearchText(s.name) === keyword);
+    if (exactNameMatches.length === 1) {
+        applyEditActivityStudent(exactNameMatches[0]);
+        return;
+    }
+
+    const nearMatches = (exactNameMatches.length > 1 ? exactNameMatches : students.filter(s =>
+        normalizeSearchText(s.license).includes(keyword) ||
+        normalizeSearchText(s.name).includes(keyword)
+    )).slice(0, 10);
+
+    if (nearMatches.length > 0) {
+        document.getElementById("editActivityMaHv").value = "";
+        renderEditStudentChoices(nearMatches);
+        if (status) {
+            status.textContent = "Tìm thấy nhiều hội viên phù hợp. Ken chọn đúng người bên dưới.";
+            status.className = "student-search-status warning";
+        }
+        return;
+    }
+
+    document.getElementById("editActivityMaHv").value = "";
+    if (status) {
+        status.textContent = "Chưa tìm thấy hội viên phù hợp.";
+        status.className = "student-search-status error";
+    }
+}
+
+function openEditActivityModal(row) {
+    if (!row || !row.id) {
+        alert("Không tìm thấy ID hoạt động để sửa.");
+        return;
+    }
+
+    document.getElementById("editActivityForm").action = "/activities/update/" + row.id;
+    document.getElementById("editActivityMaHv").value = row.ma_hv || "";
+    document.getElementById("editActivityStudentSearch").value =
+        (row.ma_hv || "") + " - " + (row.ho_ten || "");
+
+    document.getElementById("editHoatDong").value = row.hoat_dong || "";
+    document.getElementById("editThoiGian").value = row.thoi_gian || "";
+    document.getElementById("editDiaDiem").value = row.dia_diem || "";
+    document.getElementById("editNoiDung").value = row.noi_dung || "";
+    document.getElementById("editKetQua").value = row.ket_qua || "";
+
+    const results = document.getElementById("editActivityStudentResults");
+    if (results) results.innerHTML = "";
+
+    const status = document.getElementById("editActivityStudentStatus");
+    if (status) {
+        status.textContent = "Đang sửa: " + (row.ma_hv || "") + " - " + (row.ho_ten || "");
+        status.className = "student-search-status ok";
+    }
+
+    document.getElementById("editActivityModal").style.display = "flex";
+}
+
+function closeEditActivityModal() {
+    document.getElementById("editActivityModal").style.display = "none";
+}
+
+function checkEditActivityBeforeSubmit() {
+    const license = document.getElementById("editActivityMaHv").value.trim();
+
+    if (!license) {
+        alert("Ken chưa chọn đúng hội viên cho hoạt động này.");
+        document.getElementById("editActivityStudentSearch").focus();
+        return false;
+    }
+
+    return true;
+}
+
+function checkActivityStudentBeforeSubmit() {
+    const license = document.getElementById("activityStudentLicense").value.trim();
+
+    if (!license) {
+        alert("Ken chưa chọn đúng hội viên. Hãy dán mã HV hoặc nhập tên/mã HV chính xác.");
+        document.getElementById("activityStudentSearch").focus();
+        return false;
+    }
+
+    return true;
+}
+
+document.addEventListener("click", function(e) {
+    const modal = document.getElementById("activityModal");
+    const editModal = document.getElementById("editActivityModal");
+
+    if (e.target === modal) {
+        closeActivityModal();
+    }
+
+    if (e.target === editModal) {
+        closeEditActivityModal();
+    }
+});
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        closeActivityModal();
+        closeEditActivityModal();
+    }
+});
+
+let ACTIVITY_EVENTS = [];
+let selectedActivityEvent = null;
+let contentBlockIndex = 0;
+let activityBlocks = {};
+
+function getActivityEvents() {
+    const el = document.getElementById("activityEventsData");
+    if (!el) return [];
+
+    try {
+        return JSON.parse(el.textContent || "[]");
+    } catch (e) {
+        console.error("Không đọc được danh sách sự kiện:", e);
+        return [];
+    }
+}
+
+function formatDateVNFromISO(value) {
+    if (!value) return "";
+
+    const parts = String(value).split("-");
+    if (parts.length !== 3) return value;
+
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function formatEventTimeLabel(event) {
+    if (!event) return "";
+
+    const start = formatDateVNFromISO(event.start_date);
+    const end = formatDateVNFromISO(event.end_date);
+
+    if (!start && !end) return "";
+    if (start && !end) return start;
+    if (!start && end) return end;
+    if (start === end) return start;
+
+    return `${start} - ${end}`;
+}
+
+function initActivityEventSelect() {
+    ACTIVITY_EVENTS = getActivityEvents().map(ev => ({
+        ...ev,
+        event_name: ev.event_name || ev.name || ev.title || "",
+        location: ev.location || ev.dia_diem || ""
+    }));
+
+    const select = document.getElementById("activityEventSelect");
+    if (!select) return;
+
+    select.innerHTML = `<option value="">Chọn sự kiện</option>`;
+
+    ACTIVITY_EVENTS.forEach(ev => {
+        const option = document.createElement("option");
+        option.value = ev.id || "";
+        option.textContent = `${ev.event_name || ""} - ${formatEventTimeLabel(ev)}`;
+        select.appendChild(option);
+    });
+}
+
+function applySelectedActivityEvent() {
+    const select = document.getElementById("activityEventSelect");
+    const preview = document.getElementById("selectedEventPreview");
+
+    const eventId = select ? select.value : "";
+
+    selectedActivityEvent = ACTIVITY_EVENTS.find(ev => String(ev.id) === String(eventId)) || null;
+
+    if (!selectedActivityEvent) {
+        if (preview) preview.textContent = "Chưa chọn sự kiện.";
+        return;
+    }
+
+    if (preview) {
+        preview.innerHTML = `
+            <b>${selectedActivityEvent.event_name || ""}</b>
+            <span>${formatEventTimeLabel(selectedActivityEvent)}</span>
+            <span>${selectedActivityEvent.location || ""}</span>
+        `;
+    }
+}
+
+async function saveActivityEvent() {
+    const eventName = document.getElementById("newEventName").value.trim();
+    const startDate = document.getElementById("newEventStartDate").value;
+    const endDate = document.getElementById("newEventEndDate").value || startDate;
+    const location = document.getElementById("newEventLocation").value.trim();
+
+    if (!eventName) {
+        alert("Ken chưa nhập tên sự kiện.");
+        document.getElementById("newEventName").focus();
+        return;
+    }
+
+    if (!startDate) {
+        alert("Ken chưa chọn ngày bắt đầu.");
+        document.getElementById("newEventStartDate").focus();
+        return;
+    }
+
+    try {
+        const res = await fetch("/activity-events/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event_name: eventName,
+                start_date: startDate,
+                end_date: endDate,
+                location: location
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            alert(data.message || "Không lưu được sự kiện.");
+            return;
+        }
+
+        const ev = data.event || {};
+
+        await loadActivityEventsFromServer();
+
+        const select = document.getElementById("activityEventSelect");
+        if (select && ev.id) {
+            select.value = ev.id;
+            applySelectedActivityEvent();
+        }
+
+        document.getElementById("newEventName").value = "";
+        document.getElementById("newEventStartDate").value = "";
+        document.getElementById("newEventEndDate").value = "";
+        document.getElementById("newEventLocation").value = "";
+
+        alert("Đã lưu sự kiện.");
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi lưu sự kiện.");
+    }
+}
+
+function setBlockResult(blockId, resultText) {
+    const input = document.getElementById(`blockResult_${blockId}`);
+    if (input) {
+        input.value = resultText;
+    }
+}
+
+function addActivityContentBlock() {
+    contentBlockIndex += 1;
+
+    const blockId = "block_" + contentBlockIndex;
+
+    activityBlocks[blockId] = {
+        students: []
+    };
+
+    const wrap = document.getElementById("activityContentBlocks");
+    if (!wrap) return;
+
+    const block = document.createElement("div");
+    block.className = "activity-content-block";
+    block.id = blockId;
+
+    block.innerHTML = `
+        <div class="content-block-head content-block-head-input">
+            <div class="content-title-input-wrap">
+                <span>Nội dung</span>
+                <input
+                    id="blockContent_${blockId}"
+                    class="content-title-input"
+                    placeholder="VD: Quyền tiêu chuẩn cá nhân nữ U14"
+                >
+            </div>
+
+            <button type="button" onclick="removeActivityContentBlock('${blockId}')">×</button>
+        </div>
+
+        <div class="content-block-grid">
+            <div class="content-left">
+                <div class="field-box">
+                    <label>Kết quả</label>
+                    <textarea id="blockResult_${blockId}" rows="4" placeholder="VD: Huy chương đồng, chờ thi, hoàn thành..."></textarea>
+                </div>
+
+                <div class="quick-medal-row">
+                    <button type="button" onclick="setBlockResult('${blockId}', 'Huy chương vàng')">🥇 HCV</button>
+                    <button type="button" onclick="setBlockResult('${blockId}', 'Huy chương bạc')">🥈 HCB</button>
+                    <button type="button" onclick="setBlockResult('${blockId}', 'Huy chương đồng')">🥉 HCĐ</button>
+                    <button type="button" onclick="setBlockResult('${blockId}', 'Võ sinh xuất sắc')">🏆 Xuất sắc</button>
+                    <button type="button" onclick="setBlockResult('${blockId}', 'Chờ thi')">⏳ Chờ thi</button>
+                </div>
+            </div>
+
+            <div class="content-right">
+                <div class="field-box">
+                    <label>Thêm hội viên</label>
+
+                    <div class="student-combo-wrap">
+                        <input
+                            type="text"
+                            id="blockStudentSearch_${blockId}"
+                            placeholder="Nhập tên hoặc mã HV..."
+                            autocomplete="off"
+                            oninput="searchStudentForContentBlock('${blockId}')"
+                            onfocus="searchStudentForContentBlock('${blockId}')"
+                        >
+
+                        <div id="blockStudentResults_${blockId}" class="student-combo-results"></div>
+                    </div>
+                </div>
+
+                <div class="selected-student-title">Danh sách hội viên đã thêm</div>
+                <div id="blockSelectedStudents_${blockId}" class="selected-student-list"></div>
+            </div>
+        </div>
+    `;
+
+    wrap.appendChild(block);
+    renderSelectedStudentsForBlock(blockId);
+}
+
+function removeActivityContentBlock(blockId) {
+    delete activityBlocks[blockId];
+
+    const block = document.getElementById(blockId);
+    if (block) {
+        block.remove();
+    }
+}
+
+function escapeHtmlText(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function buildStudentSearchText(student) {
+    return normalizeSearchText([
+        student.license,
+        student.name,
+        student.birthdate,
+        student.gender,
+        student.classroom,
+        student.timeclass,
+        student.phone,
+        student.belt
+    ].join(" "));
+}
+
+function searchStudentForContentBlock(blockId) {
+    const input = document.getElementById(`blockStudentSearch_${blockId}`);
+    const resultBox = document.getElementById(`blockStudentResults_${blockId}`);
+
+    if (!input || !resultBox) return;
+
+    const keyword = normalizeSearchText(input.value);
+    resultBox.innerHTML = "";
+
+    const students = getActivityStudents();
+
+    if (!students.length) {
+        resultBox.innerHTML = `
+            <div class="student-combo-empty">Chưa tải được danh sách hội viên từ bảng student.</div>
+        `;
+        resultBox.style.display = "block";
+        return;
+    }
+
+    let matched = [];
+
+    if (!keyword) {
+        matched = students.slice(0, 12);
+    } else {
+        matched = students.filter(s => buildStudentSearchText(s).includes(keyword)).slice(0, 30);
+    }
+
+    if (!matched.length) {
+        resultBox.innerHTML = `
+            <div class="student-combo-empty">Không tìm thấy hội viên phù hợp</div>
+        `;
+        resultBox.style.display = "block";
+        return;
+    }
+
+    matched.forEach(student => {
+        const item = document.createElement("div");
+        item.className = "student-combo-item";
+
+        const info = document.createElement("div");
+        info.className = "student-combo-info";
+        info.innerHTML = `
+            <b>${escapeHtmlText(student.name || "")}</b>
+            <span>${escapeHtmlText(student.license || "")} - ${escapeHtmlText(student.gender || "...")} - ${escapeHtmlText(student.birthdate || "...")}</span>
+        `;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "student-combo-add";
+        btn.textContent = "+";
+        btn.addEventListener("click", function () {
+            addStudentToContentBlock(blockId, student);
+        });
+
+        item.appendChild(info);
+        item.appendChild(btn);
+        resultBox.appendChild(item);
+    });
+
+    resultBox.style.display = "block";
+}
+
+function addStudentToContentBlock(blockId, student) {
+    if (!activityBlocks[blockId]) {
+        activityBlocks[blockId] = {
+            students: []
+        };
+    }
+
+    const license = student.license || "";
+
+    if (!license) return;
+
+    const exists = activityBlocks[blockId].students.some(s => s.license === license);
+
+    if (exists) {
+        alert("Hội viên này đã có trong nội dung này.");
+        return;
+    }
+
+    activityBlocks[blockId].students.push(student);
+
+    const input = document.getElementById(`blockStudentSearch_${blockId}`);
+    const resultBox = document.getElementById(`blockStudentResults_${blockId}`);
+
+    if (input) input.value = "";
+    if (resultBox) {
+        resultBox.innerHTML = "";
+        resultBox.style.display = "none";
+    }
+
+    renderSelectedStudentsForBlock(blockId);
+}
+
+function removeStudentFromContentBlock(blockId, license) {
+    if (!activityBlocks[blockId]) return;
+
+    activityBlocks[blockId].students = activityBlocks[blockId].students.filter(s => s.license !== license);
+
+    renderSelectedStudentsForBlock(blockId);
+}
+
+function renderSelectedStudentsForBlock(blockId) {
+    const box = document.getElementById(`blockSelectedStudents_${blockId}`);
+    if (!box) return;
+
+    const students = activityBlocks[blockId]?.students || [];
+
+    if (!students.length) {
+        box.innerHTML = `<div class="selected-empty">Chưa thêm hội viên.</div>`;
+        return;
+    }
+
+    box.innerHTML = students.map(s => `
+        <div class="selected-student-chip">
+            <span>${s.license || ""} - ${s.name || ""}</span>
+            <button type="button" onclick="removeStudentFromContentBlock('${blockId}', '${s.license || ""}')">×</button>
+        </div>
+    `).join("");
+}
+
+async function saveBulkActivities() {
+    if (!selectedActivityEvent) {
+        alert("Ken chưa chọn sự kiện.");
+        document.getElementById("activityEventSelect").focus();
+        return;
+    }
+
+    const items = [];
+
+    Object.keys(activityBlocks).forEach(blockId => {
+        const contentEl = document.getElementById(`blockContent_${blockId}`);
+        const resultEl = document.getElementById(`blockResult_${blockId}`);
+
+        const noiDung = contentEl ? contentEl.value.trim() : "";
+        const ketQua = resultEl ? resultEl.value.trim() : "";
+        const students = activityBlocks[blockId]?.students || [];
+
+        if (noiDung && ketQua && students.length) {
+            items.push({
+                noi_dung: noiDung,
+                ket_qua: ketQua,
+                students: students.map(s => s.license)
+            });
+        }
+    });
+
+    if (!items.length) {
+        alert("Ken cần có ít nhất 1 nội dung, 1 kết quả và 1 hội viên.");
+        return;
+    }
+
+    try {
+        const res = await fetch("/activities/bulk-add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event_id: selectedActivityEvent.id,
+                event_name: selectedActivityEvent.event_name,
+                start_date: selectedActivityEvent.start_date,
+                end_date: selectedActivityEvent.end_date,
+                location: selectedActivityEvent.location,
+                items: items
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            alert(data.message || "Không lưu được hoạt động.");
+            return;
+        }
+
+        alert(data.message || "Đã lưu hoạt động.");
+        window.location.reload();
+
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi lưu hoạt động.");
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    initActivityEventSelect();
+});
+
+async function loadActivityEventsFromServer() {
+    try {
+        const res = await fetch("/activity-events/list");
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            console.error(data.message || "Không tải được sự kiện.");
+            initActivityEventSelect();
+            return;
+        }
+
+        ACTIVITY_EVENTS = (data.events || []).map(ev => ({
+            ...ev,
+            event_name: ev.event_name || ev.name || ev.title || "",
+            location: ev.location || ev.dia_diem || ""
+        }));
+
+        const select = document.getElementById("activityEventSelect");
+        if (!select) return;
+
+        const oldValue = select.value || "";
+
+        select.innerHTML = `<option value="">Chọn sự kiện</option>`;
+
+        ACTIVITY_EVENTS.forEach(ev => {
+            const option = document.createElement("option");
+            option.value = ev.id || "";
+            option.textContent = `${ev.event_name || ""} - ${formatEventTimeLabel(ev)}`;
+            select.appendChild(option);
+        });
+
+        if (oldValue) {
+            select.value = oldValue;
+        }
+
+        applySelectedActivityEvent();
+
+    } catch (err) {
+        console.error("Lỗi tải sự kiện:", err);
+    }
+}
+document.addEventListener("click", function(e) {
+    document.querySelectorAll(".student-combo-wrap").forEach(function(wrap) {
+        if (!wrap.contains(e.target)) {
+            const box = wrap.querySelector(".student-combo-results");
+            if (box) {
+                box.style.display = "none";
+            }
+        }
+    });
+});
+</script>
+
+
+<style>
+.page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.page-title-row h1 {
+    margin: 0;
+}
+
+.add-activity-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #ffd24a, #f3a400);
+    color: #111;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+.add-activity-btn:hover {
+    filter: brightness(0.97);
+}
+
+.activity-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+}
+
+.activity-modal-inner {
+    width: min(1200px, 96vw);
+    height: min(850px, 94vh);
+    max-height: 94vh;
+    overflow: auto;
+    background: #f5f7fb;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.35);
+}
+
+.activity-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.activity-modal-head h2 {
+    margin: 0;
+}
+
+.activity-modal-head button {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.4fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.activity-box {
+    background: #fff;
+    border: 1px solid #dfe6f0;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.05);
+}
+
+.activity-box-full {
+    grid-column: 1 / -1;
+}
+
+.activity-box-title {
+    font-weight: 900;
+    color: #0f2745;
+    border-bottom: 1px solid #e4e9f2;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.activity-box .field-box {
+    margin: 0;
+}
+
+.activity-box label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 800;
+    color: #26354d;
+}
+
+.activity-box input,
+.activity-box select,
+.activity-box textarea {
+    width: 100%;
+    border: 1px solid #cfd8e3;
+    border-radius: 9px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    outline: none;
+    background: #fff;
+    font-weight: 600;
+}
+
+.activity-box textarea {
+    resize: vertical;
+}
+
+.activity-box input:focus,
+.activity-box select:focus,
+.activity-box textarea:focus {
+    border-color: #f5b400;
+    box-shadow: 0 0 0 3px rgba(245, 180, 0, 0.16);
+}
+
+#activityStudentSearch {
+    height: 42px;
+}
+
+.student-search-status {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.student-search-status.ok {
+    color: #15803d;
+}
+
+.student-search-status.error {
+    color: #dc2626;
+}
+
+.student-search-status.warning {
+    color: #b45309;
+}
+
+.student-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.student-info-grid div {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 9px 10px;
+}
+
+.student-info-grid span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 3px;
+}
+
+.student-info-grid b {
+    color: #111827;
+    font-size: 14px;
+}
+
+.activity-input-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.activity-wide {
+    grid-column: span 2;
+}
+
+.activity-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.activity-actions button {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: #6b7280;
+    color: #fff;
+}
+
+.save-btn {
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+    color: #fff;
+}
+
+@media (max-width: 900px) {
+    .activity-grid,
+    .activity-input-grid,
+    .student-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-wide {
+        grid-column: auto;
+    }
+
+    .page-title-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+.student-search-results {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+/* Thanh cuộn gọn đẹp */
+.student-search-results::-webkit-scrollbar {
+    width: 7px;
+}
+
+.student-search-results::-webkit-scrollbar-track {
+    background: #eef2f7;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb {
+    background: #c4ccd8;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.student-choice-btn {
+    width: 100%;
+    border: 1px solid #d7dee9;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.student-choice-btn:hover {
+    background: #fff7d6;
+    border-color: #f3b600;
+    transform: translateY(-1px);
+}
+
+.student-choice-btn b {
+    display: block;
+    color: #0f172a;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.student-choice-btn span {
+    display: block;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.activity-grid > .activity-box:nth-child(1),
+.activity-grid > .activity-box:nth-child(2) {
+    min-height: 360px;
+}
+
+.student-search-results {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.student-search-results::-webkit-scrollbar {
+    width: 7px;
+}
+
+.student-search-results::-webkit-scrollbar-track {
+    background: #eef2f7;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb {
+    background: #c4ccd8;
+    border-radius: 999px;
+}
+
+.student-search-results::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.action-col {
+    width: 100px;
+}
+
+.activity-table-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.inline-delete-form {
+    display: inline;
+    margin: 0;
+}
+
+.mini-action-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 900;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.12);
+    transition: 0.15s ease;
+}
+
+.mini-action-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.98);
+}
+
+.mini-action-btn.edit {
+    background: linear-gradient(180deg, #38bdf8, #0284c7);
+    color: #fff;
+}
+
+.mini-action-btn.delete {
+    background: linear-gradient(180deg, #fb7185, #dc2626);
+    color: #fff;
+}
+
+.edit-activity-inner {
+    height: auto;
+    max-height: 90vh;
+}
+
+.edit-activity-grid {
+    grid-template-columns: 0.9fr 1.6fr;
+}
+
+.edit-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    .activity-table-actions {
+        justify-content: flex-start;
+    }
+
+    .edit-activity-grid,
+    .edit-input-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================
+   ACTIVITIES - MÀU THEO TỪNG GIẢI
+========================= */
+.activity-row td {
+    transition: background .15s ease;
+}
+
+.activity-group-0 td {
+    background: #fffdf3;
+}
+
+.activity-group-1 td {
+    background: #f0f9ff;
+}
+
+.activity-group-2 td {
+    background: #f8fafc;
+}
+
+.activity-group-3 td {
+    background: #f0fdf4;
+}
+
+.activity-group-4 td {
+    background: #fef2f2;
+}
+
+.activity-group-5 td {
+    background: #f5f3ff;
+}
+
+/* Viền trái để nhận ra từng nhóm giải */
+.activity-row td:first-child {
+    border-left: 6px solid transparent;
+}
+
+.activity-group-0 td:first-child {
+    border-left-color: #facc15;
+}
+
+.activity-group-1 td:first-child {
+    border-left-color: #38bdf8;
+}
+
+.activity-group-2 td:first-child {
+    border-left-color: #94a3b8;
+}
+
+.activity-group-3 td:first-child {
+    border-left-color: #22c55e;
+}
+
+.activity-group-4 td:first-child {
+    border-left-color: #f87171;
+}
+
+.activity-group-5 td:first-child {
+    border-left-color: #8b5cf6;
+}
+
+/* Làm nổi kết quả huy chương */
+.activity-medal-gold td:nth-child(7) {
+    background: #fef3c7 !important;
+    color: #92400e;
+    font-weight: 950;
+}
+
+.activity-medal-silver td:nth-child(7) {
+    background: #e2e8f0 !important;
+    color: #334155;
+    font-weight: 950;
+}
+
+.activity-medal-bronze td:nth-child(7) {
+    background: #ffedd5 !important;
+    color: #9a3412;
+    font-weight: 950;
+}
+
+.activity-row:hover td {
+    filter: brightness(.98);
+}
+
+.activity-bulk-inner {
+    width: min(1280px, 96vw);
+}
+
+.activity-bulk-layout {
+    display: grid;
+    gap: 14px;
+}
+
+.event-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.4fr .7fr .7fr 1.2fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.save-event-btn {
+    height: 42px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #0ea5e9, #0284c7);
+    color: #fff;
+    font-weight: 950;
+    cursor: pointer;
+    padding: 0 14px;
+    white-space: nowrap;
+}
+
+.selected-event-preview {
+    margin-top: 12px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 11px 13px;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 850;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.selected-event-preview b {
+    color: #0f172a;
+}
+
+.content-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.add-content-btn {
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #facc15, #f59e0b);
+    color: #111827;
+    font-weight: 950;
+    cursor: pointer;
+    padding: 9px 13px;
+}
+
+.activity-content-blocks {
+    display: grid;
+    gap: 14px;
+}
+
+.activity-content-block {
+    border: 1px solid #dbe3ef;
+    border-radius: 16px;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
+}
+
+.content-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #0f2a4a, #123a66);
+    color: #ffffff;
+    padding: 11px 14px;
+}
+
+.content-block-head b {
+    font-weight: 950;
+}
+
+.content-block-head button {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.content-block-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 14px;
+}
+
+.quick-medal-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.quick-medal-row button {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    color: #0f172a;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.quick-medal-row button:hover {
+    background: #fff7cc;
+}
+
+.student-add-row {
+    display: flex;
+    gap: 8px;
+}
+
+.selected-student-title {
+    margin-top: 12px;
+    margin-bottom: 8px;
+    font-weight: 950;
+    color: #0f2a4a;
+}
+
+.selected-student-list {
+    display: grid;
+    gap: 7px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.selected-empty {
+    padding: 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 800;
+}
+
+.selected-student-chip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 8px 10px;
+    font-weight: 850;
+}
+
+.selected-student-chip button {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #ffffff;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+@media(max-width: 1100px) {
+    .event-grid,
+    .content-block-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================
+   CONTENT BLOCK - NỘI DUNG NGAY TRÊN THANH TIÊU ĐỀ
+========================= */
+.content-block-head-input {
+    gap: 12px;
+}
+
+.content-title-input-wrap {
+    flex: 1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.content-title-input-wrap span {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 1000;
+    white-space: nowrap;
+}
+
+.content-title-input {
+    width: 100%;
+    height: 38px;
+    border: 1px solid rgba(250, 204, 21, .75);
+    border-radius: 10px;
+    background: rgba(255,255,255,.96);
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 900;
+    padding: 0 12px;
+    outline: none;
+}
+
+.content-title-input:focus {
+    border-color: #facc15;
+    box-shadow: 0 0 0 3px rgba(250,204,21,.22);
+}
+
+/* =========================
+   COMBOBOX THÊM HỘI VIÊN
+========================= */
+.student-combo-wrap {
+    position: relative;
+}
+
+.student-combo-results {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 30000;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, .18);
+    padding: 7px;
+}
+
+.student-combo-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    background: #ffffff;
+}
+
+.student-combo-item:hover {
+    background: #fff7cc;
+    border-color: #facc15;
+}
+
+.student-combo-info {
+    min-width: 0;
+}
+
+.student-combo-info b {
+    display: block;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 950;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-combo-info span {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-combo-add {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.student-combo-add:hover {
+    filter: brightness(.96);
+}
+
+.student-combo-empty {
+    padding: 12px;
+    color: #64748b;
+    font-weight: 850;
+    text-align: center;
+}
+</style>
+
+{% endblock %}

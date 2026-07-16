@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Kết quả thi cấp đẳng</h1>
+
+<form method="get" id="resultFilterForm" class="result-filter-box">
+
+    <div class="field-box">
+        <label>Năm</label>
+        <select name="year" onchange="autoFilterResults()">
+            <option value="">Tất cả năm</option>
+
+            {% if year_options %}
+                {% for y in year_options %}
+                <option value="{{ y }}" {{ 'selected' if year|string == y|string }}>{{ y }}</option>
+                {% endfor %}
+            {% else %}
+                {% for y in range(current_year - 2, current_year + 6) %}
+                <option value="{{ y }}" {{ 'selected' if year|string == y|string }}>{{ y }}</option>
+                {% endfor %}
+            {% endif %}
+        </select>
+    </div>
+
+    <div class="field-box">
+        <label>Quý / Lần</label>
+        <select name="quarter" onchange="autoFilterResults()">
+            <option value="">Tất cả quý / lần</option>
+
+            {% for p in period_options %}
+            <option value="{{ p.value }}" {{ 'selected' if quarter == p.value }}>
+                {{ p.label }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="field-box result-name-filter">
+        <label>Họ tên / Mã HV</label>
+        <input
+            name="name"
+            id="resultNameInput"
+            value="{{ name }}"
+            placeholder="Nhập tên hoặc mã hội viên"
+            oninput="debounceResultFilter()"
+        >
+    </div>
+
+    <div class="field-box">
+        <label>Cấp đẳng thi</label>
+        <select name="cap_thi" id="capThiSelect" onchange="autoFilterResults()">
+            <option value="">Tất cả cấp</option>
+            {% for c in cap_thi_options %}
+            <option value="{{ c }}" {{ 'selected' if cap_thi == c }}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="field-box">
+        <label>Kết quả</label>
+        <select name="ket_qua" onchange="autoFilterResults()">
+            <option value="">Tất cả kết quả</option>
+            <option value="Đạt" {{ 'selected' if ket_qua=='Đạt' }}>Đạt</option>
+            <option value="Không đạt" {{ 'selected' if ket_qua=='Không đạt' }}>Không đạt</option>
+            <option value="Vắng" {{ 'selected' if ket_qua=='Vắng' }}>Vắng</option>
+        </select>
+    </div>
+
+    <div class="field-box result-filter-actions">
+        <label>&nbsp;</label>
+        <a href="/results" class="clear-filter-btn">Xóa lọc</a>
+    </div>
+
+</form>
+
+<table class="result-table">
+    <thead>
+        <tr>
+            <th>Kỳ thi</th>
+            <th>Mã HV</th>
+            <th>Họ tên</th>
+            <th>Cấp đẳng thi</th>
+            <th>Số thi</th>
+            <th>Kết quả</th>
+            <th>Ghi chú</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for r in rows %}
+        <tr oncontextmenu='openResultMenu(
+            event,
+            {{ r.ky_thi|tojson }},
+            {{ r.ma_hv|tojson }},
+            {{ r.so_thi|tojson }},
+            {{ r.ho_ten|tojson }}
+        )'>
+            <td>{{ r.ky_thi }}</td>
+            <td>{{ r.ma_hv }}</td>
+            <td class="text-left"><b>{{ r.ho_ten }}</b></td>
+            <td>{{ r.cap_dai_thi }}</td>
+            <td>{{ r.so_thi }}</td>
+
+            <td>
+                {% if r.ket_qua == 'Đạt' %}
+                    <span class="result-pill pass">Đạt</span>
+                {% elif r.ket_qua == 'Không đạt' %}
+                    <span class="result-pill fail">Không đạt</span>
+                {% elif r.ket_qua == 'Vắng' %}
+                    <span class="result-pill absent">Vắng</span>
+                {% else %}
+                    {{ r.ket_qua }}
+                {% endif %}
+            </td>
+
+            <td>{{ r.ghi_chu }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div id="resultContextMenu" class="context-menu">
+    <div onclick="deleteResultRow()">🗑️ Xóa kết quả</div>
+</div>
+
+<form method="post" action="/results/delete?year={{ year }}&quarter={{ quarter }}" id="deleteResultForm" style="display:none;">
+    <input type="hidden" name="ky_thi" id="delete_ky_thi">
+    <input type="hidden" name="ma_hv" id="delete_ma_hv">
+    <input type="hidden" name="so_thi" id="delete_so_thi">
+</form>
+
+{% if delete_errors %}
+<div id="deleteErrorModal" class="modal-bg" style="display:flex;">
+    <div class="modal-box finalize-error-box">
+        <div class="error-modal-header">
+            <div>
+                <h2>Không thể xóa kết quả</h2>
+                <p>Ken cần xóa kết quả theo đúng thứ tự từ mới nhất về cũ nhất.</p>
+            </div>
+
+            <button type="button" class="detail-close-btn" onclick="closeDeleteErrorModal()">×</button>
+        </div>
+
+        <div class="error-list-box">
+            {% for err in delete_errors %}
+            <div class="error-item">
+                {{ err|safe }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="cancel-btn" onclick="closeDeleteErrorModal()">
+                Đóng để kiểm tra
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+let resultFilterTimer = null;
+
+function autoFilterResults() {
+    const form = document.getElementById("resultFilterForm");
+    const quarterSelect = form.querySelector('select[name="quarter"]');
+    const capSelect = document.getElementById("capThiSelect");
+
+    if (quarterSelect && capSelect) {
+        const q = quarterSelect.value;
+        const currentCap = capSelect.value;
+
+        const capOptions = [
+            "Cấp 9", "Cấp 8", "Cấp 7", "Cấp 6", "Cấp 5",
+            "Cấp 4", "Cấp 3", "Cấp 2", "Cấp 1"
+        ];
+
+        const danOptions = [
+            "1 Đẳng", "2 Đẳng", "3 Đẳng", "4 Đẳng", "5 Đẳng",
+            "6 Đẳng", "7 Đẳng", "8 Đẳng", "9 Đẳng", "10 Đẳng"
+        ];
+
+        let allowed = [];
+
+        if (["Q1", "Q2", "Q3", "Q4"].includes(q)) {
+            allowed = capOptions;
+        } else if (["L1", "L2", "KVMN", "KVMT", "KVMB", "QG"].includes(q)) {
+            allowed = danOptions;
+        } else {
+            allowed = capOptions.concat(danOptions);
+        }
+
+        if (currentCap && !allowed.includes(currentCap)) {
+            capSelect.value = "";
+        }
+    }
+
+    form.submit();
+}
+
+function debounceResultFilter() {
+    clearTimeout(resultFilterTimer);
+    resultFilterTimer = setTimeout(() => {
+        autoFilterResults();
+    }, 450);
+}
+
+/* ===== CLICK PHẢI XÓA KẾT QUẢ ===== */
+let selectedResult = {
+    kyThi: "",
+    maHv: "",
+    soThi: "",
+    hoTen: ""
+};
+
+function openResultMenu(e, kyThi, maHv, soThi, hoTen) {
+    e.preventDefault();
+
+    selectedResult.kyThi = kyThi || "";
+    selectedResult.maHv = maHv || "";
+    selectedResult.soThi = soThi || "";
+    selectedResult.hoTen = hoTen || "";
+
+    const menu = document.getElementById("resultContextMenu");
+    menu.style.display = "block";
+    menu.style.left = e.pageX + "px";
+    menu.style.top = e.pageY + "px";
+}
+
+function deleteResultRow() {
+    if (!selectedResult.kyThi || !selectedResult.maHv) return;
+
+    const msg =
+        `Xóa kết quả này?\n\n` +
+        `Kỳ thi: ${selectedResult.kyThi}\n` +
+        `Mã HV: ${selectedResult.maHv}\n` +
+        `Họ tên: ${selectedResult.hoTen}\n` +
+        `Số thi: ${selectedResult.soThi || ""}`;
+
+    if (!confirm(msg)) return;
+
+    document.getElementById("delete_ky_thi").value = selectedResult.kyThi;
+    document.getElementById("delete_ma_hv").value = selectedResult.maHv;
+    document.getElementById("delete_so_thi").value = selectedResult.soThi;
+
+    document.getElementById("deleteResultForm").submit();
+}
+
+document.addEventListener("click", function () {
+    const menu = document.getElementById("resultContextMenu");
+    if (menu) menu.style.display = "none";
+});
+
+function closeDeleteErrorModal() {
+    const modal = document.getElementById("deleteErrorModal");
+    if (modal) modal.style.display = "none";
+}
+</script>
+
+{% endblock %}

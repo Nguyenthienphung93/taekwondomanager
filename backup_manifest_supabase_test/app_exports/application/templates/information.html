@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="info-page">
+    <div class="info-hero">
+        <div class="info-avatar-wrap">
+            <img class="info-logo" src="{{ settings.header.logo_url }}" alt="Logo CLB">
+        </div>
+        <div class="info-main">
+            <div class="info-kicker">{{ settings.profile.system_name }}</div>
+            <h1>Nguyễn Thiên Phụng</h1>
+            <p class="info-role">{{ settings.profile.role }}</p>
+            <div class="info-badges">
+                <span>🥋 Taekwondo Poomsae</span>
+                <span>🇻🇳 Việt Nam</span>
+                <span>🌻 {{ settings.header.club_name }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card owner-card">
+            <h2>👑 Người sáng tạo & sở hữu</h2>
+            <p class="owner-name">{{ settings.profile.owner }}</p>
+            <p>
+                Hệ thống được xây dựng để quản lý hội viên, học phí, thi cấp, hoạt động và thông báo của CLB Taekwondo một cách gọn gàng, rõ ràng và chuyên nghiệp.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h2>📞 Thông tin liên hệ</h2>
+            <div class="contact-row"><b>SĐT/Zalo</b><span>{{ settings.profile.phone_zalo }}</span></div>
+            <div class="contact-row"><b>Email</b><span>{{ settings.profile.email }}</span></div>
+        </div>
+
+        <div class="info-card">
+            <h2>⚙️ Chức năng chính</h2>
+            <ul class="nice-list">
+                <li>Quản lý hồ sơ hội viên và ảnh thẻ.</li>
+                <li>Nhập học phí, theo dõi đã đóng/chưa đóng.</li>
+                <li>Lập danh sách thi cấp và chốt kết quả.</li>
+                <li>Theo dõi hoạt động, thông báo và dữ liệu CLB.</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h2>🌟 Định hướng</h2>
+            <p>
+                Phần mềm hướng tới sự đơn giản khi sử dụng hằng ngày, nhưng vẫn đủ dữ liệu để CLB theo dõi võ sinh lâu dài, giảm thao tác thủ công và hạn chế sai sót khi tổng hợp.
+            </p>
+        </div>
+    </div>
+</section>
+
+<style>
+.info-page{padding:22px 26px 50px;color:#07111f;}
+.info-hero{display:flex;gap:22px;align-items:center;background:linear-gradient(135deg,#061b34,#0d3c6d);border-radius:24px;padding:26px;box-shadow:0 16px 35px rgba(6,27,52,.20);color:#fff;margin-bottom:20px;}
+.info-logo{width:116px;height:116px;object-fit:contain;background:#fff;border-radius:20px;padding:10px;box-shadow:0 10px 25px rgba(0,0,0,.25);}
+.info-kicker{font-weight:800;letter-spacing:.3px;color:#ffcf24;margin-bottom:7px;}
+.info-main h1{font-size:38px;line-height:1.05;margin:0 0 8px;text-transform:uppercase;}
+.info-role{font-size:17px;margin:0 0 14px;color:#e8f2ff;font-weight:700;}
+.info-badges{display:flex;flex-wrap:wrap;gap:9px;}
+.info-badges span{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:8px 12px;border-radius:999px;font-weight:800;}
+.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.info-card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:20px;box-shadow:0 10px 24px rgba(15,23,42,.08);}
+.info-card h2{margin:0 0 12px;font-size:20px;}
+.owner-name{font-size:25px;font-weight:900;color:#0a58ca;margin:0 0 8px;}
+.contact-row{display:flex;justify-content:space-between;gap:16px;border-bottom:1px dashed #d7dee8;padding:11px 0;}
+.contact-row:last-child{border-bottom:0;}
+.contact-row span{font-weight:800;color:#0a58ca;text-align:right;}
+.nice-list{margin:0;padding-left:20px;line-height:1.8;font-weight:650;}
+@media(max-width:760px){.info-page{padding:16px}.info-hero{align-items:flex-start;flex-direction:column}.info-main h1{font-size:29px}.info-grid{grid-template-columns:1fr}.contact-row{flex-direction:column;gap:4px}.contact-row span{text-align:left}}
+</style>
+{% endblock %}

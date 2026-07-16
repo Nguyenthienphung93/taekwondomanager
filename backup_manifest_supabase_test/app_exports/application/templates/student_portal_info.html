@@ -1,0 +1,319 @@
+{% extends "student_portal_base.html" %}
+{% set active_page = 'info' %}
+{% block title %}Thông tin học viên{% endblock %}
+
+{% block extra_css %}
+<style>
+.info-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.photo-card {
+    text-align: center;
+}
+
+.student-photo-wrap {
+    width: 260px;
+    height: 347px;
+    max-width: 100%;
+    margin: 0 auto;
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #f1f5f9;
+    border: 1px solid #dbe7f5;
+    box-shadow: 0 10px 24px rgba(15,23,42,.12);
+}
+
+.student-photo,
+.student-photo-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    border-radius: 18px;
+}
+
+.student-photo {
+    object-fit: cover;
+    object-position: center top;
+    image-rendering: auto;
+}
+
+.student-photo-canvas {
+    position: absolute;
+    inset: 0;
+    background: #f1f5f9;
+}
+
+.no-photo {
+    width: 210px;
+    height: 280px;
+    border-radius: 18px;
+    margin: 0 auto;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-weight: 900;
+}
+
+.info-name {
+    margin-top: 14px;
+    font-size: 22px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.info-code {
+    margin-top: 4px;
+    color: #3C85FFFF;
+    font-weight: 850;
+}
+
+.info-section-title {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.info-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 13px;
+}
+
+.info-item span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 5px;
+}
+
+.info-item b {
+    color: #0f172a;
+    font-size: 15px;
+}
+
+.info-personal-name {
+    color: #3C85FFFF !important;
+    font-size: 17px !important;
+    font-weight: 950 !important;
+}
+
+.status-text {
+    font-size: 15px;
+    font-weight: 950;
+}
+
+.status-active {
+    color: #16a34a !important;
+}
+
+.status-paused {
+    color: #dc2626 !important;
+}
+
+@media(max-width: 860px) {
+    .info-layout { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="portal-page-head">
+    <div>
+        <h1>👤 Thông tin học viên</h1>
+        <p>Thông tin cá nhân, liên hệ và lớp học hiện tại.</p>
+    </div>
+</div>
+
+<div class="info-layout">
+    <section class="portal-card photo-card">
+        {% if photo_url %}
+            <div class="student-photo-wrap">
+                <img
+                    id="studentPhotoSource"
+                    class="student-photo"
+                    src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
+                    alt="Ảnh học viên"
+                    decoding="async"
+                >
+                <canvas
+                    id="studentPhotoCanvas"
+                    class="student-photo-canvas"
+                    width="260"
+                    height="347"
+                    aria-hidden="true"
+                ></canvas>
+            </div>
+        {% else %}
+            <div class="no-photo">Chưa có ảnh</div>
+        {% endif %}
+        <div class="info-name">{{ student.name }}</div>
+        <div class="info-code">{{ student.license }}</div>
+    </section>
+
+    <div class="portal-grid-2">
+        <section class="portal-card">
+            <h2 class="info-section-title">Thông tin cá nhân</h2>
+            <div class="info-grid">
+                <div class="info-item"><span>Họ tên</span><b class="info-personal-name">{{ student.name or '—' }}</b></div>
+                <div class="info-item"><span>Ngày sinh</span><b>{{ student.birthdate or '—' }}</b></div>
+                <div class="info-item"><span>Giới tính</span><b>{{ student.gender or '—' }}</b></div>
+                <div class="info-item"><span>Số điện thoại</span><b>{{ student.phonenumber or '—' }}</b></div>
+                <div class="info-item"><span>Địa chỉ</span><b>{{ student.address or '—' }}</b></div>
+                <div class="info-item"><span>Telegram ID</span><b>{{ student.telegram_id or '—' }}</b></div>
+            </div>
+        </section>
+
+        <section class="portal-card info-class-card">
+            <h2>Thông tin lớp học</h2>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span>Mã HV</span>
+                    <b>{{ student.license or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Cấp đai</span>
+                    <b>{{ student.belt or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Lớp</span>
+                    <b>{{ student.classroom or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Ca</span>
+                    <b>{{ student.timeclass or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>CLB</span>
+                    <b>{{ student.clup or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Gia đình tập chung</span>
+                    <b>
+                        {% if student.family|string|lower in ['có', '1', 'true', 'yes'] %}
+                            Có
+                        {% else %}
+                            Không
+                        {% endif %}
+                    </b>
+                </div>
+
+                <div class="info-item">
+                    <span>Tình trạng</span>
+                    {% if student.active|string|lower in ['có', '1', 'true', 'yes'] %}
+                        <b class="status-text status-active">Đang hoạt động</b>
+                    {% else %}
+                        <b class="status-text status-paused">Tạm ngưng</b>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+(function () {
+    function renderStudentPhotoHighQuality() {
+        const img = document.getElementById("studentPhotoSource");
+        const canvas = document.getElementById("studentPhotoCanvas");
+
+        if (!img || !canvas) return;
+
+        const cssWidth = 260;
+        const cssHeight = 347;
+        const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 4));
+
+        function draw() {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+
+            canvas.width = Math.round(cssWidth * dpr);
+            canvas.height = Math.round(cssHeight * dpr);
+            canvas.style.width = cssWidth + "px";
+            canvas.style.height = cssHeight + "px";
+
+            const ctx = canvas.getContext("2d", { alpha: false });
+            if (!ctx) return;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.fillStyle = "#f1f5f9";
+            ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+            const srcRatio = img.naturalWidth / img.naturalHeight;
+            const dstRatio = cssWidth / cssHeight;
+
+            let sx = 0;
+            let sy = 0;
+            let sw = img.naturalWidth;
+            let sh = img.naturalHeight;
+
+            if (srcRatio > dstRatio) {
+                sw = img.naturalHeight * dstRatio;
+                sx = (img.naturalWidth - sw) / 2;
+            } else {
+                sh = img.naturalWidth / dstRatio;
+                sy = 0;
+            }
+
+            /* Hạ nhẹ vùng sáng, giữ chi tiết và không làm mờ ảnh */
+            ctx.filter = "brightness(0.96) contrast(1.03) saturate(0.98)";
+
+            ctx.drawImage(
+                img,
+                sx, sy, sw, sh,
+                0, 0, cssWidth, cssHeight
+            );
+
+            ctx.filter = "none";
+            canvas.style.display = "block";
+        }
+
+        function fallback() {
+            canvas.style.display = "none";
+        }
+
+        if (img.complete) {
+            if (img.naturalWidth) draw();
+            else fallback();
+        } else {
+            img.addEventListener("load", draw, { once: true });
+            img.addEventListener("error", fallback, { once: true });
+        }
+
+        window.addEventListener("resize", draw);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", renderStudentPhotoHighQuality);
+    } else {
+        renderStudentPhotoHighQuality();
+    }
+})();
+</script>
+
+{% endblock %}
