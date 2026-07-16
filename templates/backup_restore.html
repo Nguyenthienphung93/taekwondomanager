@@ -21,11 +21,6 @@
         </div>
 
         <div class="backup-header-actions">
-            <a href="{{ url_for('backup_restore_manifests') }}"
-               class="backup-action-btn manifests">
-                <i class="fa-solid fa-list-check"></i>
-                Dữ liệu manifest
-            </a>
 
             <a href="{{ url_for('backup_restore_refresh') }}"
                class="backup-action-btn refresh">
@@ -196,16 +191,14 @@
                         </div>
 
                         <div class="backup-file-actions">
-                            <button type="button"
-                                    class="backup-detail-btn"
-                                    onclick="openBackupPreview(
-                                        '{{ backup.name|e }}',
-                                        '{{ backup.mod_time_text|e }}',
-                                        '{{ backup.size_text|e }}'
-                                    )">
-                                <i class="fa-solid fa-eye"></i>
-                                Xem thông tin
-                            </button>
+                            <a href="{{ url_for(
+                                'backup_restore_manifest_detail',
+                                manifest_id=backup.name
+                            ) }}"
+                               class="backup-open-btn">
+                                <i class="fa-solid fa-code-compare"></i>
+                                Mở & so sánh
+                            </a>
                         </div>
                     </article>
                 {% endfor %}
