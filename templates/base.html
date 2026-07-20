@@ -606,6 +606,12 @@
             <span>Setup</span>
         </a>
 
+        <a href="{{ url_for('federation_compare') }}"
+           data-tooltip="Kiểm tra Liên đoàn">
+            <span class="mi">🔍</span>
+            <span>Kiểm tra Liên đoàn</span>
+        </a>
+
         <a href="{{ url_for('backup_restore') }}"
            data-tooltip="Sao lưu & Phục hồi">
             <span class="mi">🛡️</span>
@@ -845,6 +851,7 @@ function initAdminActiveNav() {
         ["/activities", ["/activities"]],
         ["/notifications", ["/notifications"]],
         ["/setup", ["/setup"]],
+        ["/federation-compare", ["/federation-compare"]],
         ["/backup-restore", ["/backup-restore"]],
         ["/information", ["/information"]]
     ];

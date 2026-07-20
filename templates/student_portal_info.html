@@ -6,9 +6,71 @@
 <style>
 .info-layout {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: 540px minmax(0, 1fr);
     gap: 16px;
     align-items: start;
+}
+
+.student-visual-grid {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+}
+
+.belt-card {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.belt-card-title {
+    margin: 0 0 14px;
+    font-size: 19px;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.belt-image-wrap {
+    flex: 1;
+    min-height: 220px;
+    border-radius: 18px;
+    border: 1px solid #dbe7f5;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow: hidden;
+}
+
+.belt-image {
+    display: block;
+    width: 100%;
+    max-height: 190px;
+    object-fit: contain;
+}
+
+.no-belt-image {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1.5;
+}
+
+.current-belt-label {
+    margin-top: 16px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.current-belt-value {
+    margin-top: 5px;
+    color: #2563eb;
+    font-size: 22px;
+    font-weight: 950;
 }
 
 .photo-card {
@@ -128,9 +190,24 @@
     color: #dc2626 !important;
 }
 
-@media(max-width: 860px) {
-    .info-layout { grid-template-columns: 1fr; }
-    .info-grid { grid-template-columns: 1fr; }
+@media(max-width: 1180px) {
+    .info-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media(max-width: 680px) {
+    .student-visual-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .belt-image-wrap {
+        min-height: 180px;
+    }
 }
 </style>
 {% endblock %}
@@ -144,30 +221,54 @@
 </div>
 
 <div class="info-layout">
-    <section class="portal-card photo-card">
-        {% if photo_url %}
-            <div class="student-photo-wrap">
-                <img
-                    id="studentPhotoSource"
-                    class="student-photo"
-                    src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
-                    alt="Ảnh học viên"
-                    decoding="async"
-                >
-                <canvas
-                    id="studentPhotoCanvas"
-                    class="student-photo-canvas"
-                    width="260"
-                    height="347"
-                    aria-hidden="true"
-                ></canvas>
+    <div class="student-visual-grid">
+        <section class="portal-card photo-card">
+            {% if photo_url %}
+                <div class="student-photo-wrap">
+                    <img
+                        id="studentPhotoSource"
+                        class="student-photo"
+                        src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
+                        alt="Ảnh học viên"
+                        decoding="async"
+                    >
+                    <canvas
+                        id="studentPhotoCanvas"
+                        class="student-photo-canvas"
+                        width="260"
+                        height="347"
+                        aria-hidden="true"
+                    ></canvas>
+                </div>
+            {% else %}
+                <div class="no-photo">Chưa có ảnh</div>
+            {% endif %}
+            <div class="info-name">{{ student.name }}</div>
+            <div class="info-code">{{ student.license }}</div>
+        </section>
+
+        <section class="portal-card belt-card">
+            <h2 class="belt-card-title">Màu đai hiện tại</h2>
+
+            <div class="belt-image-wrap">
+                {% if belt_image_url %}
+                    <img
+                        class="belt-image"
+                        src="{{ belt_image_url }}?v={{ belt_cache_v|default(student.belt)|urlencode }}"
+                        alt="Hình {{ student.belt or 'cấp đai hiện tại' }}"
+                        loading="eager"
+                        decoding="async"
+                    >
+                {% else %}
+                    <div class="no-belt-image">
+                        Chưa có hình phù hợp<br>
+                        với cấp đai hiện tại.
+                    </div>
+                {% endif %}
             </div>
-        {% else %}
-            <div class="no-photo">Chưa có ảnh</div>
-        {% endif %}
-        <div class="info-name">{{ student.name }}</div>
-        <div class="info-code">{{ student.license }}</div>
-    </section>
+            <div class="current-belt-value">{{ student.belt or '—' }}</div>
+        </section>
+    </div>
 
     <div class="portal-grid-2">
         <section class="portal-card">

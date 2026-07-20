@@ -1,0 +1,1761 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .federation-page {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 4px 0 36px;
+    }
+
+    .federation-hero {
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 18px;
+        padding: 24px;
+        border-radius: 24px;
+        background:
+            radial-gradient(
+                circle at top right,
+                rgba(59, 130, 246, .22),
+                transparent 34%
+            ),
+            linear-gradient(
+                135deg,
+                #071426,
+                #0f2a4a
+            );
+        color: #fff;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .18);
+    }
+
+    .federation-hero::after {
+        content: "";
+        position: absolute;
+        right: -70px;
+        bottom: -100px;
+        width: 260px;
+        height: 260px;
+        border-radius: 50%;
+        background: rgba(250, 204, 21, .08);
+        pointer-events: none;
+    }
+
+    .federation-title-row {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .federation-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        min-width: 0;
+    }
+
+    .federation-title-icon {
+        width: 58px;
+        height: 58px;
+        flex: 0 0 auto;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: 1px solid rgba(255, 255, 255, .2);
+        box-shadow: 0 14px 28px rgba(37, 99, 235, .3);
+        font-size: 26px;
+    }
+
+    .federation-title-text h1 {
+        margin: 0;
+        font-size: 27px;
+        line-height: 1.18;
+        font-weight: 950;
+    }
+
+    .federation-title-text p {
+        margin: 7px 0 0;
+        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 650;
+        line-height: 1.5;
+    }
+
+    .compare-rule-badge {
+        position: relative;
+        z-index: 1;
+        flex: 0 0 auto;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: rgba(250, 204, 21, .12);
+        border: 1px solid rgba(250, 204, 21, .42);
+        color: #fde68a;
+        font-size: 12px;
+        font-weight: 900;
+        line-height: 1.35;
+        text-align: center;
+    }
+
+    .upload-panel {
+        margin-bottom: 18px;
+        padding: 20px;
+        border-radius: 22px;
+        background: #fff;
+        border: 1px solid #dbe3ef;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .08);
+    }
+
+    .upload-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .upload-heading h2 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 950;
+    }
+
+    .upload-heading p {
+        margin: 5px 0 0;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .file-requirement {
+        flex: 0 0 auto;
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .upload-heading-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 9px;
+    }
+
+    .clear-compare-btn {
+        min-height: 31px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: #fee2e2;
+        border: 1px solid #fca5a5;
+        color: #b91c1c;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 950;
+        white-space: nowrap;
+        transition: .16s ease;
+    }
+
+    .clear-compare-btn:hover {
+        background: #fecaca;
+        transform: translateY(-1px);
+    }
+
+    .upload-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .file-drop-zone {
+        position: relative;
+        min-height: 84px;
+        padding: 14px 16px;
+        border-radius: 17px;
+        border: 2px dashed #bfdbfe;
+        background: #f8fbff;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        transition: .18s ease;
+    }
+
+    .file-drop-zone:hover,
+    .file-drop-zone.dragging {
+        border-color: #2563eb;
+        background: #eff6ff;
+        transform: translateY(-1px);
+    }
+
+    .file-drop-zone.has-file {
+        border-style: solid;
+        border-color: #22c55e;
+        background: #f0fdf4;
+    }
+
+    .file-input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .file-icon {
+        width: 48px;
+        height: 48px;
+        flex: 0 0 auto;
+        border-radius: 15px;
+        background: linear-gradient(135deg, #16a34a, #15803d);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 23px;
+        box-shadow: 0 10px 20px rgba(22, 163, 74, .22);
+    }
+
+    .file-text {
+        min-width: 0;
+    }
+
+    .file-text strong {
+        display: block;
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 950;
+    }
+
+    .file-text span {
+        display: block;
+        margin-top: 5px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 650;
+        overflow-wrap: anywhere;
+    }
+
+    .compare-submit-btn {
+        min-width: 190px;
+        border: 0;
+        border-radius: 17px;
+        padding: 0 20px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 950;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, .24);
+        transition: .16s ease;
+    }
+
+    .compare-submit-btn:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.04);
+    }
+
+    .compare-submit-btn:disabled {
+        cursor: wait;
+        opacity: .75;
+        transform: none;
+    }
+
+    .file-columns-note {
+        margin-top: 13px;
+        padding: 11px 13px;
+        border-radius: 13px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
+    .file-columns-note b {
+        color: #0f172a;
+    }
+
+    .uploaded-file-info {
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #ecfeff;
+        border: 1px solid #a5f3fc;
+        color: #155e75;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 20px;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .uploaded-file-info i {
+        margin-right: 6px;
+    }
+
+    .duplicate-warning {
+        margin-bottom: 16px;
+        padding: 13px 15px;
+        border-radius: 14px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        font-size: 13px;
+        font-weight: 750;
+        line-height: 1.55;
+    }
+
+    .duplicate-warning b {
+        font-weight: 950;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .summary-card {
+        position: relative;
+        overflow: hidden;
+        padding: 16px;
+        border-radius: 18px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, .07);
+    }
+
+    .summary-card::after {
+        content: "";
+        position: absolute;
+        right: -20px;
+        bottom: -35px;
+        width: 85px;
+        height: 85px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: .05;
+    }
+
+    .summary-label {
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .summary-value {
+        margin-top: 8px;
+        color: #0f172a;
+        font-size: 29px;
+        line-height: 1;
+        font-weight: 950;
+    }
+
+    .summary-total {
+        color: #2563eb;
+        border-top: 4px solid #2563eb;
+    }
+
+    .summary-matched {
+        color: #16a34a;
+        border-top: 4px solid #22c55e;
+    }
+
+    .summary-mismatched {
+        color: #dc2626;
+        border-top: 4px solid #ef4444;
+    }
+
+    .summary-not-found {
+        color: #d97706;
+        border-top: 4px solid #f59e0b;
+    }
+
+    .summary-invalid {
+        color: #7c3aed;
+        border-top: 4px solid #8b5cf6;
+    }
+
+    .result-panel {
+        border-radius: 22px;
+        background: #fff;
+        border: 1px solid #dbe3ef;
+        box-shadow: 0 14px 35px rgba(15, 23, 42, .09);
+        overflow: hidden;
+    }
+
+    .result-toolbar {
+        padding: 16px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: grid;
+        grid-template-columns: minmax(240px, 1fr) auto auto;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .result-search-wrap {
+        position: relative;
+    }
+
+    .result-search-wrap i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        pointer-events: none;
+    }
+
+    .result-search {
+        width: 100%;
+        height: 43px;
+        padding: 0 14px 0 40px;
+        border-radius: 13px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 700;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    .result-search:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
+
+    .filter-select {
+        height: 43px;
+        min-width: 170px;
+        padding: 0 34px 0 12px;
+        border-radius: 13px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 850;
+        outline: none;
+    }
+
+    .visible-count {
+        min-width: 130px;
+        height: 43px;
+        padding: 0 13px;
+        border-radius: 13px;
+        background: #0f172a;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .table-scroll {
+        width: 100%;
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+        position: relative;
+        scrollbar-gutter: stable;
+    }
+
+    .compare-table {
+        width: 100%;
+        min-width: 1380px;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .compare-table th {
+        position: sticky;
+        z-index: 10;
+        padding: 12px 10px;
+        background: #0f2a4a;
+        color: #fff;
+        border-right: 1px solid rgba(255, 255, 255, .12);
+        border-bottom: 1px solid rgba(255, 255, 255, .18);
+        font-size: 11px;
+        line-height: 1.3;
+        font-weight: 950;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Hàng tiêu đề thứ nhất */
+    .compare-table thead tr:first-child th {
+        top: 0;
+        z-index: 12;
+        height: 42px;
+        box-sizing: border-box;
+    }
+
+    /* Hàng tiêu đề thứ hai nằm ngay dưới hàng đầu */
+    .compare-table thead tr:nth-child(2) th {
+        top: 42px;
+        z-index: 11;
+        height: 40px;
+        box-sizing: border-box;
+    }
+
+    /* Tạo bóng nhẹ để phân biệt header với dữ liệu */
+    .compare-table thead tr:last-child th {
+        box-shadow: 0 3px 7px rgba(15, 23, 42, .16);
+    }
+
+    .compare-table th.group-federation {
+        background: #1d4ed8;
+    }
+
+    .compare-table th.group-supabase {
+        background: #047857;
+    }
+
+    .compare-table td {
+        padding: 11px 10px;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.45;
+        vertical-align: middle;
+        background: #fff;
+    }
+
+    .compare-table tbody tr:hover td {
+        background: #f8fbff;
+    }
+
+    .compare-table tbody tr.row-mismatched td {
+        background: #fffafa;
+    }
+
+    .compare-table tbody tr.row-not-found td {
+        background: #fffdf5;
+    }
+
+    .compare-table tbody tr.row-invalid td {
+        background: #faf5ff;
+    }
+
+    .compare-table tbody tr.row-matched td {
+        background: #fbfffc;
+    }
+
+    .center-cell {
+        text-align: center;
+    }
+
+    .stt-cell {
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .license-cell {
+        color: #1d4ed8 !important;
+        font-weight: 950 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .name-cell {
+        color: #0f172a !important;
+        font-weight: 900 !important;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
+        line-height: 1.4;
+    }
+
+    .field-cell {
+        min-width: 112px;
+    }
+
+    .field-same {
+        color: #166534 !important;
+        background: #f0fdf4 !important;
+    }
+
+    .field-different {
+        color: #b91c1c !important;
+        background: #fef2f2 !important;
+        font-weight: 900 !important;
+    }
+
+    .empty-value {
+        color: #94a3b8;
+        font-style: italic;
+        font-weight: 650;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-width: 105px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .status-matched {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+
+    .status-mismatched {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fca5a5;
+    }
+
+    .status-not-found {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+    }
+
+    .status-invalid {
+        background: #ede9fe;
+        color: #6d28d9;
+        border: 1px solid #c4b5fd;
+    }
+
+    .difference-list {
+        min-width: 165px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .difference-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 7px;
+        border-radius: 8px;
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        font-size: 10px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .all-same-text {
+        color: #15803d;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .not-found-text {
+        color: #b45309;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .empty-result {
+        padding: 50px 20px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .empty-result-icon {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 14px;
+        border-radius: 22px;
+        background: #eff6ff;
+        color: #2563eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+    }
+
+    .empty-result h3 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 950;
+    }
+
+    .empty-result p {
+        max-width: 530px;
+        margin: 8px auto 0;
+        font-size: 13px;
+        line-height: 1.6;
+        font-weight: 650;
+    }
+
+    .no-filter-result {
+        display: none;
+        padding: 32px 18px;
+        text-align: center;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    @media (max-width: 1150px) {
+        .summary-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 850px) {
+        .federation-title-row {
+            flex-direction: column;
+        }
+
+        .compare-rule-badge {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .upload-form {
+            grid-template-columns: 1fr;
+        }
+
+        .compare-submit-btn {
+            min-height: 52px;
+        }
+
+        .result-toolbar {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .result-search-wrap {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 620px) {
+        .federation-hero {
+            padding: 18px;
+            border-radius: 19px;
+        }
+
+        .federation-title-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+        }
+
+        .federation-title-text h1 {
+            font-size: 21px;
+        }
+
+        .summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .summary-card:first-child {
+            grid-column: 1 / -1;
+        }
+
+        .result-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .result-search-wrap {
+            grid-column: auto;
+        }
+
+        .filter-select,
+        .visible-count {
+            width: 100%;
+        }
+
+        .upload-heading {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .upload-heading-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+</style>
+
+<div class="federation-page">
+
+    <section class="federation-hero">
+        <div class="federation-title-row">
+            <div class="federation-title">
+                <div class="federation-title-icon">
+                    <i class="fa-solid fa-file-circle-check"></i>
+                </div>
+
+                <div class="federation-title-text">
+                    <h1>Kiểm tra dữ liệu Liên đoàn</h1>
+
+                    <p>
+                        Tải danh sách Excel từ hệ thống Liên đoàn để đối chiếu
+                        với dữ liệu võ sinh đang lưu trên Supabase.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="upload-panel">
+        <div class="upload-heading">
+            <div>
+                <h2>Tải danh sách cần kiểm tra</h2>
+
+                <p>
+                    File chỉ được đọc để so sánh,
+                    hệ thống không tự động cập nhật dữ liệu.
+                </p>
+            </div>
+
+            <div class="upload-heading-actions">
+                <div class="file-requirement">
+                    Chấp nhận .xlsx · Tối đa 50 MB
+                </div>
+
+                {% if compare_rows %}
+                <a
+                    href="{{ url_for('federation_compare') }}"
+                    class="clear-compare-btn"
+                    id="clearFederationCompareButton"
+                >
+                    <i class="fa-solid fa-trash-can"></i>
+                    Xóa file và kết quả
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form
+            id="federationUploadForm"
+            class="upload-form"
+            method="post"
+            enctype="multipart/form-data"
+            action="{{ url_for('federation_compare') }}"
+        >
+            <label
+                id="fileDropZone"
+                class="file-drop-zone"
+                for="federationExcelFile"
+            >
+                <input
+                    id="federationExcelFile"
+                    class="file-input"
+                    type="file"
+                    name="excel_file"
+                    accept=".xlsx"
+                    required
+                >
+
+                <div class="file-icon">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+
+                <div class="file-text">
+                    <strong id="fileMainText">
+                        Nhấn để chọn file Excel của Liên đoàn
+                    </strong>
+
+                    <span id="fileSubText">
+                        Hoặc kéo thả file .xlsx vào khu vực này
+                    </span>
+                </div>
+            </label>
+
+            <button
+                id="compareSubmitButton"
+                class="compare-submit-btn"
+                type="submit"
+            >
+                <i class="fa-solid fa-code-compare"></i>
+                Kiểm tra với Supabase
+            </button>
+        </form>
+
+        <div class="file-columns-note">
+            <b>Các cột bắt buộc:</b>
+            VTF ID, Họ và Tên, Giới tính, Ngày sinh và Cấp/Đẳng.
+            Hệ thống dùng VTF ID làm Mã HV để tìm đúng võ sinh.
+        </div>
+    </section>
+
+    {% if uploaded_filename %}
+    <div class="uploaded-file-info">
+        <span>
+            <i class="fa-solid fa-file-excel"></i>
+            File: {{ uploaded_filename }}
+        </span>
+
+        <span>
+            <i class="fa-solid fa-table"></i>
+            Sheet: {{ sheet_name }}
+        </span>
+
+        <span>
+            <i class="fa-solid fa-list-ol"></i>
+            Đã đọc: {{ summary.total }} dòng
+        </span>
+    </div>
+    {% endif %}
+
+    {% if duplicate_licenses %}
+    <div class="duplicate-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+
+        <b>Phát hiện VTF ID bị trùng trong file Excel:</b>
+
+        {{ duplicate_licenses | join(", ") }}.
+
+        Ken nên kiểm tra lại danh sách của Liên đoàn để tránh một võ sinh
+        xuất hiện nhiều lần.
+    </div>
+    {% endif %}
+
+    {% if compare_rows %}
+    <section class="summary-grid">
+        <div class="summary-card summary-total">
+            <div class="summary-label">Tổng dòng kiểm tra</div>
+            <div class="summary-value">{{ summary.total }}</div>
+        </div>
+
+        <div class="summary-card summary-matched">
+            <div class="summary-label">Giống hoàn toàn</div>
+            <div class="summary-value">{{ summary.matched }}</div>
+        </div>
+
+        <div class="summary-card summary-mismatched">
+            <div class="summary-label">Không giống</div>
+            <div class="summary-value">{{ summary.mismatched }}</div>
+        </div>
+
+        <div class="summary-card summary-not-found">
+            <div class="summary-label">Không tìm thấy</div>
+            <div class="summary-value">{{ summary.not_found }}</div>
+        </div>
+
+        <div class="summary-card summary-invalid">
+            <div class="summary-label">Dòng không hợp lệ</div>
+            <div class="summary-value">{{ summary.invalid }}</div>
+        </div>
+    </section>
+
+    <section class="result-panel">
+        <div class="result-toolbar">
+            <div class="result-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    id="federationResultSearch"
+                    class="result-search"
+                    type="search"
+                    placeholder="Tìm Mã HV hoặc họ tên..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <select
+                id="federationStatusFilter"
+                class="filter-select"
+            >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="mismatched">Không giống</option>
+                <option value="matched">Giống hoàn toàn</option>
+                <option value="not_found">Không tìm thấy</option>
+                <option value="invalid">Dòng không hợp lệ</option>
+            </select>
+
+            <select
+                id="federationFieldFilter"
+                class="filter-select"
+            >
+                <option value="all">Tất cả trường</option>
+                <option value="name">Sai họ tên</option>
+                <option value="birthdate">Sai ngày sinh</option>
+                <option value="gender">Sai giới tính</option>
+                <option value="belt">Sai Cấp/Đẳng</option>
+            </select>
+
+            <div
+                id="federationVisibleCount"
+                class="visible-count"
+            >
+                Hiển thị {{ summary.total }} dòng
+            </div>
+        </div>
+
+        <div class="table-scroll">
+            <table class="compare-table">
+                <colgroup>
+                    <!-- STT -->
+                    <col style="width:48px;">
+
+                    <!-- Trạng thái -->
+                    <col style="width:118px;">
+
+                    <!-- VTF ID / Mã HV -->
+                    <col style="width:135px;">
+
+                    <!-- Liên đoàn: Họ tên -->
+                    <col style="width:235px;">
+
+                    <!-- Liên đoàn: Ngày sinh -->
+                    <col style="width:108px;">
+
+                    <!-- Liên đoàn: Giới tính -->
+                    <col style="width:82px;">
+
+                    <!-- Liên đoàn: Cấp/Đẳng -->
+                    <col style="width:92px;">
+
+                    <!-- Supabase: Họ tên -->
+                    <col style="width:235px;">
+
+                    <!-- Supabase: Ngày sinh -->
+                    <col style="width:108px;">
+
+                    <!-- Supabase: Giới tính -->
+                    <col style="width:82px;">
+
+                    <!-- Supabase: Cấp/Đẳng -->
+                    <col style="width:92px;">
+
+                    <!-- Trường không giống -->
+                    <col style="width:145px;">
+                </colgroup>
+
+                <thead>
+                    <tr>
+                        <th rowspan="2" class="stt-cell">
+                            STT
+                        </th>
+
+                        <th rowspan="2">
+                            Trạng thái
+                        </th>
+
+                        <th rowspan="2">
+                            VTF ID / Mã HV
+                        </th>
+
+                        <th
+                            colspan="4"
+                            class="group-federation"
+                        >
+                            Dữ liệu Liên đoàn
+                        </th>
+
+                        <th
+                            colspan="4"
+                            class="group-supabase"
+                        >
+                            Dữ liệu Supabase
+                        </th>
+
+                        <th rowspan="2">
+                            Trường không giống
+                        </th>
+                    </tr>
+
+                    <tr>
+                        <th class="group-federation">
+                            Họ tên
+                        </th>
+
+                        <th class="group-federation">
+                            Ngày sinh
+                        </th>
+
+                        <th class="group-federation">
+                            Giới tính
+                        </th>
+
+                        <th class="group-federation">
+                            Cấp/Đẳng
+                        </th>
+
+                        <th class="group-supabase">
+                            Họ tên
+                        </th>
+
+                        <th class="group-supabase">
+                            Ngày sinh
+                        </th>
+
+                        <th class="group-supabase">
+                            Giới tính
+                        </th>
+
+                        <th class="group-supabase">
+                            Cấp/Đẳng
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody id="federationCompareBody">
+                    {% for row in compare_rows %}
+                    <tr
+                        class="compare-data-row row-{{ row.status }}"
+                        data-status="{{ row.status }}"
+                        data-fields="{{ row.difference_fields | join(',') }}"
+                        data-search="{{ (
+                            row.license ~ ' ' ~
+                            row.name ~ ' ' ~
+                            (row.student.name if row.student else '')
+                        ) | lower }}"
+                    >
+                        <td class="stt-cell">
+                            {{ loop.index }}
+                        </td>
+
+                        <td class="center-cell">
+                            {% if row.status == "matched" %}
+                            <span class="status-badge status-matched">
+                                <i class="fa-solid fa-circle-check"></i>
+                                Giống
+                            </span>
+
+                            {% elif row.status == "mismatched" %}
+                            <span class="status-badge status-mismatched">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                                Không giống
+                            </span>
+
+                            {% elif row.status == "not_found" %}
+                            <span class="status-badge status-not-found">
+                                <i class="fa-solid fa-user-slash"></i>
+                                Không tìm thấy
+                            </span>
+
+                            {% else %}
+                            <span class="status-badge status-invalid">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Không hợp lệ
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="license-cell">
+                            {% if row.license %}
+                                {{ row.license }}
+                            {% else %}
+                                <span class="empty-value">
+                                    Không có Mã HV
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- DỮ LIỆU LIÊN ĐOÀN -->
+                        <td
+                            class="name-cell
+                            {% if row.status == 'mismatched' and 'name' in row.difference_fields %}
+                                field-different
+                            {% endif %}"
+                        >
+                            {% if row.name %}
+                                {{ row.name }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <td
+                            class="field-cell
+                            {% if row.status == 'mismatched' and 'birthdate' in row.difference_fields %}
+                                field-different
+                            {% endif %}"
+                        >
+                            {% if row.birthdate %}
+                                {{ row.birthdate }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <td
+                            class="field-cell center-cell
+                            {% if row.status == 'mismatched' and 'gender' in row.difference_fields %}
+                                field-different
+                            {% endif %}"
+                        >
+                            {% if row.gender %}
+                                {{ row.gender }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <td
+                            class="field-cell center-cell
+                            {% if row.status == 'mismatched' and 'belt' in row.difference_fields %}
+                                field-different
+                            {% endif %}"
+                        >
+                            {% if row.belt %}
+                                {{ row.belt }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- DỮ LIỆU SUPABASE -->
+                        {% if row.student %}
+                        <td
+                            class="name-cell
+                            {% if row.status == 'mismatched' and 'name' in row.difference_fields %}
+                                field-different
+                            {% elif row.status == 'matched' %}
+                                field-same
+                            {% endif %}"
+                        >
+                            {% if row.student.name %}
+                                {{ row.student.name }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <td
+                            class="field-cell
+                            {% if row.status == 'mismatched' and 'birthdate' in row.difference_fields %}
+                                field-different
+                            {% elif row.status == 'matched' %}
+                                field-same
+                            {% endif %}"
+                        >
+                            {% if row.student.birthdate %}
+                                {{ row.student.birthdate }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <td
+                            class="field-cell center-cell
+                            {% if row.status == 'mismatched' and 'gender' in row.difference_fields %}
+                                field-different
+                            {% elif row.status == 'matched' %}
+                                field-same
+                            {% endif %}"
+                        >
+                            {% if row.student.gender %}
+                                {{ row.student.gender }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        <td
+                            class="field-cell center-cell
+                            {% if row.status == 'mismatched' and 'belt' in row.difference_fields %}
+                                field-different
+                            {% elif row.status == 'matched' %}
+                                field-same
+                            {% endif %}"
+                        >
+                            {% if row.student.belt %}
+                                {{ row.student.belt }}
+                            {% else %}
+                                <span class="empty-value">Trống</span>
+                            {% endif %}
+                        </td>
+
+                        {% else %}
+                        <td colspan="4" class="center-cell">
+                            {% if row.status == "not_found" %}
+                            <span class="not-found-text">
+                                Không có Mã HV này trên Supabase
+                            </span>
+
+                            {% else %}
+                            <span class="empty-value">
+                                Không có dữ liệu để đối chiếu
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
+                        <td>
+                            <div class="difference-list">
+                                {% if row.status == "matched" %}
+                                <span class="all-same-text">
+                                    <i class="fa-solid fa-check"></i>
+                                    Trùng cả 4 thông tin
+                                </span>
+
+                                {% elif row.status == "not_found" %}
+                                <span class="not-found-text">
+                                    Kiểm tra lại VTF ID
+                                </span>
+
+                                {% elif row.status == "invalid" %}
+                                <span class="difference-tag">
+                                    Thiếu VTF ID
+                                </span>
+
+                                {% else %}
+                                    {% for difference in row.differences %}
+                                    <span class="difference-tag">
+                                        {{ difference.label }}
+                                    </span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div
+            id="federationNoFilterResult"
+            class="no-filter-result"
+        >
+            Không có dòng nào phù hợp với bộ lọc hiện tại.
+        </div>
+    </section>
+
+    {% else %}
+    <section class="result-panel">
+        <div class="empty-result">
+            <div class="empty-result-icon">
+                <i class="fa-solid fa-code-compare"></i>
+            </div>
+
+            <h3>Chưa có kết quả kiểm tra</h3>
+
+            <p>
+                Ken chọn file Excel được tải từ hệ thống Liên đoàn,
+                sau đó nhấn “Kiểm tra với Supabase”.
+                Kết quả sẽ được chia thành Giống, Không giống,
+                Không tìm thấy và Dòng không hợp lệ.
+            </p>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const fileInput = document.getElementById(
+        "federationExcelFile"
+    );
+
+    const dropZone = document.getElementById(
+        "fileDropZone"
+    );
+
+    const fileMainText = document.getElementById(
+        "fileMainText"
+    );
+
+    const fileSubText = document.getElementById(
+        "fileSubText"
+    );
+
+    const uploadForm = document.getElementById(
+        "federationUploadForm"
+    );
+
+    const submitButton = document.getElementById(
+        "compareSubmitButton"
+    );
+
+    function formatFileSize(bytes) {
+        const size = Number(bytes || 0);
+
+        if (size < 1024) {
+            return size + " B";
+        }
+
+        if (size < 1024 * 1024) {
+            return (size / 1024).toFixed(1) + " KB";
+        }
+
+        return (
+            size / (1024 * 1024)
+        ).toFixed(2) + " MB";
+    }
+
+    function showSelectedFile(file) {
+        if (!file) {
+            dropZone.classList.remove("has-file");
+
+            fileMainText.textContent =
+                "Nhấn để chọn file Excel của Liên đoàn";
+
+            fileSubText.textContent =
+                "Hoặc kéo thả file .xlsx vào khu vực này";
+
+            return;
+        }
+
+        dropZone.classList.add("has-file");
+        fileMainText.textContent = file.name;
+
+        fileSubText.textContent =
+            "Dung lượng: " + formatFileSize(file.size);
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener(
+            "change",
+            function () {
+                showSelectedFile(
+                    fileInput.files
+                        ? fileInput.files[0]
+                        : null
+                );
+            }
+        );
+    }
+
+    if (dropZone && fileInput) {
+        [
+            "dragenter",
+            "dragover"
+        ].forEach(function (eventName) {
+            dropZone.addEventListener(
+                eventName,
+                function (event) {
+                    event.preventDefault();
+                    dropZone.classList.add("dragging");
+                }
+            );
+        });
+
+        [
+            "dragleave",
+            "drop"
+        ].forEach(function (eventName) {
+            dropZone.addEventListener(
+                eventName,
+                function (event) {
+                    event.preventDefault();
+                    dropZone.classList.remove("dragging");
+                }
+            );
+        });
+
+        dropZone.addEventListener(
+            "drop",
+            function (event) {
+                const files = event.dataTransfer.files;
+
+                if (!files || !files.length) {
+                    return;
+                }
+
+                const droppedFile = files[0];
+
+                if (
+                    !droppedFile.name
+                        .toLowerCase()
+                        .endsWith(".xlsx")
+                ) {
+                    alert(
+                        "Ken chỉ chọn file Excel định dạng .xlsx."
+                    );
+
+                    return;
+                }
+
+                try {
+                    const transfer = new DataTransfer();
+                    transfer.items.add(droppedFile);
+                    fileInput.files = transfer.files;
+
+                    showSelectedFile(droppedFile);
+
+                } catch (error) {
+                    fileInput.click();
+                }
+            }
+        );
+    }
+
+    if (uploadForm && submitButton) {
+        uploadForm.addEventListener(
+            "submit",
+            function () {
+                submitButton.disabled = true;
+
+                submitButton.innerHTML =
+                    '<i class="fa-solid fa-spinner fa-spin"></i>' +
+                    ' Đang kiểm tra...';
+            }
+        );
+    }
+})();
+
+
+(function () {
+    const searchInput = document.getElementById(
+        "federationResultSearch"
+    );
+
+    const statusFilter = document.getElementById(
+        "federationStatusFilter"
+    );
+
+    const fieldFilter = document.getElementById(
+        "federationFieldFilter"
+    );
+
+    const visibleCount = document.getElementById(
+        "federationVisibleCount"
+    );
+
+    const noFilterResult = document.getElementById(
+        "federationNoFilterResult"
+    );
+
+    const rows = Array.from(
+        document.querySelectorAll(
+            ".compare-data-row"
+        )
+    );
+
+    if (
+        !searchInput ||
+        !statusFilter ||
+        !fieldFilter ||
+        !rows.length
+    ) {
+        return;
+    }
+
+    function normalizeSearchText(value) {
+        return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d")
+            .replace(/Đ/g, "D")
+            .toLowerCase()
+            .trim();
+    }
+
+    function applyFederationFilters() {
+        const keyword = normalizeSearchText(
+            searchInput.value
+        );
+
+        const selectedStatus = statusFilter.value;
+        const selectedField = fieldFilter.value;
+
+        let shownCount = 0;
+
+        rows.forEach(function (row) {
+            const rowStatus =
+                row.getAttribute("data-status") || "";
+
+            const rowFields = (
+                row.getAttribute("data-fields") || ""
+            )
+                .split(",")
+                .map(function (item) {
+                    return item.trim();
+                })
+                .filter(Boolean);
+
+            const rowSearch = normalizeSearchText(
+                row.getAttribute("data-search") || ""
+            );
+
+            const matchesKeyword =
+                !keyword ||
+                rowSearch.includes(keyword);
+
+            const matchesStatus =
+                selectedStatus === "all" ||
+                rowStatus === selectedStatus;
+
+            const matchesField =
+                selectedField === "all" ||
+                rowFields.includes(selectedField);
+
+            const visible =
+                matchesKeyword &&
+                matchesStatus &&
+                matchesField;
+
+            row.style.display = visible
+                ? ""
+                : "none";
+
+            if (visible) {
+                shownCount += 1;
+            }
+        });
+
+        if (visibleCount) {
+            visibleCount.textContent =
+                "Hiển thị " +
+                shownCount +
+                " / " +
+                rows.length +
+                " dòng";
+        }
+
+        if (noFilterResult) {
+            noFilterResult.style.display =
+                shownCount === 0
+                    ? "block"
+                    : "none";
+        }
+    }
+
+    searchInput.addEventListener(
+        "input",
+        applyFederationFilters
+    );
+
+    statusFilter.addEventListener(
+        "change",
+        applyFederationFilters
+    );
+
+    fieldFilter.addEventListener(
+        "change",
+        applyFederationFilters
+    );
+
+    applyFederationFilters();
+})();
+
+/* =========================================================
+   KẾT QUẢ CHỈ DÙNG TẠM THỜI
+   - Refresh trang: xóa kết quả
+   - Đổi tab trình duyệt rồi quay lại: xóa kết quả
+   - Chuyển sang menu khác: DOM tự bị hủy
+========================================================= */
+(function () {
+    const hasCompareResult = {{ 'true' if compare_rows else 'false' }};
+
+    if (!hasCompareResult) {
+        return;
+    }
+
+    const cleanUrl = "{{ url_for('federation_compare') }}";
+    const reloadClearKey = "federation_compare_clear_on_return";
+
+    let pageIsLeaving = false;
+
+    /* Kiểm tra trường hợp người dùng vừa refresh trang */
+    try {
+        const navigationEntry = performance.getEntriesByType(
+            "navigation"
+        )[0];
+
+        if (
+            navigationEntry &&
+            navigationEntry.type === "reload"
+        ) {
+            window.location.replace(cleanUrl);
+            return;
+        }
+    } catch (error) {}
+
+    /*
+     Khi chuyển sang tab trình duyệt khác:
+     đánh dấu kết quả cần được xóa.
+    */
+    document.addEventListener(
+        "visibilitychange",
+        function () {
+            if (document.hidden) {
+                try {
+                    sessionStorage.setItem(
+                        reloadClearKey,
+                        "1"
+                    );
+                } catch (error) {}
+
+                return;
+            }
+
+            if (pageIsLeaving) {
+                return;
+            }
+
+            try {
+                const shouldClear =
+                    sessionStorage.getItem(
+                        reloadClearKey
+                    ) === "1";
+
+                if (shouldClear) {
+                    sessionStorage.removeItem(
+                        reloadClearKey
+                    );
+
+                    window.location.replace(
+                        cleanUrl
+                    );
+                }
+            } catch (error) {}
+        }
+    );
+
+    /*
+     Nếu bấm link menu hoặc nút xóa thì không cần
+     xử lý thêm vì trang hiện tại sẽ bị đóng.
+    */
+    document.addEventListener(
+        "click",
+        function (event) {
+            const link = event.target.closest("a");
+
+            if (link) {
+                pageIsLeaving = true;
+            }
+        },
+        true
+    );
+
+    window.addEventListener(
+        "beforeunload",
+        function () {
+            pageIsLeaving = true;
+        }
+    );
+})();
+</script>
+{% endblock %}

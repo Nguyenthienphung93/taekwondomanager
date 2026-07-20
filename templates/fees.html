@@ -205,53 +205,85 @@
     </div>
 </div>
 
-<table data-paginated-table="feesTable">
-    <thead>
-        <tr>
-            <th style="display:none;">ID</th>
-            <th>Thời gian</th>
-            <th>Mã HV</th>
-            <th>Họ tên</th>
-            <th>Số tiền</th>
-            <th>Đóng phí</th>
-            <th>Ghi chú</th>
-            <th>Mã tháng</th>
-            <th>Mã quý</th>
-            <th>P.Thức</th>
-        </tr>
-    </thead>
+<div class="fees-table-wrap">
+    <table
+        class="fees-list-table"
+        data-paginated-table="feesTable"
+    >
+        <colgroup>
+            <col class="fee-col-time">
+            <col class="fee-col-license">
+            <col class="fee-col-name">
+            <col class="fee-col-amount">
+            <col class="fee-col-content">
+            <col class="fee-col-note">
+        </colgroup>
 
-    <tbody>
-        {% for r in rows %}
-        <tr
-            oncontextmenu="openFeeMenu(event, '{{ r.id }}', this)"
-            data-id="{{ r.id }}"
-            data-time="{{ r.thoi_gian }}"
-            data-ma-hv="{{ r.ma_hv }}"
-            data-name="{{ r.ho_ten }}"
-            data-amount="{{ r.tong_tien }}"
-            data-month-label="{{ r.thang_dong_phi }}"
-            data-note="{{ r.ghi_chu }}"
-            data-month-code="{{ r.ma_thang }}"
-            data-quarter-code="{{ r.ma_quy }}"
-            data-method="{{ r.chuyen_khoan }}"
-            data-classroom="{{ r.lop }}"
-            data-timeclass="{{ r.ca }}"
-        >
-            <td style="display:none;">{{ r.id }}</td>
-            <td>{{ r.thoi_gian }}</td>
-            <td>{{ r.ma_hv }}</td>
-            <td>{{ r.ho_ten }}</td>
-            <td>{{ r.tong_tien|money }}</td>
-            <td>{{ r.thang_dong_phi }}</td>
-            <td>{{ r.ghi_chu }}</td>
-            <td>{{ r.ma_thang }}</td>
-            <td>{{ r.ma_quy }}</td>
-            <td>{{ r.chuyen_khoan }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <thead>
+            <tr>
+                <th>Thời gian</th>
+                <th>Mã HV</th>
+                <th>Họ tên</th>
+                <th>Số tiền</th>
+                <th>Đóng phí</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for r in rows %}
+            <tr
+                oncontextmenu="openFeeMenu(event, '{{ r.id }}', this)"
+                data-id="{{ r.id }}"
+                data-time="{{ r.thoi_gian }}"
+                data-ma-hv="{{ r.ma_hv }}"
+                data-name="{{ r.ho_ten }}"
+                data-amount="{{ r.tong_tien }}"
+                data-month-label="{{ r.thang_dong_phi }}"
+                data-note="{{ r.ghi_chu }}"
+                data-month-code="{{ r.ma_thang }}"
+                data-quarter-code="{{ r.ma_quy }}"
+                data-method="{{ r.chuyen_khoan }}"
+                data-classroom="{{ r.lop }}"
+                data-timeclass="{{ r.ca }}"
+            >
+                <td
+                    class="fee-time-cell"
+                    title="{{ r.thoi_gian }}"
+                >
+                    {{ r.thoi_gian }}
+                </td>
+
+                <td
+                    class="fee-license-cell"
+                    title="{{ r.ma_hv }}"
+                >
+                    {{ r.ma_hv }}
+                </td>
+
+                <td
+                    class="fee-name-cell"
+                    title="{{ r.ho_ten }}"
+                >
+                    {{ r.ho_ten }}
+                </td>
+
+                <td class="fee-amount-cell">
+                    {{ r.tong_tien|money }}
+                </td>
+
+                <td class="fee-content-cell">
+                    {{ r.thang_dong_phi }}
+                </td>
+
+                <td class="fee-note-cell">
+                    {{ r.ghi_chu }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <div id="feeContextMenu" class="context-menu">
     <div onclick="openReceiptPopup()">🧾 Tạo hóa đơn</div>
@@ -2027,6 +2059,135 @@ document.addEventListener("DOMContentLoaded", function () {
 
     .list-search-btn{
         width:100%;
+    }
+}
+
+/* =========================
+   BẢNG DANH SÁCH HỌC PHÍ
+========================= */
+.fees-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #dbe3ef;
+    border-radius: 0 0 14px 14px;
+    background: #ffffff;
+}
+
+.fees-list-table {
+    width: 100%;
+    min-width: 1080px;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+/* Chia đúng 100% cho 6 cột */
+.fees-list-table .fee-col-time {
+    width: 18%;
+}
+
+.fees-list-table .fee-col-license {
+    width: 13%;
+}
+
+.fees-list-table .fee-col-name {
+    width: 20%;
+}
+
+.fees-list-table .fee-col-amount {
+    width: 11%;
+}
+
+.fees-list-table .fee-col-content {
+    width: 17%;
+}
+
+.fees-list-table .fee-col-note {
+    width: 21%;
+}
+
+.fees-list-table th {
+    padding: 11px 9px;
+    background: #f8fafc;
+    color: #0f172a;
+    border-right: 1px solid #dbe3ef;
+    border-bottom: 1px solid #dbe3ef;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.fees-list-table td {
+    padding: 9px;
+    color: #1e293b;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.fees-list-table th:last-child,
+.fees-list-table td:last-child {
+    border-right: 0;
+}
+
+.fees-list-table tbody tr:hover td {
+    background: #f8fbff;
+}
+
+/* Thời gian */
+.fee-time-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Mã hội viên */
+.fee-license-cell {
+    color: #1d4ed8;
+    font-weight: 850;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Họ tên */
+.fee-name-cell {
+    color: #0f172a;
+    font-weight: 900;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Số tiền */
+.fee-amount-cell {
+    color: #9a3412;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+/* Nội dung đóng phí */
+.fee-content-cell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Ghi chú */
+.fee-note-cell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .fees-list-table {
+        min-width: 980px;
+    }
+
+    .fees-list-table th,
+    .fees-list-table td {
+        padding: 8px 7px;
+        font-size: 12px;
     }
 }
 </style>

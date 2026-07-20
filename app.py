@@ -35,7 +35,64 @@ SUPABASE_URL = os.environ.get(
 
 STUDENT_PHOTO_BUCKET = "student-photos"
 CLUB_ASSET_BUCKET = "system-assets"
+BELT_IMAGE_BUCKET = "belt"
 
+
+def get_belt_image_url_web(belt_name):
+    """
+    Chuyển cấp đai hiện tại thành URL hình trong Supabase Storage.
+
+    Ví dụ:
+    Cấp 7  -> belt/cap-7.png
+    1 Đẳng -> belt/dang-1.png
+    """
+
+    belt_name = str(belt_name or "").strip()
+
+    if not belt_name:
+        return ""
+
+    normalized = remove_accents(belt_name).lower()
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    file_name = ""
+
+    # Cấp 10 đến Cấp 1
+    cap_match = re.fullmatch(r"cap\s*(\d+)", normalized)
+
+    if cap_match:
+        belt_number = int(cap_match.group(1))
+
+        if 1 <= belt_number <= 10:
+            file_name = f"cap-{belt_number}.png"
+
+    # 1 Đẳng, 2 Đẳng...
+    if not file_name:
+        dang_match = re.fullmatch(r"(\d+)\s*dang", normalized)
+
+        if dang_match:
+            belt_number = int(dang_match.group(1))
+
+            if 1 <= belt_number <= 10:
+                file_name = f"dang-{belt_number}.png"
+
+    # Dự phòng nếu dữ liệu được nhập dạng "Đẳng 1"
+    if not file_name:
+        dang_reverse_match = re.fullmatch(r"dang\s*(\d+)", normalized)
+
+        if dang_reverse_match:
+            belt_number = int(dang_reverse_match.group(1))
+
+            if 1 <= belt_number <= 10:
+                file_name = f"dang-{belt_number}.png"
+
+    if not file_name:
+        return ""
+
+    return (
+        f"{SUPABASE_URL}/storage/v1/object/public/"
+        f"{BELT_IMAGE_BUCKET}/{file_name}"
+    )
 
 DEFAULT_APP_SETTINGS = {
     "header": {
@@ -11302,6 +11359,936 @@ def setup_class_options_delete():
 def information():
     return render_template("information.html", settings=load_app_settings())
 
+# =========================================================
+# KIỂM TRA DỮ LIỆU LIÊN ĐOÀN VỚI SUPABASE
+# - Đọc danh sách Excel do Liên đoàn xuất
+# - Đối chiếu bằng Mã HV / VTF ID
+# - So sánh: Họ tên, Ngày sinh, Giới tính, Cấp/Đẳng
+# - Chỉ kiểm tra, không tự động sửa Supabase
+# =========================================================
+
+FEDERATION_COMPARE_ALLOWED_EXTENSIONS = {"xlsx"}
+
+# Chỉ là giới hạn an toàn khi upload.
+# File không được lưu lâu dài trên hệ thống.
+FEDERATION_COMPARE_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+def federation_clean_header_web(value):
+    """
+    Chuẩn hóa tiêu đề cột Excel để nhận diện được
+    cả trường hợp viết hoa, viết thường hoặc dư khoảng trắng.
+    """
+    text = str(value or "").strip()
+    text = re.sub(r"\s+", " ", text)
+    text = remove_accents(text).lower()
+
+    return text
+
+
+def federation_normalize_text_web(value):
+    """
+    Chuẩn hóa chuỗi để so sánh.
+
+    Có giữ dấu tiếng Việt để phát hiện các trường hợp:
+    - Ngọc khác Ngoc
+    - Nguyễn khác Nguyen
+
+    Chỉ bỏ:
+    - Khoảng trắng dư
+    - Khác biệt chữ hoa/chữ thường
+    """
+    text = str(value or "").strip()
+    text = unicodedata.normalize("NFC", text)
+    text = re.sub(r"\s+", " ", text)
+
+    return text.casefold()
+
+
+def federation_display_value_web(value):
+    """
+    Chuyển dữ liệu Excel thành chuỗi hiển thị.
+    """
+    if value is None:
+        return ""
+
+    if isinstance(value, datetime):
+        return value.strftime("%d/%m/%Y")
+
+    if isinstance(value, date):
+        return value.strftime("%d/%m/%Y")
+
+    return str(value).strip()
+
+
+def federation_normalize_birthdate_web(value):
+    """
+    Chuẩn hóa ngày sinh thành YYYY-MM-DD để so sánh.
+
+    Chấp nhận:
+    - Ô Excel dạng ngày
+    - dd/mm/yyyy
+    - dd-mm-yyyy
+    - yyyy-mm-dd
+    - ddmmyyyy
+    """
+    if value is None:
+        return ""
+
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+
+    raw = str(value or "").strip()
+
+    if not raw:
+        return ""
+
+    raw = raw.split("T")[0].strip()
+
+    formats = [
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%d.%m.%Y",
+        "%d/%m/%y",
+        "%d-%m-%y",
+    ]
+
+    for date_format in formats:
+        try:
+            return datetime.strptime(
+                raw,
+                date_format
+            ).strftime("%Y-%m-%d")
+
+        except Exception:
+            pass
+
+    digits = re.sub(r"\D", "", raw)
+
+    if len(digits) == 8:
+        try:
+            day = int(digits[0:2])
+            month = int(digits[2:4])
+            year = int(digits[4:8])
+
+            return date(
+                year,
+                month,
+                day
+            ).strftime("%Y-%m-%d")
+
+        except Exception:
+            pass
+
+    return ""
+
+
+def federation_format_birthdate_web(value):
+    """
+    Đổi ngày đã chuẩn hóa YYYY-MM-DD thành dd/mm/YYYY.
+    """
+    normalized = federation_normalize_birthdate_web(value)
+
+    if not normalized:
+        return federation_display_value_web(value)
+
+    try:
+        return datetime.strptime(
+            normalized,
+            "%Y-%m-%d"
+        ).strftime("%d/%m/%Y")
+
+    except Exception:
+        return federation_display_value_web(value)
+
+
+def federation_normalize_gender_web(value):
+    """
+    Chuẩn hóa giới tính để tránh khác nhau do cách ghi.
+
+    Ví dụ:
+    - Nam, NAM, male, M -> nam
+    - Nữ, NU, female, F -> nu
+    """
+    raw = str(value or "").strip()
+
+    if not raw:
+        return ""
+
+    normalized = remove_accents(raw).lower()
+    normalized = re.sub(r"\s+", "", normalized)
+
+    male_values = {
+        "nam",
+        "male",
+        "m",
+        "boy",
+        "cong",
+    }
+
+    female_values = {
+        "nu",
+        "female",
+        "f",
+        "girl",
+        "cai",
+    }
+
+    if normalized in male_values:
+        return "nam"
+
+    if normalized in female_values:
+        return "nu"
+
+    return normalized
+
+
+def federation_format_gender_web(value):
+    normalized = federation_normalize_gender_web(value)
+
+    if normalized == "nam":
+        return "Nam"
+
+    if normalized == "nu":
+        return "Nữ"
+
+    return str(value or "").strip()
+
+
+def federation_normalize_belt_web(value):
+    """
+    Chuẩn hóa Cấp/Đẳng để so sánh.
+
+    Ví dụ:
+    - 3 Đẳng
+    - 3 đẳng
+    - 3 DAN
+    - Đẳng 3
+
+    đều được xem là: 3 dang
+    """
+    raw = str(value or "").strip()
+
+    if not raw:
+        return ""
+
+    normalized = remove_accents(raw).lower()
+    normalized = normalized.replace("dan", "dang")
+    normalized = normalized.replace("đẳng", "dang")
+    normalized = normalized.replace("đai", "")
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    number_match = re.search(r"\d+", normalized)
+
+    if not number_match:
+        return normalized
+
+    number = str(int(number_match.group()))
+
+    if "dang" in normalized:
+        return f"{number} dang"
+
+    if "cap" in normalized:
+        return f"cap {number}"
+
+    return number
+
+
+def federation_format_belt_web(value):
+    normalized = federation_normalize_belt_web(value)
+
+    if not normalized:
+        return ""
+
+    dang_match = re.fullmatch(
+        r"(\d+)\s+dang",
+        normalized
+    )
+
+    if dang_match:
+        return f"{dang_match.group(1)} Đẳng"
+
+    cap_match = re.fullmatch(
+        r"cap\s+(\d+)",
+        normalized
+    )
+
+    if cap_match:
+        return f"Cấp {cap_match.group(1)}"
+
+    return str(value or "").strip()
+
+
+def federation_get_column_map_web(header_values):
+    """
+    Tìm vị trí các cột cần dùng trong file Excel.
+
+    File mẫu của Liên đoàn đang có:
+    - VTF ID
+    - Họ và Tên
+    - Giới tính
+    - Ngày sinh
+    - Cấp/Đẳng
+    """
+    aliases = {
+        "license": {
+            "vtf id",
+            "ma hv",
+            "ma hoi vien",
+            "ma vo sinh",
+            "license",
+            "id",
+        },
+
+        "name": {
+            "ho va ten",
+            "ho ten",
+            "ten vo sinh",
+            "name",
+        },
+
+        "gender": {
+            "gioi tinh",
+            "phai",
+            "gender",
+        },
+
+        "birthdate": {
+            "ngay sinh",
+            "nam sinh",
+            "birthdate",
+            "date of birth",
+            "dob",
+        },
+
+        "belt": {
+            "cap/dang",
+            "cap / dang",
+            "cap dang",
+            "cap dai",
+            "cap",
+            "dang",
+            "belt",
+        },
+    }
+
+    column_map = {}
+
+    for column_index, header_value in enumerate(
+        header_values,
+        start=1
+    ):
+        normalized_header = federation_clean_header_web(
+            header_value
+        )
+
+        for field_name, field_aliases in aliases.items():
+            if (
+                field_name not in column_map
+                and normalized_header in field_aliases
+            ):
+                column_map[field_name] = column_index
+
+    return column_map
+
+
+def federation_read_excel_rows_web(file_storage):
+    """
+    Đọc danh sách từ file Excel Liên đoàn.
+    """
+    filename = secure_filename(
+        file_storage.filename or ""
+    )
+
+    extension = (
+        filename.rsplit(".", 1)[-1].lower()
+        if "." in filename
+        else ""
+    )
+
+    if extension not in FEDERATION_COMPARE_ALLOWED_EXTENSIONS:
+        raise ValueError(
+            "Chỉ chấp nhận file Excel định dạng .xlsx."
+        )
+
+    file_storage.stream.seek(
+        0,
+        os.SEEK_END
+    )
+
+    file_size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+
+    if file_size <= 0:
+        raise ValueError(
+            "File Excel đang trống."
+        )
+
+    if file_size > FEDERATION_COMPARE_MAX_FILE_SIZE:
+        raise ValueError(
+            "File Excel vượt quá dung lượng cho phép 50 MB."
+        )
+
+    workbook = load_workbook(
+        file_storage.stream,
+        data_only=True,
+        read_only=True,
+    )
+
+    try:
+        worksheet = workbook.active
+
+        header_values = [
+            worksheet.cell(
+                row=1,
+                column=column_index
+            ).value
+            for column_index in range(
+                1,
+                worksheet.max_column + 1
+            )
+        ]
+
+        column_map = federation_get_column_map_web(
+            header_values
+        )
+
+        required_fields = {
+            "license": "VTF ID / Mã HV",
+            "name": "Họ và Tên",
+            "gender": "Giới tính",
+            "birthdate": "Ngày sinh",
+            "belt": "Cấp/Đẳng",
+        }
+
+        missing_columns = [
+            label
+            for field_name, label in required_fields.items()
+            if field_name not in column_map
+        ]
+
+        if missing_columns:
+            raise ValueError(
+                "File Excel thiếu cột: "
+                + ", ".join(missing_columns)
+                + "."
+            )
+
+        excel_rows = []
+        duplicate_licenses = []
+        seen_licenses = set()
+
+        for row_index in range(
+            2,
+            worksheet.max_row + 1
+        ):
+            license_value = worksheet.cell(
+                row=row_index,
+                column=column_map["license"]
+            ).value
+
+            name_value = worksheet.cell(
+                row=row_index,
+                column=column_map["name"]
+            ).value
+
+            gender_value = worksheet.cell(
+                row=row_index,
+                column=column_map["gender"]
+            ).value
+
+            birthdate_value = worksheet.cell(
+                row=row_index,
+                column=column_map["birthdate"]
+            ).value
+
+            belt_value = worksheet.cell(
+                row=row_index,
+                column=column_map["belt"]
+            ).value
+
+            license_code = str(
+                license_value or ""
+            ).strip()
+
+            # Bỏ qua những dòng hoàn toàn trống.
+            if not any([
+                license_code,
+                str(name_value or "").strip(),
+                str(gender_value or "").strip(),
+                str(birthdate_value or "").strip(),
+                str(belt_value or "").strip(),
+            ]):
+                continue
+
+            if not license_code:
+                excel_rows.append({
+                    "excel_row": row_index,
+                    "license": "",
+                    "name": federation_display_value_web(
+                        name_value
+                    ),
+                    "birthdate": federation_format_birthdate_web(
+                        birthdate_value
+                    ),
+                    "gender": federation_format_gender_web(
+                        gender_value
+                    ),
+                    "belt": federation_format_belt_web(
+                        belt_value
+                    ),
+                    "invalid_reason": "Dòng Excel không có VTF ID.",
+                })
+                continue
+
+            if license_code in seen_licenses:
+                duplicate_licenses.append(
+                    license_code
+                )
+
+            seen_licenses.add(
+                license_code
+            )
+
+            excel_rows.append({
+                "excel_row": row_index,
+                "license": license_code,
+                "name": federation_display_value_web(
+                    name_value
+                ),
+                "birthdate": federation_format_birthdate_web(
+                    birthdate_value
+                ),
+                "gender": federation_format_gender_web(
+                    gender_value
+                ),
+                "belt": federation_format_belt_web(
+                    belt_value
+                ),
+                "invalid_reason": "",
+            })
+
+        return {
+            "filename": filename,
+            "sheet_name": worksheet.title,
+            "rows": excel_rows,
+            "duplicate_licenses": sorted(
+                set(duplicate_licenses)
+            ),
+        }
+
+    finally:
+        workbook.close()
+
+
+def federation_compare_one_field_web(
+    field_name,
+    federation_value,
+    supabase_value
+):
+    """
+    So sánh đúng quy tắc của từng trường.
+    """
+    if field_name == "name":
+        left_value = federation_normalize_text_web(
+            federation_value
+        )
+
+        right_value = federation_normalize_text_web(
+            supabase_value
+        )
+
+    elif field_name == "birthdate":
+        left_value = federation_normalize_birthdate_web(
+            federation_value
+        )
+
+        right_value = federation_normalize_birthdate_web(
+            supabase_value
+        )
+
+    elif field_name == "gender":
+        left_value = federation_normalize_gender_web(
+            federation_value
+        )
+
+        right_value = federation_normalize_gender_web(
+            supabase_value
+        )
+
+    elif field_name == "belt":
+        left_value = federation_normalize_belt_web(
+            federation_value
+        )
+
+        right_value = federation_normalize_belt_web(
+            supabase_value
+        )
+
+    else:
+        left_value = federation_normalize_text_web(
+            federation_value
+        )
+
+        right_value = federation_normalize_text_web(
+            supabase_value
+        )
+
+    return left_value == right_value
+
+
+def federation_build_compare_result_web(
+    federation_rows,
+    student_rows
+):
+    """
+    Đối chiếu dữ liệu Liên đoàn và Supabase bằng Mã HV.
+
+    Trạng thái:
+    - matched: Trùng hoàn toàn 4 trường quan trọng
+    - mismatched: Có ít nhất một trường không giống
+    - not_found: Không tìm thấy Mã HV trên Supabase
+    - invalid: Dòng Excel thiếu Mã HV
+    """
+    student_map = {}
+
+    for student in student_rows or []:
+        license_code = str(
+            student.get("license") or ""
+        ).strip()
+
+        if license_code:
+            student_map[license_code] = student
+
+    compared_rows = []
+
+    summary = {
+        "total": 0,
+        "matched": 0,
+        "mismatched": 0,
+        "not_found": 0,
+        "invalid": 0,
+    }
+
+    field_labels = {
+        "name": "Họ tên",
+        "birthdate": "Ngày sinh",
+        "gender": "Giới tính",
+        "belt": "Cấp/Đẳng",
+    }
+
+    for federation_row in federation_rows or []:
+        summary["total"] += 1
+
+        license_code = str(
+            federation_row.get("license") or ""
+        ).strip()
+
+        invalid_reason = str(
+            federation_row.get("invalid_reason") or ""
+        ).strip()
+
+        if invalid_reason:
+            summary["invalid"] += 1
+
+            compared_rows.append({
+                **federation_row,
+                "status": "invalid",
+                "status_text": "Dòng không hợp lệ",
+                "student": {},
+                "differences": [],
+                "difference_fields": [],
+                "difference_count": 0,
+            })
+            continue
+
+        student = student_map.get(
+            license_code
+        )
+
+        if not student:
+            summary["not_found"] += 1
+
+            compared_rows.append({
+                **federation_row,
+                "status": "not_found",
+                "status_text": "Không tìm thấy trên Supabase",
+                "student": {},
+                "differences": [],
+                "difference_fields": [],
+                "difference_count": 0,
+            })
+            continue
+
+        comparisons = [
+            {
+                "field": "name",
+                "federation_value": federation_row.get(
+                    "name"
+                ),
+                "supabase_value": student.get(
+                    "name"
+                ),
+            },
+            {
+                "field": "birthdate",
+                "federation_value": federation_row.get(
+                    "birthdate"
+                ),
+                "supabase_value": federation_format_birthdate_web(
+                    student.get("birthdate")
+                ),
+            },
+            {
+                "field": "gender",
+                "federation_value": federation_row.get(
+                    "gender"
+                ),
+                "supabase_value": federation_format_gender_web(
+                    student.get("gender")
+                ),
+            },
+            {
+                "field": "belt",
+                "federation_value": federation_row.get(
+                    "belt"
+                ),
+                "supabase_value": federation_format_belt_web(
+                    student.get("belt")
+                ),
+            },
+        ]
+
+        differences = []
+
+        for comparison in comparisons:
+            field_name = comparison["field"]
+
+            is_same = federation_compare_one_field_web(
+                field_name,
+                comparison["federation_value"],
+                comparison["supabase_value"],
+            )
+
+            comparison["label"] = field_labels.get(
+                field_name,
+                field_name
+            )
+
+            comparison["same"] = is_same
+
+            if not is_same:
+                differences.append(
+                    comparison
+                )
+
+        if differences:
+            status = "mismatched"
+            status_text = "Không giống"
+            summary["mismatched"] += 1
+
+        else:
+            status = "matched"
+            status_text = "Giống"
+            summary["matched"] += 1
+
+        compared_rows.append({
+            **federation_row,
+            "status": status,
+            "status_text": status_text,
+            "student": {
+                "license": str(
+                    student.get("license") or ""
+                ).strip(),
+                "name": str(
+                    student.get("name") or ""
+                ).strip(),
+                "birthdate": federation_format_birthdate_web(
+                    student.get("birthdate")
+                ),
+                "gender": federation_format_gender_web(
+                    student.get("gender")
+                ),
+                "belt": federation_format_belt_web(
+                    student.get("belt")
+                ),
+            },
+            "comparisons": comparisons,
+            "differences": differences,
+            "difference_fields": [
+                item["field"]
+                for item in differences
+            ],
+            "difference_count": len(
+                differences
+            ),
+        })
+
+    status_order = {
+        "mismatched": 1,
+        "not_found": 2,
+        "invalid": 3,
+        "matched": 4,
+    }
+
+    compared_rows.sort(
+        key=lambda item: (
+            status_order.get(
+                item.get("status"),
+                99
+            ),
+            remove_accents(
+                str(item.get("name") or "")
+            ).lower(),
+            str(item.get("license") or ""),
+        )
+    )
+
+    return {
+        "rows": compared_rows,
+        "summary": summary,
+    }
+
+def federation_fetch_students_web(page_size=1000):
+    """
+    Đọc một lần toàn bộ thông tin cần đối chiếu từ bảng student.
+
+    Nhanh hơn cách chia danh sách VTF ID thành nhiều request.
+    Chỉ lấy 5 cột cần thiết, không tải dữ liệu dư thừa.
+    """
+    student_rows = []
+    start = 0
+
+    while True:
+        end = start + page_size - 1
+
+        batch = (
+            supabase.table(STUDENT_TABLE)
+            .select(
+                "license,name,birthdate,gender,belt"
+            )
+            .range(start, end)
+            .execute()
+            .data
+            or []
+        )
+
+        student_rows.extend(batch)
+
+        if len(batch) < page_size:
+            break
+
+        start += page_size
+
+    return student_rows
+
+@app.route(
+    "/federation-compare",
+    methods=["GET", "POST"]
+)
+def federation_compare():
+    """
+    Trang kiểm tra danh sách Liên đoàn với bảng student.
+    """
+    compare_rows = []
+    summary = {
+        "total": 0,
+        "matched": 0,
+        "mismatched": 0,
+        "not_found": 0,
+        "invalid": 0,
+    }
+
+    uploaded_filename = ""
+    sheet_name = ""
+    duplicate_licenses = []
+
+    if request.method == "POST":
+        excel_file = request.files.get(
+            "excel_file"
+        )
+
+        if (
+            not excel_file
+            or not str(excel_file.filename or "").strip()
+        ):
+            flash(
+                "Ken chưa chọn file Excel của Liên đoàn.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("federation_compare")
+            )
+
+        try:
+            excel_result = federation_read_excel_rows_web(
+                excel_file
+            )
+
+            uploaded_filename = excel_result["filename"]
+            sheet_name = excel_result["sheet_name"]
+            duplicate_licenses = excel_result[
+                "duplicate_licenses"
+            ]
+
+            # Chỉ gọi Supabase một lần trong trường hợp dữ liệu dưới 1.000 HV.
+            # Không truyền hàng trăm mã lên URL nên xử lý ổn định và nhanh hơn.
+            student_rows = federation_fetch_students_web()
+
+            compare_result = (
+                federation_build_compare_result_web(
+                    excel_result["rows"],
+                    student_rows,
+                )
+            )
+
+            compare_rows = compare_result["rows"]
+            summary = compare_result["summary"]
+
+            flash(
+                f"Đã kiểm tra {summary['total']} dòng. "
+                f"Giống: {summary['matched']} · "
+                f"Không giống: {summary['mismatched']} · "
+                f"Không tìm thấy: {summary['not_found']}.",
+                "success"
+            )
+
+        except Exception as error:
+            print(
+                "[FEDERATION COMPARE ERROR]",
+                repr(error)
+            )
+
+            flash(
+                f"Không thể kiểm tra file Excel: {error}",
+                "danger"
+            )
+
+    response = app.make_response(
+        render_template(
+            "federation_compare.html",
+            compare_rows=compare_rows,
+            summary=summary,
+            uploaded_filename=uploaded_filename,
+            sheet_name=sheet_name,
+            duplicate_licenses=duplicate_licenses,
+        )
+    )
+
+    # Không lưu cache kết quả kiểm tra trên trình duyệt.
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, max-age=0"
+    )
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return response
 
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
@@ -12556,16 +13543,36 @@ def student_portal_notification_detail(notification_id):
 @app.get("/student-portal/info")
 def student_portal_info():
     student = require_student_login()
+
     if not student:
         return redirect(url_for("student_login"))
 
-    notifications_rows, unread_count = get_student_notifications(student.get("license"))
+    license_code = str(
+        student.get("license") or ""
+    ).strip()
+
+    current_belt = str(
+        student.get("belt") or ""
+    ).strip()
+
+    notifications_rows, unread_count = (
+        get_student_notifications(license_code)
+    )
 
     return render_template(
         "student_portal_info.html",
         student=student,
         unread_count=unread_count,
-        photo_url=get_student_photo_url(student.get("license"))
+
+        photo_url=get_student_photo_url(
+            license_code
+        ),
+
+        belt_image_url=get_belt_image_url_web(
+            current_belt
+        ),
+
+        belt_cache_v=current_belt,
     )
 
 @app.get("/student-portal/club-info")
