@@ -9562,23 +9562,31 @@ def safe_due_date_web(year, month, day):
 
 def get_compare_date_web(year, month):
     """
-    Nếu đang lọc tháng hiện tại: so với ngày hôm nay.
-    Nếu lọc tháng cũ: so với ngày cuối tháng đó để xem cuối tháng còn ai quá hạn.
-    Nếu lọc tháng tương lai: so với ngày đầu tháng đó.
+    Ngày dùng để tính số ngày còn lại trên trang chưa đóng phí.
+
+    - Tháng hiện tại hoặc tháng tương lai:
+      luôn tính từ ngày hôm nay.
+
+    - Tháng đã qua:
+      dùng ngày cuối tháng được lọc để xem trạng thái lịch sử.
     """
     today = date.today()
+
     year = int(year)
     month = int(month)
 
-    if today.year == year and today.month == month:
+    selected_month = date(year, month, 1)
+    current_month = date(today.year, today.month, 1)
+
+    # Tháng hiện tại hoặc tương lai:
+    # tính đúng số ngày còn lại từ hôm nay.
+    if selected_month >= current_month:
         return today
 
-    selected_first = date(year, month, 1)
-
-    if selected_first > today.replace(day=1):
-        return selected_first
-
+    # Tháng trong quá khứ:
+    # đối chiếu tại ngày cuối tháng đó.
     last_day = calendar.monthrange(year, month)[1]
+
     return date(year, month, last_day)
 
 
