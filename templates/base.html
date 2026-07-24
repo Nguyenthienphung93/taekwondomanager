@@ -599,6 +599,10 @@
         <a href="/results"><span class="mi">🏅</span><span>Kết quả thi cấp đẳng</span></a>
         <a href="/activities"><span class="mi">📅</span><span>Hoạt động</span></a>
         <a href="/notifications"><span class="mi">🔔</span><span>Thông báo</span></a>
+        <a href="{{ url_for('admin_feedback') }}" data-tooltip="Phản hồi">
+            <span class="mi">📨</span>
+            <span>Phản hồi</span>
+        </a>
 
         <div class="sidebar-section"></div>
         <a href="/setup">
@@ -850,6 +854,7 @@ function initAdminActiveNav() {
         ["/results", ["/results"]],
         ["/activities", ["/activities"]],
         ["/notifications", ["/notifications"]],
+        ["/feedback", ["/feedback"]],
         ["/setup", ["/setup"]],
         ["/federation-compare", ["/federation-compare"]],
         ["/backup-restore", ["/backup-restore"]],

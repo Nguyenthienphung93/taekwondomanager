@@ -9,6 +9,8 @@ import tarfile
 import sys
 from io import BytesIO
 from PIL import Image, ImageOps, ImageFilter
+import cv2
+import numpy as np
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -17,9 +19,12 @@ from supabase_client import supabase
 from utils import auto_generate_license, is_active, calc_tuition, format_money, build_month_codes
 import re
 import unicodedata
+import uuid
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret")
@@ -32,6 +37,7 @@ SUPABASE_URL = os.environ.get(
     "SUPABASE_URL",
     "https://hbmqqvrhjnhxgrxvlthm.supabase.co"
 )
+
 
 STUDENT_PHOTO_BUCKET = "student-photos"
 CLUB_ASSET_BUCKET = "system-assets"
@@ -113,7 +119,7 @@ DEFAULT_APP_SETTINGS = {
         }
     },
     "exam": {
-        "exam_number_prefix": "Cấp_"
+        "exam_number_prefix": "{cap}_"
     },
     "class_options": {
         "classrooms": ["2 - 4 - 6", "3 - 5 - 7", "T7 - CN", "Hẹn hò"],
@@ -8407,14 +8413,19 @@ def exam_list_finalize():
         ket_qua = request.form.get(f"ket_qua_{ma_hv}", "Đạt").strip()
 
         so_thi = ""
-        if so_thi_raw:
-            exam_prefix = str(get_app_setting("exam.exam_number_prefix", "Cấp_") or "")
 
-            # Cách dùng trong Setup:
-            # "Cấp_"   -> Cấp_01
-            # "{cap}_" -> Cấp 5_01
-            # ""       -> 01
-            exam_prefix = exam_prefix.replace("{cap}", cap_du_thi)
+        if so_thi_raw:
+            exam_prefix_template = str(
+                get_app_setting(
+                    "exam.exam_number_prefix",
+                    ""
+                ) or ""
+            ).strip()
+
+            exam_prefix = exam_prefix_template.replace(
+                "{cap}",
+                cap_du_thi
+            )
 
             so_thi = f"{exam_prefix}{so_thi_raw}"
 
@@ -8571,6 +8582,7 @@ COACH_TABLE = "coaches"
 HOCPHI_TABLE = "hocphi"
 KETQUA_TABLE = "ketqua"
 HOATDONG_TABLE = "hoatdong"
+STUDENT_FEEDBACK_TABLE = "student_feedback"
 
 RESTORE_SECURITY_TABLE = "restore_security"
 RESTORE_HISTORY_TABLE = "restore_history"
@@ -8673,6 +8685,158 @@ def upload_club_asset_to_supabase(file_storage, folder="club-info"):
 
     return supabase_public_url(CLUB_ASSET_BUCKET, storage_path)
 
+def get_avatar_face_cascade_web():
+    """
+    Nạp bộ nhận diện khuôn mặt frontal face có sẵn trong OpenCV.
+    """
+
+    cascade_path = (
+        cv2.data.haarcascades
+        + "haarcascade_frontalface_default.xml"
+    )
+
+    face_cascade = cv2.CascadeClassifier(
+        cascade_path
+    )
+
+    if face_cascade.empty():
+        raise RuntimeError(
+            "Không tải được bộ nhận diện khuôn mặt OpenCV."
+        )
+
+    return face_cascade
+
+
+def validate_student_avatar_bytes_web(image_bytes):
+    """
+    Kiểm tra ảnh đại diện trước khi upload.
+
+    Chỉ từ chối khi:
+    - Không đọc được file ảnh.
+    - Không phát hiện khuôn mặt.
+    - Phát hiện từ 2 khuôn mặt trở lên.
+
+    Không kiểm tra:
+    - Ảnh ngang hay dọc.
+    - Ảnh mờ.
+    - Độ phân giải thấp.
+    - Khuôn mặt nhỏ.
+    - Khuôn mặt sát mép.
+    """
+
+    if not image_bytes:
+        return {
+            "ok": False,
+            "message": "File ảnh đang trống hoặc không đọc được.",
+            "face_count": 0,
+        }
+
+    try:
+        # Đọc bằng PIL để xử lý đúng hướng xoay EXIF.
+        pil_image = Image.open(
+            BytesIO(image_bytes)
+        )
+
+        pil_image = ImageOps.exif_transpose(
+            pil_image
+        )
+
+        pil_image = pil_image.convert("RGB")
+
+        # Chuyển ảnh PIL sang định dạng OpenCV.
+        image = cv2.cvtColor(
+            np.array(pil_image),
+            cv2.COLOR_RGB2BGR
+        )
+
+    except Exception:
+        image = None
+
+    if image is None:
+        return {
+            "ok": False,
+            "message": (
+                "Không đọc được file ảnh. "
+                "Vui lòng chọn ảnh JPG, JPEG, PNG hoặc WEBP hợp lệ."
+            ),
+            "face_count": 0,
+        }
+
+    image_height, image_width = image.shape[:2]
+
+    gray = cv2.cvtColor(
+        image,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    detection_gray = cv2.equalizeHist(
+        gray
+    )
+
+    face_cascade = get_avatar_face_cascade_web()
+
+    # Nới nhỏ kích thước tối thiểu để nhận mặt xa hoặc ảnh chưa nét.
+    min_face_size = max(
+        24,
+        int(
+            min(
+                image_width,
+                image_height
+            ) * 0.04
+        )
+    )
+
+    faces = face_cascade.detectMultiScale(
+        detection_gray,
+
+        # Quét kỹ hơn để giảm bỏ sót khuôn mặt.
+        scaleFactor=1.04,
+
+        # Nới nhẹ nhận diện.
+        minNeighbors=3,
+
+        minSize=(
+            min_face_size,
+            min_face_size
+        ),
+
+        flags=cv2.CASCADE_SCALE_IMAGE,
+    )
+
+    face_count = len(faces)
+
+    if face_count == 0:
+        return {
+            "ok": False,
+            "message": (
+                "Không phát hiện được người trong ảnh. "
+                "Vui lòng chọn ảnh có khuôn mặt học viên."
+            ),
+            "face_count": 0,
+            "image_width": image_width,
+            "image_height": image_height,
+        }
+
+    if face_count > 1:
+        return {
+            "ok": False,
+            "message": (
+                "Ảnh có nhiều khuôn mặt. "
+                "Vui lòng chọn ảnh chỉ có một học viên."
+            ),
+            "face_count": face_count,
+            "image_width": image_width,
+            "image_height": image_height,
+        }
+
+    return {
+        "ok": True,
+        "message": "Ảnh phù hợp.",
+        "face_count": 1,
+        "image_width": image_width,
+        "image_height": image_height,
+    }
+
 def prepare_student_photo_for_upload(
     file_storage,
     target_width=780,
@@ -8691,8 +8855,61 @@ def prepare_student_photo_for_upload(
     - Chỉ giảm độ phân giải thêm khi giảm chất lượng vẫn chưa đủ.
     """
 
-    img = Image.open(file_storage.stream)
-    img = ImageOps.exif_transpose(img)
+    # =========================================
+    # ĐỌC FILE MỘT LẦN
+    # Sau đó cùng dùng cho kiểm tra và xử lý ảnh.
+    # =========================================
+    try:
+        file_storage.stream.seek(0)
+    except Exception:
+        pass
+
+    original_content = file_storage.read()
+
+    if not original_content:
+        raise ValueError(
+            "File ảnh đang trống hoặc không đọc được."
+        )
+
+    # =========================================
+    # KIỂM TRA ẢNH TRƯỚC KHI CROP/UPLOAD
+    # Áp dụng đồng thời cho Admin và học viên.
+    # =========================================
+    avatar_check = (
+        validate_student_avatar_bytes_web(
+            original_content
+        )
+    )
+
+    if not avatar_check.get("ok"):
+        raise ValueError(
+            avatar_check.get("message")
+            or "Ảnh không phù hợp làm ảnh đại diện."
+        )
+
+    print(
+        "[AVATAR VALIDATION OK]",
+        {
+            "face_count": avatar_check.get(
+                "face_count"
+            ),
+            "image_width": avatar_check.get(
+                "image_width"
+            ),
+            "image_height": avatar_check.get(
+                "image_height"
+            ),
+        }
+    )
+
+    img = Image.open(
+        BytesIO(original_content)
+    )
+
+    img = ImageOps.exif_transpose(
+        img
+    )
+
     img = img.convert("RGB")
 
     # =========================
@@ -8830,6 +9047,312 @@ def prepare_student_photo_for_upload(
     # trả về bản nhỏ nhất đã tạo được.
     return best_content
 
+def upload_student_photo_storage_web(
+    storage_path,
+    content,
+):
+    """
+    Upload hoặc ghi đè ảnh JPG vào bucket student-photos.
+    """
+    try:
+        supabase.storage \
+            .from_(STUDENT_PHOTO_BUCKET) \
+            .upload(
+                storage_path,
+                content,
+                {
+                    "content-type": "image/jpeg",
+                    "upsert": "true",
+                }
+            )
+
+    except Exception:
+        supabase.storage \
+            .from_(STUDENT_PHOTO_BUCKET) \
+            .update(
+                storage_path,
+                content,
+                {
+                    "content-type": "image/jpeg",
+                    "upsert": "true",
+                }
+            )
+
+
+def delete_student_storage_files_web(paths):
+    """
+    Xóa file Storage an toàn.
+    Không làm hỏng luồng nếu file đã không còn tồn tại.
+    """
+    cleaned_paths = []
+
+    for path in paths or []:
+        path = str(path or "").strip().strip("/")
+
+        if path and path not in cleaned_paths:
+            cleaned_paths.append(path)
+
+    if not cleaned_paths:
+        return
+
+    try:
+        supabase.storage \
+            .from_(STUDENT_PHOTO_BUCKET) \
+            .remove(cleaned_paths)
+
+    except Exception as error:
+        print(
+            "[DELETE STUDENT STORAGE FILE ERROR]",
+            repr(error)
+        )
+
+
+def get_pending_avatar_feedback_web(license_code):
+    """
+    Lấy yêu cầu đổi ảnh đang chờ duyệt của học viên.
+    """
+    license_code = str(
+        license_code or ""
+    ).strip()
+
+    if not license_code:
+        return {}
+
+    try:
+        rows = (
+            supabase.table(STUDENT_FEEDBACK_TABLE)
+            .select("*")
+            .eq("student_license", license_code)
+            .eq("feedback_type", "avatar_change")
+            .eq("status", "pending")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+
+        return rows[0] if rows else {}
+
+    except Exception as error:
+        print(
+            "[GET PENDING AVATAR FEEDBACK ERROR]",
+            repr(error)
+        )
+
+        return {}
+
+
+def save_student_official_photo_web(
+    license_code,
+    content,
+):
+    """
+    Lưu ảnh chính thức của học viên:
+    - Xóa ảnh cũ khác đuôi.
+    - Upload thành license.jpg.
+    - Cập nhật photo_url trong bảng student.
+    """
+    license_code = str(
+        license_code or ""
+    ).strip()
+
+    if not license_code:
+        raise ValueError(
+            "Thiếu mã hội viên."
+        )
+
+    official_path = f"{license_code}.jpg"
+
+    old_paths = [
+        f"{license_code}.jpg",
+        f"{license_code}.jpeg",
+        f"{license_code}.png",
+        f"{license_code}.webp",
+    ]
+
+    delete_student_storage_files_web(
+        old_paths
+    )
+
+    upload_student_photo_storage_web(
+        official_path,
+        content,
+    )
+
+    photo_url = (
+        supabase_student_photo_public_url(
+            official_path
+        )
+    )
+
+    photo_url_with_version = (
+        f"{photo_url}"
+        f"?v={int(datetime.now().timestamp())}"
+    )
+
+    (
+        supabase.table(STUDENT_TABLE)
+        .update({
+            "photo_url": photo_url_with_version
+        })
+        .eq("license", license_code)
+        .execute()
+    )
+
+    return {
+        "storage_path": official_path,
+        "photo_url": photo_url_with_version,
+    }
+
+def get_existing_student_official_photo_web(
+    license_code,
+):
+    """
+    Kiểm tra ảnh đại diện chính thức có thật trong Storage.
+
+    Không dựa riêng vào student.photo_url vì URL có thể còn
+    nhưng file Storage đã bị xóa.
+
+    Trả về:
+    {
+        "exists": True/False,
+        "storage_path": "...",
+        "photo_url": "..."
+    }
+    """
+
+    license_code = str(
+        license_code or ""
+    ).strip()
+
+    if not license_code:
+        return {
+            "exists": False,
+            "storage_path": "",
+            "photo_url": "",
+        }
+
+    possible_paths = [
+        f"{license_code}.jpg",
+        f"{license_code}.jpeg",
+        f"{license_code}.png",
+        f"{license_code}.webp",
+    ]
+
+    try:
+        # Ảnh chính thức nằm ở thư mục gốc của bucket.
+        storage_items = (
+            supabase.storage
+            .from_(STUDENT_PHOTO_BUCKET)
+            .list(
+                "",
+                {
+                    "limit": 1000,
+                    "offset": 0,
+                    "search": license_code,
+                }
+            )
+            or []
+        )
+
+        existing_names = {
+            str(item.get("name") or "").strip()
+            for item in storage_items
+            if item.get("name")
+        }
+
+        for storage_path in possible_paths:
+            if storage_path not in existing_names:
+                continue
+
+            photo_url = (
+                supabase_student_photo_public_url(
+                    storage_path
+                )
+            )
+
+            photo_url_with_version = (
+                f"{photo_url}"
+                f"?v={int(datetime.now().timestamp())}"
+            )
+
+            return {
+                "exists": True,
+                "storage_path": storage_path,
+                "photo_url": photo_url_with_version,
+            }
+
+    except Exception as error:
+        app.logger.exception(
+            "Cannot check official student photo in Storage"
+        )
+
+        # Dự phòng: nếu không đọc được Storage,
+        # kiểm tra cột photo_url trong bảng student.
+        try:
+            rows = (
+                supabase.table(STUDENT_TABLE)
+                .select("photo_url")
+                .eq("license", license_code)
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+
+            database_photo_url = str(
+                rows[0].get("photo_url")
+                if rows
+                else ""
+            ).strip()
+
+            if database_photo_url:
+                return {
+                    "exists": True,
+                    "storage_path": "",
+                    "photo_url": database_photo_url,
+                }
+
+        except Exception:
+            pass
+
+    return {
+        "exists": False,
+        "storage_path": "",
+        "photo_url": "",
+    }
+
+def clear_broken_student_photo_url_web(
+    license_code,
+):
+    """
+    Nếu bảng student còn photo_url nhưng file thật đã mất,
+    xóa URL cũ để giao diện quay về avatar chữ cái.
+    """
+
+    license_code = str(
+        license_code or ""
+    ).strip()
+
+    if not license_code:
+        return
+
+    try:
+        (
+            supabase.table(STUDENT_TABLE)
+            .update({
+                "photo_url": None
+            })
+            .eq("license", license_code)
+            .execute()
+        )
+
+    except Exception:
+        app.logger.exception(
+            "Cannot clear broken student photo URL"
+        )
+
 def get_student_photo_url(license_code):
     license_code = str(license_code or "").strip()
 
@@ -8966,9 +9489,25 @@ def api_student_photo_upload(license_code):
             "photo_url": photo_url_with_version
         })
 
-    except Exception as e:
-        print("[UPLOAD STUDENT PHOTO SUPABASE ERROR]", repr(e))
-        return jsonify({"ok": False, "message": str(e)}), 500
+    except ValueError as error:
+        return jsonify({
+            "ok": False,
+            "message": str(error)
+        }), 400
+
+    except Exception as error:
+        print(
+            "[STUDENT PHOTO UPLOAD ERROR]",
+            repr(error)
+        )
+
+        return jsonify({
+            "ok": False,
+            "message": (
+                "Không thể cập nhật ảnh học viên. "
+                f"Chi tiết: {error}"
+            )
+        }), 500
 
 def sync_student_profile_to_related_tables(license_code):
     """
@@ -12356,10 +12895,11 @@ def setup():
                 settings["fees"]["dan_fees"] = dan_fees
 
             elif active_tab == "exam":
-                settings["exam"]["exam_number_prefix"] = request.form.get(
-                    "exam_number_prefix",
-                    settings["exam"]["exam_number_prefix"]
-                )
+                exam_number_prefix = str(
+                    request.form.get("exam_number_prefix") or ""
+                ).strip()
+
+                settings["exam"]["exam_number_prefix"] = exam_number_prefix
 
             elif active_tab == "club_info":
                 settings["club_info"] = read_club_info_from_form(
@@ -13553,7 +14093,9 @@ def student_portal_info():
     student = require_student_login()
 
     if not student:
-        return redirect(url_for("student_login"))
+        return redirect(
+            url_for("student_login")
+        )
 
     license_code = str(
         student.get("license") or ""
@@ -13564,16 +14106,34 @@ def student_portal_info():
     ).strip()
 
     notifications_rows, unread_count = (
-        get_student_notifications(license_code)
+        get_student_notifications(
+            license_code
+        )
+    )
+
+    photo_url = get_student_photo_url(
+        license_code
+    )
+
+    pending_avatar_request = (
+        get_pending_avatar_feedback_web(
+            license_code
+        )
     )
 
     return render_template(
         "student_portal_info.html",
+
         student=student,
         unread_count=unread_count,
 
-        photo_url=get_student_photo_url(
-            license_code
+        photo_url=photo_url,
+        photo_cache_v=int(
+            datetime.now().timestamp()
+        ),
+
+        pending_avatar_request=(
+            pending_avatar_request
         ),
 
         belt_image_url=get_belt_image_url_web(
@@ -13581,6 +14141,491 @@ def student_portal_info():
         ),
 
         belt_cache_v=current_belt,
+    )
+
+@app.post("/student-portal/avatar/upload")
+def student_avatar_upload():
+    student = require_student_login()
+
+    if not student:
+        return redirect(
+            url_for("student_login")
+        )
+
+    license_code = str(
+        student.get("license") or ""
+    ).strip()
+
+    student_name = str(
+        student.get("name") or ""
+    ).strip()
+
+    if not license_code:
+        flash(
+            "Không xác định được mã hội viên.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("student_portal_info")
+        )
+
+    # Không cho gửi thêm khi đang chờ Admin xử lý.
+    pending_request = (
+        get_pending_avatar_feedback_web(
+            license_code
+        )
+    )
+
+    if pending_request:
+        flash(
+            "Ảnh mới đang chờ Admin phê duyệt. "
+            "Học viên chưa thể gửi ảnh khác.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("student_portal_info")
+        )
+
+    file = request.files.get("photo")
+
+    if not file or not file.filename:
+        flash(
+            "Học viên chưa chọn ảnh.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("student_portal_info")
+        )
+
+    filename = secure_filename(
+        file.filename
+    )
+
+    extension = (
+        filename.rsplit(".", 1)[-1].lower()
+        if "." in filename
+        else ""
+    )
+
+    if extension not in ALLOWED_PHOTO_EXTENSIONS:
+        flash(
+            "Chỉ cho phép ảnh JPG, JPEG, PNG hoặc WEBP.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("student_portal_info")
+        )
+
+    try:
+        # Hàm có sẵn sẽ chuẩn hóa ảnh thành JPG 3x4.
+        content = prepare_student_photo_for_upload(
+            file
+        )
+
+        # =========================================
+        # KIỂM TRA ẢNH CHÍNH THỨC CÓ THẬT
+        # Không chỉ dựa vào cột photo_url.
+        # =========================================
+        official_photo = (
+            get_existing_student_official_photo_web(
+                license_code
+            )
+        )
+
+        has_official_photo = bool(
+            official_photo.get("exists")
+        )
+
+        current_photo_url = str(
+            official_photo.get("photo_url")
+            or ""
+        ).strip()
+
+        # =========================================
+        # CHƯA CÓ ẢNH THẬT TRONG STORAGE:
+        # Đây là ảnh đầu tiên.
+        # Cập nhật trực tiếp, không cần Admin duyệt.
+        # =========================================
+        if not has_official_photo:
+            # Dọn URL cũ nếu bảng student còn URL hỏng.
+            clear_broken_student_photo_url_web(
+                license_code
+            )
+
+            save_student_official_photo_web(
+                license_code,
+                content,
+            )
+
+            flash(
+                "Đã cập nhật ảnh đại diện lần đầu thành công.",
+                "success"
+            )
+
+            return redirect(
+                url_for("student_portal_info")
+            )
+
+        # =========================================
+        # ĐÃ CÓ ẢNH:
+        # Upload ảnh vào thư mục chờ duyệt.
+        # =========================================
+        request_code = uuid.uuid4().hex
+
+        pending_path = (
+            f"pending/"
+            f"{license_code}/"
+            f"{request_code}.jpg"
+        )
+
+        upload_student_photo_storage_web(
+            pending_path,
+            content,
+        )
+
+        pending_photo_url = (
+            supabase_student_photo_public_url(
+                pending_path
+            )
+        )
+
+        pending_photo_url = (
+            f"{pending_photo_url}"
+            f"?v={int(datetime.now().timestamp())}"
+        )
+
+        payload = {
+            "student_license": license_code,
+            "student_name": student_name,
+
+            "feedback_type": "avatar_change",
+
+            "title": (
+                f"Học viên {student_name} "
+                f"yêu cầu đổi ảnh đại diện"
+            ),
+
+            "message": (
+                "Học viên gửi yêu cầu "
+                "cập nhật ảnh đại diện mới."
+            ),
+
+            "old_image_url": current_photo_url,
+            "new_image_url": pending_photo_url,
+            "new_image_path": pending_path,
+
+            "status": "pending",
+
+            "created_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+
+            "updated_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+        }
+
+        try:
+            (
+                supabase.table(
+                    STUDENT_FEEDBACK_TABLE
+                )
+                .insert(payload)
+                .execute()
+            )
+
+        except Exception:
+            # Nếu tạo phản hồi lỗi thì xóa ảnh chờ,
+            # tránh tạo file rác trong Storage.
+            delete_student_storage_files_web([
+                pending_path
+            ])
+
+            raise
+
+        flash(
+            "Đã gửi ảnh mới. "
+            "Ảnh hiện tại vẫn được giữ nguyên "
+            "cho đến khi Admin phê duyệt.",
+            "success"
+        )
+
+    except ValueError as error:
+        # Ảnh không đạt yêu cầu, không phải lỗi máy chủ.
+        safe_error = str(error).encode(
+            "unicode_escape"
+        ).decode("ascii")
+
+        app.logger.warning(
+            "Student avatar rejected: %s",
+            safe_error
+        )
+
+        flash(
+            f"Không cập nhật được ảnh: {error}",
+            "danger"
+        )
+
+    except Exception:
+        app.logger.exception(
+            "Student avatar upload failed"
+        )
+
+        flash(
+            "Không thể cập nhật ảnh lúc này. "
+            "Vui lòng thử lại.",
+            "danger"
+        )
+
+    return redirect(
+        url_for("student_portal_info")
+    )
+
+@app.get("/feedback")
+def admin_feedback():
+    try:
+        feedback_rows = (
+            supabase.table(
+                STUDENT_FEEDBACK_TABLE
+            )
+            .select("*")
+            .eq("status", "pending")
+            .order("created_at", desc=True)
+            .execute()
+            .data
+            or []
+        )
+
+    except Exception as error:
+        print(
+            "[ADMIN FEEDBACK LIST ERROR]",
+            repr(error)
+        )
+
+        feedback_rows = []
+
+        flash(
+            f"Không đọc được phản hồi: {error}",
+            "danger"
+        )
+
+    selected_id = str(
+        request.args.get("feedback_id")
+        or ""
+    ).strip()
+
+    selected_feedback = None
+
+    if selected_id:
+        selected_feedback = next(
+            (
+                item
+                for item in feedback_rows
+                if str(
+                    item.get("id") or ""
+                ) == selected_id
+            ),
+            None
+        )
+
+    if (
+        not selected_feedback
+        and feedback_rows
+    ):
+        selected_feedback = feedback_rows[0]
+
+    return render_template(
+        "feedback.html",
+        feedback_rows=feedback_rows,
+        selected_feedback=selected_feedback,
+    )
+
+@app.post("/feedback/<feedback_id>/approve")
+def admin_feedback_approve(feedback_id):
+    try:
+        rows = (
+            supabase.table(
+                STUDENT_FEEDBACK_TABLE
+            )
+            .select("*")
+            .eq("id", feedback_id)
+            .eq("status", "pending")
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+
+        if not rows:
+            flash(
+                "Phản hồi không còn tồn tại "
+                "hoặc đã được xử lý.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("admin_feedback")
+            )
+
+        feedback = rows[0]
+
+        if (
+            feedback.get("feedback_type")
+            != "avatar_change"
+        ):
+            flash(
+                "Loại phản hồi này chưa hỗ trợ phê duyệt.",
+                "danger"
+            )
+
+            return redirect(
+                url_for(
+                    "admin_feedback",
+                    feedback_id=feedback_id
+                )
+            )
+
+        license_code = str(
+            feedback.get("student_license")
+            or ""
+        ).strip()
+
+        pending_path = str(
+            feedback.get("new_image_path")
+            or ""
+        ).strip()
+
+        if not license_code or not pending_path:
+            raise ValueError(
+                "Phản hồi thiếu mã hội viên "
+                "hoặc đường dẫn ảnh chờ."
+            )
+
+        pending_content = (
+            supabase.storage
+            .from_(STUDENT_PHOTO_BUCKET)
+            .download(pending_path)
+        )
+
+        if not pending_content:
+            raise FileNotFoundError(
+                "Không tìm thấy ảnh mới "
+                "trong Storage."
+            )
+
+        # Đưa ảnh chờ thành ảnh chính thức.
+        save_student_official_photo_web(
+            license_code,
+            pending_content,
+        )
+
+        # Xóa ảnh tạm.
+        delete_student_storage_files_web([
+            pending_path
+        ])
+
+        # Duyệt xong thì xóa phản hồi.
+        (
+            supabase.table(
+                STUDENT_FEEDBACK_TABLE
+            )
+            .delete()
+            .eq("id", feedback_id)
+            .execute()
+        )
+
+        flash(
+            "Đã phê duyệt và cập nhật "
+            "ảnh đại diện mới.",
+            "success"
+        )
+
+    except Exception as error:
+        print(
+            "[ADMIN APPROVE AVATAR ERROR]",
+            repr(error)
+        )
+
+        flash(
+            f"Không phê duyệt được ảnh: {error}",
+            "danger"
+        )
+
+    return redirect(
+        url_for("admin_feedback")
+    )
+
+@app.post("/feedback/<feedback_id>/reject")
+def admin_feedback_reject(feedback_id):
+    try:
+        rows = (
+            supabase.table(
+                STUDENT_FEEDBACK_TABLE
+            )
+            .select("*")
+            .eq("id", feedback_id)
+            .eq("status", "pending")
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+
+        if not rows:
+            flash(
+                "Phản hồi không còn tồn tại "
+                "hoặc đã được xử lý.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("admin_feedback")
+            )
+
+        feedback = rows[0]
+
+        pending_path = str(
+            feedback.get("new_image_path")
+            or ""
+        ).strip()
+
+        if pending_path:
+            delete_student_storage_files_web([
+                pending_path
+            ])
+
+        (
+            supabase.table(
+                STUDENT_FEEDBACK_TABLE
+            )
+            .delete()
+            .eq("id", feedback_id)
+            .execute()
+        )
+
+        flash(
+            "Đã không phê duyệt ảnh mới. "
+            "Ảnh hiện tại của học viên được giữ nguyên.",
+            "success"
+        )
+
+    except Exception as error:
+        print(
+            "[ADMIN REJECT AVATAR ERROR]",
+            repr(error)
+        )
+
+        flash(
+            f"Không xử lý được phản hồi: {error}",
+            "danger"
+        )
+
+    return redirect(
+        url_for("admin_feedback")
     )
 
 @app.get("/student-portal/club-info")
@@ -14066,61 +15111,104 @@ def student_portal_activities():
 @app.route("/student-portal/settings", methods=["GET", "POST"])
 def student_portal_settings():
     student = require_student_login()
+
     if not student:
         return redirect(url_for("student_login"))
 
-    license_code = student.get("license")
+    license_code = str(student.get("license") or "").strip()
 
     if request.method == "POST":
-        new_username = request.form.get("portal_username", "").strip()
-        old_password = request.form.get("old_password", "").strip()
-        new_password = request.form.get("new_password", "").strip()
-        confirm_password = request.form.get("confirm_password", "").strip()
+        old_password = request.form.get(
+            "old_password",
+            ""
+        ).strip()
 
-        update_data = {}
+        new_password = request.form.get(
+            "new_password",
+            ""
+        ).strip()
 
-        if new_username:
-            duplicated = supabase.table(STUDENT_TABLE) \
-                .select("license,portal_username") \
-                .eq("portal_username", new_username) \
-                .neq("license", license_code) \
-                .limit(1) \
-                .execute().data or []
+        confirm_password = request.form.get(
+            "confirm_password",
+            ""
+        ).strip()
 
-            if duplicated:
-                flash("Tên đăng nhập này đã có người dùng.", "danger")
-                return redirect(url_for("student_portal_settings"))
+        if not old_password:
+            flash("Ken chưa nhập mật khẩu cũ.", "danger")
+            return redirect(
+                url_for("student_portal_settings")
+            )
 
-            update_data["portal_username"] = new_username
+        if not new_password:
+            flash("Ken chưa nhập mật khẩu mới.", "danger")
+            return redirect(
+                url_for("student_portal_settings")
+            )
 
-        if old_password or new_password or confirm_password:
-            password_hash = str(student.get("portal_password_hash") or "").strip()
+        if not confirm_password:
+            flash(
+                "Ken chưa xác nhận mật khẩu mới.",
+                "danger"
+            )
+            return redirect(
+                url_for("student_portal_settings")
+            )
 
-            if not check_password_hash(password_hash, old_password):
-                flash("Mật khẩu cũ không đúng.", "danger")
-                return redirect(url_for("student_portal_settings"))
+        password_hash = str(
+            student.get("portal_password_hash") or ""
+        ).strip()
 
-            if not new_password:
-                flash("Ken chưa nhập mật khẩu mới.", "danger")
-                return redirect(url_for("student_portal_settings"))
+        if (
+            not password_hash
+            or not check_password_hash(
+                password_hash,
+                old_password
+            )
+        ):
+            flash("Mật khẩu cũ không đúng.", "danger")
+            return redirect(
+                url_for("student_portal_settings")
+            )
 
-            if new_password != confirm_password:
-                flash("Xác nhận mật khẩu mới không khớp.", "danger")
-                return redirect(url_for("student_portal_settings"))
+        if new_password != confirm_password:
+            flash(
+                "Xác nhận mật khẩu mới không khớp.",
+                "danger"
+            )
+            return redirect(
+                url_for("student_portal_settings")
+            )
 
-            update_data["portal_password_hash"] = generate_password_hash(new_password)
+        if new_password == old_password:
+            flash(
+                "Mật khẩu mới phải khác mật khẩu cũ.",
+                "danger"
+            )
+            return redirect(
+                url_for("student_portal_settings")
+            )
 
-        if update_data:
-            supabase.table(STUDENT_TABLE) \
-                .update(update_data) \
-                .eq("license", license_code) \
-                .execute()
+        supabase.table(STUDENT_TABLE) \
+            .update({
+                "portal_password_hash": generate_password_hash(
+                    new_password
+                )
+            }) \
+            .eq("license", license_code) \
+            .execute()
 
-            flash("Đã cập nhật tài khoản.", "success")
+        flash(
+            "Đã đổi mật khẩu thành công.",
+            "success"
+        )
 
-        return redirect(url_for("student_portal_settings"))
+        return redirect(
+            url_for("student_portal_settings")
+        )
 
-    notifications_rows, unread_count = get_student_notifications(license_code)
+    notifications_rows, unread_count = (
+        get_student_notifications(license_code)
+    )
 
     return render_template(
         "student_portal_settings.html",

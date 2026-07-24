@@ -4,211 +4,211 @@
 
 {% block extra_css %}
 <style>
-.info-layout {
-    display: grid;
-    grid-template-columns: 540px minmax(0, 1fr);
-    gap: 16px;
-    align-items: start;
+.info-layout{display:grid;grid-template-columns:560px minmax(0,1fr);gap:16px;align-items:start}
+.student-visual-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+.visual-card{padding:0!important;overflow:hidden;display:flex;flex-direction:column;min-height:100%;background:#fff}
+.visual-card-head{min-height:54px;padding:14px 16px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #dbe7f5;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}
+.visual-card-head h2{margin:0;font-size:18px;line-height:1.25;font-weight:950;color:#0f172a;text-align:center}
+.visual-image-panel{margin:14px 14px 0;min-height:265px;border:1px solid #dbe7f5;border-radius:16px;background:#f8fafc;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden}
+.visual-info-panel{margin:14px;padding:13px 14px;min-height:78px;border-radius:14px;border:1px solid #dbe7f5;background:linear-gradient(180deg,#f8fbff 0%,#f1f6fc 100%);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.visual-info-label{margin-bottom:5px;color:#64748b;font-size:12px;font-weight:900;text-align:center}
+.visual-info-main{color:#0f172a;font-size:19px;line-height:1.25;font-weight:950;text-align:center}
+.visual-info-sub{margin-top:4px;color:#2563eb;font-size:14px;font-weight:900;text-align:center}
+.student-photo-wrap{width:210px;height:280px;max-width:100%;position:relative;border-radius:16px;overflow:hidden;background:#f1f5f9;border:1px solid #dbe7f5;box-shadow:0 8px 20px rgba(15,23,42,.10)}
+.student-photo,.student-photo-canvas{width:100%;height:100%;display:block;border:0;border-radius:16px}
+.student-photo{object-fit:cover;object-position:center top;image-rendering:auto}
+.student-photo-canvas{position:absolute;inset:0;background:#f1f5f9}
+.no-photo{
+    width:210px;
+    height:280px;
+    max-width:100%;
+    border-radius:16px;
+    background:#f8fafc;
+    border:1px solid #dbe7f5;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
 }
 
-.student-visual-grid {
-    display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    gap: 16px;
-    align-items: stretch;
+.no-photo-avatar{
+    width:150px;
+    height:150px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#facc15,#f59e0b);
+    border:5px solid #ffffff;
+    box-shadow:
+        0 12px 28px rgba(15,42,74,.18),
+        0 0 0 1px #dbe7f5;
+    color:#ffffff;
+    font-size:68px;
+    line-height:1;
+    font-weight:950;
+    text-transform:uppercase;
+    user-select:none;
 }
+.belt-image{display:block;width:100%;max-width:210px;max-height:190px;object-fit:contain}
+.no-belt-image{color:#64748b;font-size:14px;font-weight:850;line-height:1.5;text-align:center}
+.portal-grid-2{align-items:stretch}
+.detail-card{padding:0!important;overflow:hidden}
+.detail-card-head{min-height:66px;padding:17px 16px;display:flex;align-items:center;border-bottom:1px solid #dbe7f5;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}
+.detail-card-head h2{margin:0;font-size:20px;line-height:1.25;font-weight:950;color:#0f172a}
+.detail-card-body{padding:14px}
+.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.info-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:13px}
+.info-item span{display:block;color:#64748b;font-size:12px;font-weight:900;margin-bottom:5px}
+.info-item b{color:#0f172a;font-size:15px}
+.info-personal-name{color:#3C85FFFF!important;font-size:17px!important;font-weight:950!important}
+.status-text{font-size:15px;font-weight:950}
+.status-active{color:#16a34a!important}
+.status-paused{color:#dc2626!important}
 
-.belt-card {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
+.avatar-edit-btn{
+    position:absolute;
+    right:10px;
+    bottom:10px;
+    z-index:5;
+    width:42px;
+    height:42px;
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:14px;
+    background:rgba(15,23,42,.62);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(15,23,42,.22);
+    backdrop-filter:blur(7px);
+    transition:.18s ease;
 }
-
-.belt-card-title {
-    margin: 0 0 14px;
-    font-size: 19px;
-    font-weight: 950;
-    color: #0f172a;
+.avatar-edit-btn:hover{background:#2563eb;transform:translateY(-1px)}
+.avatar-edit-btn:disabled{cursor:not-allowed;background:rgba(100,116,139,.68);opacity:.75;transform:none}
+.no-photo-wrap{position:relative;width:210px;height:280px;max-width:100%}
+.no-photo-wrap .no-photo{width:100%;height:100%}
+.avatar-pending-note{
+    margin:10px 14px 0;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid #fbbf24;
+    background:#fffbeb;
+    color:#92400e;
+    font-size:13px;
+    line-height:1.45;
+    font-weight:850;
+    text-align:center;
 }
+.avatar-modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(2,6,23,.68);
+    backdrop-filter:blur(4px);
+}
+.avatar-modal-overlay.show{display:flex}
+.avatar-modal{
+    width:min(520px,96vw);
+    border-radius:22px;
+    background:#fff;
+    border:1px solid #dbe7f5;
+    box-shadow:0 28px 80px rgba(15,23,42,.32);
+    overflow:hidden;
+}
+.avatar-modal-head{
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid #e2e8f0;
+}
+.avatar-modal-head h3{margin:0;font-size:20px;color:#0f172a}
+.avatar-modal-close{
+    width:34px;height:34px;border:0;border-radius:50%;
+    background:#f1f5f9;color:#334155;font-size:22px;cursor:pointer
+}
+.avatar-modal-body{padding:18px}
+.avatar-preview-box{
+    width:210px;height:280px;margin:0 auto 16px;border-radius:16px;
+    border:1px dashed #94a3b8;background:#f8fafc;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:850
+}
+.avatar-preview-box img{width:100%;height:100%;object-fit:cover;object-position:center top;display:none}
+.avatar-file-label{
+    min-height:46px;border-radius:12px;border:1px solid #cbd5e1;background:#f8fafc;
+    display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;font-weight:900;color:#1e293b
+}
+.avatar-file-label input{display:none}
+.avatar-help{margin:12px 0 0;color:#64748b;font-size:13px;line-height:1.5;font-weight:700}
+.avatar-modal-actions{display:flex;gap:10px;padding:0 18px 18px}
+.avatar-action-btn{
+    flex:1;height:44px;border:0;border-radius:12px;font-weight:950;cursor:pointer
+}
+.avatar-cancel-btn{background:#e2e8f0;color:#334155}
+.avatar-submit-btn{background:#16a34a;color:#fff}
+.avatar-submit-btn:disabled{opacity:.65;cursor:wait}
 
-.belt-image-wrap {
-    flex: 1;
-    min-height: 220px;
-    border-radius: 18px;
-    border: 1px solid #dbe7f5;
-    background: #f8fafc;
+@media(max-width:1180px){.info-layout{grid-template-columns:1fr}}
+@media(max-width:680px){.student-visual-grid{grid-template-columns:1fr}.info-grid{grid-template-columns:1fr}.visual-image-panel{min-height:230px}}
+.student-photo-fallback {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
-    overflow: hidden;
+
+    background: #f8fafc;
 }
 
-.belt-image {
-    display: block;
-    width: 100%;
-    max-height: 190px;
-    object-fit: contain;
-}
+.student-photo-fallback-circle {
+    width: 150px;
+    height: 150px;
 
-.no-belt-image {
-    color: #64748b;
-    font-size: 14px;
-    font-weight: 850;
-    line-height: 1.5;
-}
+    border-radius: 50%;
+    border: 5px solid #ffffff;
 
-.current-belt-label {
-    margin-top: 16px;
-    color: #64748b;
-    font-size: 13px;
-    font-weight: 900;
-}
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-.current-belt-value {
-    margin-top: 5px;
-    color: #2563eb;
-    font-size: 22px;
+    background: linear-gradient(
+        135deg,
+        #facc15,
+        #f59e0b
+    );
+
+    color: #ffffff;
+    font-size: 68px;
+    line-height: 1;
     font-weight: 950;
-}
 
-.photo-card {
-    text-align: center;
-}
-
-.student-photo-wrap {
-    width: 260px;
-    height: 347px;
-    max-width: 100%;
-    margin: 0 auto;
-    position: relative;
-    border-radius: 18px;
-    overflow: hidden;
-    background: #f1f5f9;
-    border: 1px solid #dbe7f5;
-    box-shadow: 0 10px 24px rgba(15,23,42,.12);
-}
-
-.student-photo,
-.student-photo-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    border: 0;
-    border-radius: 18px;
+    box-shadow:
+        0 12px 28px rgba(15, 42, 74, .18),
+        0 0 0 1px #dbe7f5;
 }
 
 .student-photo {
-    object-fit: cover;
-    object-position: center top;
-    image-rendering: auto;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
 }
 
 .student-photo-canvas {
-    position: absolute;
-    inset: 0;
-    background: #f1f5f9;
+    z-index: 3;
 }
 
-.no-photo {
-    width: 210px;
-    height: 280px;
-    border-radius: 18px;
-    margin: 0 auto;
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #64748b;
-    font-weight: 900;
+.avatar-edit-btn {
+    z-index: 5;
 }
 
-.info-name {
-    margin-top: 14px;
-    font-size: 22px;
-    font-weight: 950;
-    color: #0f172a;
-}
-
-.info-code {
-    margin-top: 4px;
-    color: #3C85FFFF;
-    font-weight: 850;
-}
-
-.info-section-title {
-    margin: 0 0 12px;
-    font-size: 20px;
-    font-weight: 950;
-    color: #0f172a;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.info-item {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 13px;
-}
-
-.info-item span {
-    display: block;
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 900;
-    margin-bottom: 5px;
-}
-
-.info-item b {
-    color: #0f172a;
-    font-size: 15px;
-}
-
-.info-personal-name {
-    color: #3C85FFFF !important;
-    font-size: 17px !important;
-    font-weight: 950 !important;
-}
-
-.status-text {
-    font-size: 15px;
-    font-weight: 950;
-}
-
-.status-active {
-    color: #16a34a !important;
-}
-
-.status-paused {
-    color: #dc2626 !important;
-}
-
-@media(max-width: 1180px) {
-    .info-layout {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media(max-width: 680px) {
-    .student-visual-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .info-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .belt-image-wrap {
-        min-height: 180px;
-    }
-}
 </style>
 {% endblock %}
 
@@ -222,117 +222,173 @@
 
 <div class="info-layout">
     <div class="student-visual-grid">
-        <section class="portal-card photo-card">
-            {% if photo_url %}
-                <div class="student-photo-wrap">
-                    <img
-                        id="studentPhotoSource"
-                        class="student-photo"
-                        src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
-                        alt="Ảnh học viên"
-                        decoding="async"
-                    >
-                    <canvas
-                        id="studentPhotoCanvas"
-                        class="student-photo-canvas"
-                        width="260"
-                        height="347"
-                        aria-hidden="true"
-                    ></canvas>
-                </div>
-            {% else %}
-                <div class="no-photo">Chưa có ảnh</div>
-            {% endif %}
-            <div class="info-name">{{ student.name }}</div>
-            <div class="info-code">{{ student.license }}</div>
-        </section>
+        <section class="portal-card visual-card">
+            <div class="visual-card-head"><h2>Ảnh đại diện</h2></div>
+            <div class="visual-image-panel">
+                {% if photo_url %}
+                    <div class="student-photo-wrap">
+                        <div
+                            id="studentPhotoFallback"
+                            class="student-photo-fallback"
+                        >
+                            <div class="student-photo-fallback-circle">
+                                {{ ((student.name or 'HV')|trim).split()[-1][:1]|upper }}
+                            </div>
+                        </div>
 
-        <section class="portal-card belt-card">
-            <h2 class="belt-card-title">Màu đai hiện tại</h2>
+                        {% if photo_url %}
+                            <img
+                                id="studentPhotoSource"
+                                class="student-photo"
+                                src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
+                                alt=""
+                                decoding="async"
+                                onerror="
+                                    this.style.display='none';
+                                    const canvas = document.getElementById('studentPhotoCanvas');
+                                    if (canvas) canvas.style.display='none';
+                                    const fallback = document.getElementById('studentPhotoFallback');
+                                    if (fallback) fallback.style.display='flex';
+                                "
+                            >
 
-            <div class="belt-image-wrap">
-                {% if belt_image_url %}
-                    <img
-                        class="belt-image"
-                        src="{{ belt_image_url }}?v={{ belt_cache_v|default(student.belt)|urlencode }}"
-                        alt="Hình {{ student.belt or 'cấp đai hiện tại' }}"
-                        loading="eager"
-                        decoding="async"
-                    >
+                            <canvas
+                                id="studentPhotoCanvas"
+                                class="student-photo-canvas"
+                                width="210"
+                                height="280"
+                                aria-hidden="true"
+                            ></canvas>
+                        {% endif %}
+
+                        <button
+                            type="button"
+                            class="avatar-edit-btn"
+                            id="openAvatarModalBtn"
+                            title="{% if pending_avatar_request %}Ảnh mới đang chờ Admin duyệt{% else %}Đổi ảnh đại diện{% endif %}"
+                            {% if pending_avatar_request %}disabled{% endif %}
+                        >
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
                 {% else %}
-                    <div class="no-belt-image">
-                        Chưa có hình phù hợp<br>
-                        với cấp đai hiện tại.
+                    <div class="no-photo-wrap">
+                        <div class="no-photo">
+                            <div class="no-photo-avatar" aria-label="Avatar chữ cái">
+                                {{ ((student.name or 'HV')|trim).split()[-1][:1]|upper }}
+                            </div>
+                        </div>
+
+                        <button type="button"
+                                class="avatar-edit-btn"
+                                id="openAvatarModalBtn"
+                                title="Cập nhật ảnh đại diện">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
                     </div>
                 {% endif %}
             </div>
-            <div class="current-belt-value">{{ student.belt or '—' }}</div>
+
+            {% if pending_avatar_request %}
+                <div class="avatar-pending-note">
+                    <i class="fa-solid fa-clock"></i>
+                    Ảnh mới đang chờ Admin phê duyệt. Học viên chưa thể gửi ảnh khác.
+                </div>
+            {% endif %}
+            <div class="visual-info-panel">
+                <div class="visual-info-main">{{ student.name }}</div>
+                <div class="visual-info-sub">{{ student.license }}</div>
+            </div>
+        </section>
+
+        <section class="portal-card visual-card">
+            <div class="visual-card-head"><h2>Ảnh đai đại diện</h2></div>
+            <div class="visual-image-panel">
+                {% if belt_image_url %}
+                    <img class="belt-image" src="{{ belt_image_url }}?v={{ belt_cache_v|default(student.belt)|urlencode }}" alt="Hình {{ student.belt or 'cấp đai hiện tại' }}" loading="eager" decoding="async">
+                {% else %}
+                    <div class="no-belt-image">Chưa có hình phù hợp<br>với cấp đai hiện tại.</div>
+                {% endif %}
+            </div>
+            <div class="visual-info-panel">
+                <div class="visual-info-label">Cấp đai hiện tại</div>
+                <div class="visual-info-main">{{ student.belt or '—' }}</div>
+            </div>
         </section>
     </div>
 
     <div class="portal-grid-2">
-        <section class="portal-card">
-            <h2 class="info-section-title">Thông tin cá nhân</h2>
-            <div class="info-grid">
-                <div class="info-item"><span>Họ tên</span><b class="info-personal-name">{{ student.name or '—' }}</b></div>
-                <div class="info-item"><span>Ngày sinh</span><b>{{ student.birthdate or '—' }}</b></div>
-                <div class="info-item"><span>Giới tính</span><b>{{ student.gender or '—' }}</b></div>
-                <div class="info-item"><span>Số điện thoại</span><b>{{ student.phonenumber or '—' }}</b></div>
-                <div class="info-item"><span>Địa chỉ</span><b>{{ student.address or '—' }}</b></div>
-                <div class="info-item"><span>Telegram ID</span><b>{{ student.telegram_id or '—' }}</b></div>
+        <section class="portal-card detail-card">
+            <div class="detail-card-head"><h2>Thông tin cá nhân</h2></div>
+            <div class="detail-card-body">
+                <div class="info-grid">
+                    <div class="info-item"><span>Họ tên</span><b class="info-personal-name">{{ student.name or '—' }}</b></div>
+                    <div class="info-item"><span>Ngày sinh</span><b>{{ student.birthdate or '—' }}</b></div>
+                    <div class="info-item"><span>Giới tính</span><b>{{ student.gender or '—' }}</b></div>
+                    <div class="info-item"><span>Số điện thoại</span><b>{{ student.phonenumber or '—' }}</b></div>
+                    <div class="info-item"><span>Địa chỉ</span><b>{{ student.address or '—' }}</b></div>
+                    <div class="info-item"><span>Telegram ID</span><b>{{ student.telegram_id or '—' }}</b></div>
+                </div>
             </div>
         </section>
 
-        <section class="portal-card info-class-card">
-            <h2>Thông tin lớp học</h2>
+        <section class="portal-card detail-card">
+            <div class="detail-card-head"><h2>Thông tin lớp học</h2></div>
+            <div class="detail-card-body">
+                <div class="info-grid">
+                    <div class="info-item"><span>Mã HV</span><b>{{ student.license or '—' }}</b></div>
+                    <div class="info-item"><span>Lớp</span><b>{{ student.classroom or '—' }}</b></div>
+                    <div class="info-item"><span>Ca</span><b>{{ student.timeclass or '—' }}</b></div>
+                    <div class="info-item"><span>CLB</span><b>{{ student.clup or '—' }}</b></div>
+                    <div class="info-item"><span>Gia đình tập chung</span><b>{% if student.family|string|lower in ['có','1','true','yes'] %}Có{% else %}Không{% endif %}</b></div>
+                    <div class="info-item"><span>Tình trạng</span>{% if student.active|string|lower in ['có','1','true','yes'] %}<b class="status-text status-active">Đang hoạt động</b>{% else %}<b class="status-text status-paused">Tạm ngưng</b>{% endif %}</div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
 
-            <div class="info-grid">
-                <div class="info-item">
-                    <span>Mã HV</span>
-                    <b>{{ student.license or '—' }}</b>
+<div class="avatar-modal-overlay" id="avatarModalOverlay" aria-hidden="true">
+    <div class="avatar-modal" role="dialog" aria-modal="true" aria-labelledby="avatarModalTitle">
+        <div class="avatar-modal-head">
+            <h3 id="avatarModalTitle">Cập nhật ảnh đại diện</h3>
+            <button type="button" class="avatar-modal-close" id="closeAvatarModalBtn">&times;</button>
+        </div>
+
+        <form id="avatarUploadForm"
+              method="post"
+              action="{{ url_for('student_avatar_upload') }}"
+              enctype="multipart/form-data">
+            <div class="avatar-modal-body">
+                <div class="avatar-preview-box">
+                    <span id="avatarPreviewText">Chưa chọn ảnh</span>
+                    <img id="avatarPreviewImage" alt="Xem trước ảnh mới">
                 </div>
 
-                <div class="info-item">
-                    <span>Cấp đai</span>
-                    <b>{{ student.belt or '—' }}</b>
-                </div>
+                <label class="avatar-file-label">
+                    <i class="fa-solid fa-image"></i>
+                    Chọn ảnh JPG, PNG hoặc WEBP
+                    <input type="file"
+                           id="avatarFileInput"
+                           name="photo"
+                           accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                           required>
+                </label>
 
-                <div class="info-item">
-                    <span>Lớp</span>
-                    <b>{{ student.classroom or '—' }}</b>
-                </div>
-
-                <div class="info-item">
-                    <span>Ca</span>
-                    <b>{{ student.timeclass or '—' }}</b>
-                </div>
-
-                <div class="info-item">
-                    <span>CLB</span>
-                    <b>{{ student.clup or '—' }}</b>
-                </div>
-
-                <div class="info-item">
-                    <span>Gia đình tập chung</span>
-                    <b>
-                        {% if student.family|string|lower in ['có', '1', 'true', 'yes'] %}
-                            Có
-                        {% else %}
-                            Không
-                        {% endif %}
-                    </b>
-                </div>
-
-                <div class="info-item">
-                    <span>Tình trạng</span>
-                    {% if student.active|string|lower in ['có', '1', 'true', 'yes'] %}
-                        <b class="status-text status-active">Đang hoạt động</b>
+                <div class="avatar-help">
+                    {% if photo_url %}
+                        Ảnh hiện tại sẽ được giữ nguyên cho đến khi Admin phê duyệt ảnh mới.
                     {% else %}
-                        <b class="status-text status-paused">Tạm ngưng</b>
+                        Đây là lần cập nhật ảnh đầu tiên nên ảnh sẽ được sử dụng ngay, không cần Admin duyệt.
                     {% endif %}
                 </div>
             </div>
-        </section>
+
+            <div class="avatar-modal-actions">
+                <button type="button" class="avatar-action-btn avatar-cancel-btn" id="cancelAvatarModalBtn">Hủy</button>
+                <button type="submit" class="avatar-action-btn avatar-submit-btn" id="submitAvatarBtn">Gửi ảnh</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -344,8 +400,8 @@
 
         if (!img || !canvas) return;
 
-        const cssWidth = 260;
-        const cssHeight = 347;
+        const cssWidth = 210;
+        const cssHeight = 280;
         const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 4));
 
         function draw() {
@@ -396,6 +452,15 @@
 
         function fallback() {
             canvas.style.display = "none";
+            img.style.display = "none";
+
+            const fallbackAvatar = document.getElementById(
+                "studentPhotoFallback"
+            );
+
+            if (fallbackAvatar) {
+                fallbackAvatar.style.display = "flex";
+            }
         }
 
         if (img.complete) {
@@ -415,6 +480,84 @@
         renderStudentPhotoHighQuality();
     }
 })();
-</script>
 
+
+
+(function () {
+    const openBtn = document.getElementById("openAvatarModalBtn");
+    const overlay = document.getElementById("avatarModalOverlay");
+    const closeBtn = document.getElementById("closeAvatarModalBtn");
+    const cancelBtn = document.getElementById("cancelAvatarModalBtn");
+    const fileInput = document.getElementById("avatarFileInput");
+    const previewImage = document.getElementById("avatarPreviewImage");
+    const previewText = document.getElementById("avatarPreviewText");
+    const form = document.getElementById("avatarUploadForm");
+    const submitBtn = document.getElementById("submitAvatarBtn");
+
+    if (!openBtn || !overlay) return;
+
+    function openModal() {
+        overlay.classList.add("show");
+        overlay.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal() {
+        overlay.classList.remove("show");
+        overlay.setAttribute("aria-hidden", "true");
+        if (form) form.reset();
+        if (previewImage) {
+            previewImage.src = "";
+            previewImage.style.display = "none";
+        }
+        if (previewText) previewText.style.display = "block";
+    }
+
+    openBtn.addEventListener("click", openModal);
+    closeBtn?.addEventListener("click", closeModal);
+    cancelBtn?.addEventListener("click", closeModal);
+
+    overlay.addEventListener("click", function (event) {
+        if (event.target === overlay) closeModal();
+    });
+
+    fileInput?.addEventListener("change", function () {
+        const file = fileInput.files && fileInput.files[0];
+
+        if (!file) {
+            previewImage.style.display = "none";
+            previewText.style.display = "block";
+            return;
+        }
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+        if (!allowedTypes.includes(file.type)) {
+            alert("Chỉ cho phép ảnh JPG, PNG hoặc WEBP.");
+            fileInput.value = "";
+            return;
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+            alert("Ảnh không được vượt quá 8 MB.");
+            fileInput.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            previewImage.src = event.target.result;
+            previewImage.style.display = "block";
+            previewText.style.display = "none";
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    form?.addEventListener("submit", function () {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Đang tải ảnh...";
+    });
+})();
+</script>
 {% endblock %}

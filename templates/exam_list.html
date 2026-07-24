@@ -115,7 +115,11 @@
                         </div>
                     {% else %}
                         <div class="exam-number-box">
-                            <span>{{ r.cap_du_thi }}_</span>
+                            {% set number_prefix_template = app_settings.get('exam', {}).get('exam_number_prefix', '{cap}_') %}
+                            {% set number_prefix_text = number_prefix_template|replace('{cap}', r.cap_du_thi) %}
+                            {% if number_prefix_text %}
+                                <span>{{ number_prefix_text }}</span>
+                            {% endif %}
                             <input
                                 type="number"
                                 name="so_thi_{{ r.license }}"
@@ -943,9 +947,9 @@ function sortExamListTemp() {
     const order = rows.map(row => row.dataset.license || "").filter(Boolean);
     localStorage.setItem(getExamSortKey(), JSON.stringify(order));
 
-    // Quan trọng: tự đánh lại số thi 1,2,3...
-    autoRenumberExamNumbers();
-
+    // Chỉ sắp xếp danh sách.
+    // Không tự thay đổi số thi vì số thi do Ken nhập tay
+    // hoặc cập nhật hàng loạt từ Excel.
     saveExamDraft();
 }
 

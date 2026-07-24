@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.feedback-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.feedback-page-head h1{margin:0 0 5px;color:#0f172a;font-size:30px}
+.feedback-page-head p{margin:0;color:#64748b;font-weight:700}
+.feedback-layout{display:grid;grid-template-columns:390px minmax(0,1fr);gap:16px;min-height:650px}
+.feedback-list,.feedback-detail{background:#fff;border:1px solid #dbe7f5;border-radius:18px;box-shadow:0 10px 24px rgba(15,23,42,.07);overflow:hidden}
+.feedback-list-head,.feedback-detail-head{padding:16px 18px;border-bottom:1px solid #e2e8f0;background:linear-gradient(180deg,#fff,#f8fbff)}
+.feedback-list-head h2,.feedback-detail-head h2{margin:0;color:#0f172a;font-size:20px}
+.feedback-count{margin-top:5px;color:#64748b;font-size:13px;font-weight:800}
+.feedback-items{max-height:720px;overflow:auto}
+.feedback-item{display:block;padding:15px 16px;border-bottom:1px solid #e2e8f0;text-decoration:none;color:inherit;transition:.16s ease}
+.feedback-item:hover{background:#f8fafc}
+.feedback-item.active{background:#eff6ff;box-shadow:inset 4px 0 0 #2563eb}
+.feedback-item-title{font-size:15px;line-height:1.4;font-weight:950;color:#0f172a}
+.feedback-item-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;color:#64748b;font-size:12px;font-weight:800}
+.feedback-empty{padding:44px 20px;text-align:center;color:#64748b;font-weight:850}
+.feedback-detail-body{padding:20px}
+.student-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.summary-box{padding:13px;border-radius:14px;border:1px solid #e2e8f0;background:#f8fafc}
+.summary-box span{display:block;color:#64748b;font-size:12px;font-weight:900;margin-bottom:5px}
+.summary-box b{color:#0f172a;font-size:15px}
+.photo-compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.photo-card{padding:16px;border-radius:16px;border:1px solid #dbe7f5;background:#f8fafc}
+.photo-card h3{margin:0 0 12px;text-align:center;color:#0f172a;font-size:17px}
+.photo-box{width:210px;height:280px;max-width:100%;margin:0 auto;border-radius:16px;overflow:hidden;border:1px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:850}
+.photo-box img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.feedback-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid #e2e8f0}
+.feedback-btn{min-width:150px;height:44px;border:0;border-radius:12px;color:#fff;font-weight:950;cursor:pointer}
+.feedback-approve{background:#16a34a}
+.feedback-reject{background:#dc2626}
+.feedback-placeholder{min-height:610px;display:flex;align-items:center;justify-content:center;text-align:center;color:#64748b;font-weight:850;padding:30px}
+@media(max-width:1000px){.feedback-layout{grid-template-columns:1fr}.feedback-items{max-height:360px}}
+@media(max-width:680px){.student-summary,.photo-compare{grid-template-columns:1fr}.feedback-actions{flex-direction:column}.feedback-btn{width:100%}}
+</style>
+
+<div class="feedback-page-head">
+    <div>
+        <h1>📨 Phản hồi</h1>
+        <p>Tiếp nhận và xử lý yêu cầu từ học viên.</p>
+    </div>
+</div>
+
+<div class="feedback-layout">
+    <section class="feedback-list">
+        <div class="feedback-list-head">
+            <h2>Hộp thư phản hồi</h2>
+            <div class="feedback-count">{{ feedback_rows|length }} yêu cầu đang chờ</div>
+        </div>
+
+        <div class="feedback-items">
+            {% for item in feedback_rows %}
+                <a class="feedback-item {% if selected_feedback and selected_feedback.id == item.id %}active{% endif %}"
+                   href="{{ url_for('admin_feedback', feedback_id=item.id) }}">
+                    <div class="feedback-item-title">{{ item.title }}</div>
+                    <div class="feedback-item-meta">
+                        <span>{{ item.student_license }}</span>
+                        <span>{{ item.created_at|datetime_vn }}</span>
+                    </div>
+                </a>
+            {% else %}
+                <div class="feedback-empty">Chưa có phản hồi nào đang chờ xử lý.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="feedback-detail">
+        {% if selected_feedback %}
+            <div class="feedback-detail-head">
+                <h2>{{ selected_feedback.title }}</h2>
+            </div>
+
+            <div class="feedback-detail-body">
+                <div class="student-summary">
+                    <div class="summary-box">
+                        <span>Họ tên</span>
+                        <b>{{ selected_feedback.student_name }}</b>
+                    </div>
+                    <div class="summary-box">
+                        <span>Mã hội viên</span>
+                        <b>{{ selected_feedback.student_license }}</b>
+                    </div>
+                    <div class="summary-box">
+                        <span>Thời gian gửi</span>
+                        <b>{{ selected_feedback.created_at|datetime_vn }}</b>
+                    </div>
+                </div>
+
+                <div class="photo-compare">
+                    <div class="photo-card">
+                        <h3>Ảnh hiện tại</h3>
+                        <div class="photo-box">
+                            {% if selected_feedback.old_image_url %}
+                                <img src="{{ selected_feedback.old_image_url }}" alt="Ảnh hiện tại">
+                            {% else %}
+                                Chưa có ảnh
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="photo-card">
+                        <h3>Ảnh đề nghị mới</h3>
+                        <div class="photo-box">
+                            <img src="{{ selected_feedback.new_image_url }}" alt="Ảnh mới chờ duyệt">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feedback-actions">
+                    <form method="post"
+                          action="{{ url_for('admin_feedback_reject', feedback_id=selected_feedback.id) }}"
+                          onsubmit="return confirm('Không phê duyệt ảnh mới này?');">
+                        <button type="submit" class="feedback-btn feedback-reject">
+                            <i class="fa-solid fa-xmark"></i>
+                            Không phê duyệt
+                        </button>
+                    </form>
+
+                    <form method="post"
+                          action="{{ url_for('admin_feedback_approve', feedback_id=selected_feedback.id) }}"
+                          onsubmit="return confirm('Phê duyệt ảnh mới cho học viên này?');">
+                        <button type="submit" class="feedback-btn feedback-approve">
+                            <i class="fa-solid fa-check"></i>
+                            Phê duyệt
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="feedback-placeholder">
+                Chọn một phản hồi bên trái để xem ảnh hiện tại và ảnh mới.
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

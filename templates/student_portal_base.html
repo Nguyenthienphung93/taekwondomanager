@@ -255,30 +255,60 @@
         }
 
         .student-avatar-mini {
+            position: relative;
             width: 54px;
             height: 54px;
-            border-radius: 50%;
-            background: var(--portal-yellow);
-            color: #0f172a;
+            min-width: 54px;
+            min-height: 54px;
+            flex: 0 0 54px;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 950;
-            flex-shrink: 0;
-            overflow: hidden;
-            border: 2px solid rgba(250, 204, 21, .95);
-            box-shadow: 0 8px 18px rgba(0, 0, 0, .22);
+            border-radius: 50%;
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            border: 3px solid #ffffff;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, .24);
         }
 
         .student-avatar-mini img {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
             width: 100%;
             height: 100%;
-            object-fit: cover;
             display: block;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center top;
+            background: #ffffff;
         }
 
-        .student-mini-text {
-            min-width: 0;
+        .student-avatar-letter {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 950;
+            line-height: 1;
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        body.student-sidebar-collapsed .student-avatar-mini {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            flex-basis: 48px;
         }
 
         .student-mini-name {
@@ -3030,10 +3060,20 @@
         <a href="{{ url_for('student_portal_info') }}"
            class="student-mini-profile student-profile-link {{ 'active' if active_page == 'info' else '' }}">
             <div class="student-avatar-mini">
-                {% if student.photo_url %}
-                    <img src="{{ student.photo_url }}" alt="Ảnh học viên">
-                {% else %}
-                    {{ (student.name or 'HV')[:1] }}
+                {% set menu_photo_url = (student.photo_url or '')|trim %}
+
+                <span class="student-avatar-letter">
+                    {{ ((student.name or 'HV')|trim).split()[-1][:1]|upper }}
+                </span>
+
+                {% if menu_photo_url %}
+                    <img
+                        src="{{ menu_photo_url }}"
+                        alt=""
+                        loading="eager"
+                        decoding="async"
+                        onerror="this.remove();"
+                    >
                 {% endif %}
             </div>
 
