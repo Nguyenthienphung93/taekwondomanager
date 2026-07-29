@@ -442,22 +442,27 @@ def build_vietqr_url(payment_info, student=None, amount=None):
 # =========================
 # ADMIN LOGIN - BỘ QUẢN LÝ
 # =========================
-def normalize_admin_email(email):
-    return str(email or "").strip().lower()
-
-def verify_admin_login_web(email, password):
+def normalize_admin_login_name(value):
     """
-    Xác thực tài khoản Admin bằng hàm RPC trên Supabase.
+    Chuẩn hóa username hoặc email Admin.
+    """
+    return str(value or "").strip().lower()
 
-    Supabase tự kiểm tra:
-    - Email
-    - Mật khẩu được mã hóa bằng pgcrypto
+
+def verify_admin_login_web(login_name, password):
+    """
+    Xác thực Admin bằng username hoặc email thông qua RPC Supabase.
     """
 
-    email = normalize_admin_email(email)
-    password = str(password or "")
+    login_name = normalize_admin_login_name(
+        login_name
+    )
 
-    if not email or not password:
+    password = str(
+        password or ""
+    )
+
+    if not login_name or not password:
         return None
 
     try:
@@ -465,7 +470,7 @@ def verify_admin_login_web(email, password):
             supabase.rpc(
                 "verify_admin_login",
                 {
-                    "login_email": email,
+                    "login_name": login_name,
                     "login_password": password,
                 }
             )
@@ -761,8 +766,9 @@ def admin_login():
         return redirect(next_url)
 
     if request.method == "POST":
-        email = normalize_admin_email(
-            request.form.get("email")
+        login_name = normalize_admin_login_name(
+            request.form.get("login_name")
+            or request.form.get("email")
             or request.form.get("username")
         )
 
@@ -783,9 +789,9 @@ def admin_login():
         if not is_safe_next_url(next_url):
             next_url = url_for("students")
 
-        if not email or not password:
+        if not login_name or not password:
             flash(
-                "Ken cần nhập đầy đủ email và mật khẩu.",
+                "Cần nhập đầy đủ tên đăng nhập hoặc email và mật khẩu.",
                 "danger"
             )
 
@@ -797,13 +803,13 @@ def admin_login():
             )
 
         admin_user = verify_admin_login_web(
-            email,
+            login_name,
             password
         )
 
         if not admin_user:
             flash(
-                "Email hoặc mật khẩu chưa đúng.",
+                "Tên đăng nhập, email hoặc mật khẩu chưa đúng.",
                 "danger"
             )
 
@@ -835,13 +841,14 @@ def admin_login():
             or ""
         )
 
-        session["admin_email"] = str(
-            admin_user.get("email")
+        session["admin_login_name"] = str(
+            admin_user.get("username")
             or ""
         )
 
         session["admin_username"] = str(
             admin_user.get("full_name")
+            or admin_user.get("username")
             or admin_user.get("email")
             or "Quản trị viên"
         )
@@ -883,6 +890,7 @@ def admin_logout():
     session.pop("admin_logged_in", None)
     session.pop("admin_id", None)
     session.pop("admin_email", None)
+    session.pop("admin_login_name", None)
     session.pop("admin_username", None)
     session.pop("admin_role", None)
 
@@ -6089,6 +6097,11 @@ def inject_app_settings():
 
         "admin_email": session.get(
             "admin_email",
+            ""
+        ),
+
+        "admin_login_name": session.get(
+            "admin_login_name",
             ""
         ),
 
