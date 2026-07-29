@@ -442,10 +442,100 @@ def build_vietqr_url(payment_info, student=None, amount=None):
 # =========================
 # ADMIN LOGIN - BỘ QUẢN LÝ
 # =========================
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "nhoctotokute93")
-ADMIN_PASSWORD_HASH = generate_password_hash(
-    os.environ.get("ADMIN_PASSWORD", "Nguyenthienphung#93")
-)
+def normalize_admin_email(email):
+    return str(email or "").strip().lower()
+
+def verify_admin_login_web(email, password):
+    """
+    Xác thực tài khoản Admin bằng hàm RPC trên Supabase.
+
+    Supabase tự kiểm tra:
+    - Email
+    - Mật khẩu được mã hóa bằng pgcrypto
+    """
+
+    email = normalize_admin_email(email)
+    password = str(password or "")
+
+    if not email or not password:
+        return None
+
+    try:
+        response = (
+            supabase.rpc(
+                "verify_admin_login",
+                {
+                    "login_email": email,
+                    "login_password": password,
+                }
+            )
+            .execute()
+        )
+
+        rows = response.data or []
+
+        return rows[0] if rows else None
+
+    except Exception as e:
+        print(
+            "[VERIFY ADMIN LOGIN ERROR]",
+            repr(e)
+        )
+        return None
+
+
+def admin_user_is_active(admin_user):
+    """
+    Chỉ cho đăng nhập khi active = true.
+    """
+
+    if not admin_user:
+        return False
+
+    active = admin_user.get("active")
+
+    if isinstance(active, bool):
+        return active
+
+    active_text = remove_accents(
+        str(active or "")
+    ).strip().lower()
+
+    return active_text in {
+        "true",
+        "1",
+        "yes",
+        "co",
+    }
+
+
+def update_admin_last_login(admin_id):
+    """
+    Cập nhật thời gian đăng nhập thông qua RPC,
+    tránh bị RLS chặn.
+    """
+
+    admin_id = str(admin_id or "").strip()
+
+    if not admin_id:
+        return
+
+    try:
+        (
+            supabase.rpc(
+                "set_admin_last_login",
+                {
+                    "admin_user_id": admin_id
+                }
+            )
+            .execute()
+        )
+
+    except Exception as e:
+        print(
+            "[UPDATE ADMIN LAST LOGIN ERROR]",
+            repr(e)
+        )
 
 ADMIN_PUBLIC_ENDPOINTS = {
     "admin_login",
@@ -587,7 +677,26 @@ def is_admin_logged_in():
 
 def is_safe_next_url(next_url):
     next_url = str(next_url or "").strip()
-    return next_url.startswith("/") and not next_url.startswith("//")
+
+    if not next_url.startswith("/"):
+        return False
+
+    if next_url.startswith("//"):
+        return False
+
+    # Không cho quay lại các đường dẫn đăng nhập Admin cũ/sai.
+    invalid_admin_login_paths = {
+        "/admin/login",
+        "/admin_login",
+        "/admin-login",
+    }
+
+    clean_path = next_url.split("?", 1)[0].rstrip("/") or "/"
+
+    if clean_path in invalid_admin_login_paths:
+        return False
+
+    return True
 
 def back_to_current_page(default_endpoint):
     """
@@ -609,6 +718,14 @@ def back_to_current_page(default_endpoint):
 @app.before_request
 def require_admin_login_for_management_pages():
     path = request.path or "/"
+
+    # Tương thích với đường dẫn Admin cũ.
+    # Không cho /admin/login trở thành biến next rồi gây lỗi 404.
+    if path in {"/admin/login", "/admin_login"}:
+        if is_admin_logged_in():
+            return redirect(url_for("students"))
+
+        return redirect(url_for("admin_login"))
 
     # Cho phép các endpoint public
     if request.endpoint in ADMIN_PUBLIC_ENDPOINTS:
@@ -633,7 +750,10 @@ def require_admin_login_for_management_pages():
 @app.route("/admin-login", methods=["GET", "POST"])
 def admin_login():
     if is_admin_logged_in():
-        next_url = request.args.get("next") or url_for("students")
+        next_url = (
+            request.args.get("next")
+            or url_for("students")
+        )
 
         if not is_safe_next_url(next_url):
             next_url = url_for("students")
@@ -641,44 +761,142 @@ def admin_login():
         return redirect(next_url)
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        remember = request.form.get("remember") == "on"
-        next_url = request.form.get("next") or url_for("students")
+        email = normalize_admin_email(
+            request.form.get("email")
+            or request.form.get("username")
+        )
+
+        password = str(
+            request.form.get("password")
+            or ""
+        )
+
+        remember = (
+            request.form.get("remember") == "on"
+        )
+
+        next_url = (
+            request.form.get("next")
+            or url_for("students")
+        )
 
         if not is_safe_next_url(next_url):
             next_url = url_for("students")
 
-        if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
-            # Không dùng session.clear(), vì sẽ làm out Student và Coach
-            session["admin_logged_in"] = True
-            session["admin_username"] = username
-            session.permanent = remember
+        if not email or not password:
+            flash(
+                "Ken cần nhập đầy đủ email và mật khẩu.",
+                "danger"
+            )
 
-            flash("Đăng nhập admin thành công", "success")
-            return redirect(next_url)
+            return redirect(
+                url_for(
+                    "admin_login",
+                    next=next_url
+                )
+            )
 
-        flash("ID hoặc mật khẩu admin chưa đúng")
-        return redirect(url_for("admin_login", next=next_url))
+        admin_user = verify_admin_login_web(
+            email,
+            password
+        )
 
-    next_url = request.args.get("next") or url_for("students")
+        if not admin_user:
+            flash(
+                "Email hoặc mật khẩu chưa đúng.",
+                "danger"
+            )
+
+            return redirect(
+                url_for(
+                    "admin_login",
+                    next=next_url
+                )
+            )
+
+        if not admin_user_is_active(admin_user):
+            flash(
+                "Tài khoản này đang bị tạm khóa. "
+                "Vui lòng liên hệ chủ hệ thống.",
+                "danger"
+            )
+
+            return redirect(
+                url_for(
+                    "admin_login",
+                    next=next_url
+                )
+            )
+
+        session["admin_logged_in"] = True
+
+        session["admin_id"] = str(
+            admin_user.get("id")
+            or ""
+        )
+
+        session["admin_email"] = str(
+            admin_user.get("email")
+            or ""
+        )
+
+        session["admin_username"] = str(
+            admin_user.get("full_name")
+            or admin_user.get("email")
+            or "Quản trị viên"
+        )
+
+        session["admin_role"] = str(
+            admin_user.get("role")
+            or "admin"
+        )
+
+        session.permanent = remember
+
+        update_admin_last_login(
+            admin_user.get("id")
+        )
+
+        flash(
+            "Đăng nhập quản trị thành công.",
+            "success"
+        )
+
+        return redirect(next_url)
+
+    next_url = (
+        request.args.get("next")
+        or url_for("students")
+    )
 
     if not is_safe_next_url(next_url):
         next_url = url_for("students")
 
-    return render_template("admin_login.html", next_url=next_url)
+    return render_template(
+        "admin_login.html",
+        next_url=next_url
+    )
 
 
 @app.get("/admin-logout")
 def admin_logout():
     session.pop("admin_logged_in", None)
+    session.pop("admin_id", None)
+    session.pop("admin_email", None)
     session.pop("admin_username", None)
+    session.pop("admin_role", None)
 
     session.pop("restore_unlocked", None)
     session.pop("restore_unlocked_until", None)
 
-    flash("Đã đăng xuất admin")
-    return redirect(url_for("admin_login"))
+    flash(
+        "Đã đăng xuất tài khoản quản trị.",
+        "success"
+    )
+
+    return redirect(
+        url_for("admin_login")
+    )
 
 # =========================================================
 # BACKUP & RESTORE CENTER - GIAI ĐOẠN 1
@@ -978,7 +1196,7 @@ def log_restore_history(
         "error_message": error_message,
         "admin_name": session.get(
             "admin_username",
-            ADMIN_USERNAME
+            "Quản trị viên"
         ),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -5861,14 +6079,47 @@ def inject_app_settings():
 
     return {
         "app_settings": settings,
+
         "admin_logged_in": is_admin_logged_in(),
-        "admin_username": session.get("admin_username", ADMIN_USERNAME),
-        "tuition_fee": int(fees.get("tuition_fee", 500000) or 500000),
-        "exam_fee": int(fees.get("exam_fee", 300000) or 300000),
-        "dan_fees": fees.get("dan_fees", {}),
-        "exam_number_prefix": exam.get("exam_number_prefix", "Cấp_"),
+
+        "admin_username": session.get(
+            "admin_username",
+            "Quản trị viên"
+        ),
+
+        "admin_email": session.get(
+            "admin_email",
+            ""
+        ),
+
+        "admin_role": session.get(
+            "admin_role",
+            ""
+        ),
+
+        "tuition_fee": int(
+            fees.get("tuition_fee", 500000)
+            or 500000
+        ),
+
+        "exam_fee": int(
+            fees.get("exam_fee", 300000)
+            or 300000
+        ),
+
+        "dan_fees": fees.get(
+            "dan_fees",
+            {}
+        ),
+
+        "exam_number_prefix": exam.get(
+            "exam_number_prefix",
+            ""
+        ),
+
         "class_options": class_options
     }
+
 
 @app.template_filter('money')
 def money_filter(v):
@@ -8583,6 +8834,7 @@ HOCPHI_TABLE = "hocphi"
 KETQUA_TABLE = "ketqua"
 HOATDONG_TABLE = "hoatdong"
 STUDENT_FEEDBACK_TABLE = "student_feedback"
+ADMIN_USERS_TABLE = "admin_users"
 
 RESTORE_SECURITY_TABLE = "restore_security"
 RESTORE_HISTORY_TABLE = "restore_history"
