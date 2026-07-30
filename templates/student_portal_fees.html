@@ -490,12 +490,18 @@
     color: #0f172a;
 }
 
+.receipt-note-row {
+    position: relative;
+    min-height: 58px;
+    padding-right: 178px;
+}
+
 .receipt-paid-stamp {
     position: absolute;
-    top: 250px;
-    right: 54px;
-    width: 162px;
-    height: 40px;
+    top: 40%;
+    right: 30;
+    width: 200px;
+    height: 70px;
     margin: 0;
     border: 3px solid #dc2626;
     color: #dc2626;
@@ -503,11 +509,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 17px;
+    font-size: 25px;
     font-weight: 950;
-    transform: rotate(-4deg);
+    transform: translateY(-50%) rotate(-4deg);
     background: rgba(255,255,255,.88);
     z-index: 2;
+    white-space: nowrap;
 }
 
 .receipt-signatures {
@@ -704,11 +711,6 @@
     .receipt-header {
         align-items: center;
         grid-template-columns: 72px 1fr 72px;
-    }
-
-    .receipt-paid-stamp {
-        top: 196px;
-        right: 36px;
     }
 
     .receipt-title {
@@ -1144,13 +1146,12 @@
                     <div class="receipt-value" id="rcMethod">...</div>
                 </div>
 
-                <div class="receipt-row">
+                <div class="receipt-row receipt-note-row">
                     <div class="receipt-label">Ghi chú:</div>
                     <div class="receipt-value" id="rcNote">...</div>
+                    <div class="receipt-paid-stamp">ĐÃ THU TIỀN</div>
                 </div>
             </div>
-
-            <div class="receipt-paid-stamp">ĐÃ THU TIỀN</div>
 
             <div class="receipt-signatures">
                 <div>
