@@ -298,13 +298,123 @@
     }
 
     @media (max-width: 620px) {
-        .portal-content { padding: 14px; }
-        .students-grid { grid-template-columns: 1fr; }
-        .student-detail-top { align-items: flex-start; }
+        .portal-content {
+            padding: 12px;
+            overflow-x: hidden;
+        }
+
+        .portal-card {
+            padding: 12px;
+            overflow: hidden;
+        }
+
+        .student-toolbar {
+            display: block;
+        }
+
+        .student-summary {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .summary-chip {
+            flex: 1 1 120px;
+            min-width: 0;
+        }
+
+        .filter-field {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .students-grid {
+            width: 100%;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        .student-card {
+            width: 100%;
+            min-width: 0;
+            padding: 12px;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        .student-photo,
+        .student-photo-fallback {
+            width: 74px;
+            height: 94px;
+            flex: 0 0 74px;
+            border-radius: 13px;
+        }
+
+        .student-card-info {
+            min-width: 0;
+            width: calc(100% - 86px);
+            overflow: hidden;
+        }
+
+        .student-card-info h3 {
+            width: 100%;
+            margin-bottom: 8px;
+            font-size: 17px;
+            line-height: 1.3;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        /*
+           Trên laptop: 3 thông tin nằm ngang.
+           Trên điện thoại: mỗi thông tin một hàng,
+           tránh chạy ra ngoài thẻ.
+        */
+        .student-meta {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 5px;
+            width: 100%;
+            min-width: 0;
+            font-size: 13px;
+        }
+
+        .student-meta span {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.35;
+        }
+
+        .student-meta b {
+            white-space: normal;
+        }
+
+        .student-detail-top {
+            align-items: flex-start;
+            gap: 12px;
+        }
+
         .student-detail-photo,
-        .student-detail-fallback { width: 94px; height: 118px; }
-        .student-detail-grid { grid-template-columns: 1fr; }
-        .student-detail-title h2 { font-size: 20px; }
+        .student-detail-fallback {
+            width: 86px;
+            height: 108px;
+            flex: 0 0 86px;
+        }
+
+        .student-detail-title {
+            min-width: 0;
+        }
+
+        .student-detail-title h2 {
+            font-size: 20px;
+            overflow-wrap: anywhere;
+        }
+
+        .student-detail-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
     }
 </style>
 {% endblock %}
