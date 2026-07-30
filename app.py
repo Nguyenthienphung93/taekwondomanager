@@ -14052,7 +14052,7 @@ def coach_login():
             session["coach_name"] = coach.get("name")
 
             flash("Đăng nhập HLV thành công.", "success")
-            return redirect(url_for("coach_exam"))
+            return redirect(url_for("coach_students"))
 
         except Exception as e:
             print("[COACH LOGIN ERROR]", e)
@@ -14071,6 +14071,196 @@ def coach_logout():
     flash("Đã đăng xuất HLV.", "success")
     return redirect(url_for("coach_login"))
 
+# =========================================================
+# COACH PORTAL - THÔNG TIN VÕ SINH
+# Chèn khối này NGAY TRƯỚC route: @app.get("/coach/exam")
+# =========================================================
+
+def normalize_class_key_web(value):
+    """Chuẩn hóa tên lớp để so khớp được cả '2-4-6' và '2 - 4 - 6'."""
+    text = remove_accents(str(value or "")).lower().strip()
+    return re.sub(r"[^a-z0-9]+", "", text)
+
+
+def get_coach_classroom_web(coach):
+    """
+    Xác định lớp HLV từ cột role của bảng coaches.
+
+    Ví dụ:
+    - HLV 2-4-6 / HDV 2-4-6 -> 2 - 4 - 6
+    - HLV 3-5-7 / HDV 3-5-7 -> 3 - 5 - 7
+    - HLV 7-CN                 -> T7 - CN
+    - HLV Trưởng               -> xem toàn bộ lớp
+    """
+    role = normalize_class_key_web((coach or {}).get("role"))
+
+    if "246" in role:
+        return "2 - 4 - 6"
+
+    if "357" in role:
+        return "3 - 5 - 7"
+
+    if "7cn" in role or "t7cn" in role or "weekend" in role:
+        return "T7 - CN"
+
+    if "truong" in role:
+        return "*"
+
+    return ""
+
+
+def get_birth_year_web(value):
+    """Lấy năm sinh từ dữ liệu dd/mm/yyyy, yyyy-mm-dd hoặc chuỗi tương tự."""
+    text = str(value or "").strip()
+
+    if not text:
+        return ""
+
+    match = re.search(r"(?:19|20)\d{2}", text)
+    return match.group(0) if match else ""
+
+
+@app.get("/coach/students")
+def coach_students():
+    coach = require_coach_login()
+
+    if not coach:
+        return redirect(url_for("coach_login"))
+
+    coach_classroom = get_coach_classroom_web(coach)
+
+    if not coach_classroom:
+        flash(
+            "Tài khoản HLV chưa được gán lớp trong cột role. "
+            "Ken kiểm tra lại HLV 2-4-6 hoặc HLV 3-5-7.",
+            "warning"
+        )
+
+        return render_template(
+            "coach_students.html",
+            coach=coach,
+            rows=[],
+            coach_class_label="Chưa gán lớp",
+            selected_timeclass="all",
+            active_page="coach_students"
+        )
+
+    selected_timeclass = str(
+        request.args.get("timeclass") or "all"
+    ).strip()
+
+    if selected_timeclass not in ["all", "Ca 1", "Ca 2"]:
+        selected_timeclass = "all"
+
+    try:
+        # Chỉ đọc các cột cần hiển thị, không lấy SĐT/địa chỉ.
+        student_rows = (
+            supabase.table(STUDENT_TABLE)
+            .select(
+                "license,name,gender,birthdate,belt,classroom,"
+                "timeclass,clup,address,family,active,photo_url"
+            )
+            .execute()
+            .data
+            or []
+        )
+
+        coach_class_key = normalize_class_key_web(coach_classroom)
+        rows = []
+
+        for student in student_rows:
+            # Chỉ hiện võ sinh đang hoạt động.
+            if not is_active_text(student.get("active")):
+                continue
+
+            # HLV Trưởng được xem toàn bộ; HLV khác chỉ xem đúng lớp.
+            if coach_classroom != "*":
+                student_class_key = normalize_class_key_web(
+                    student.get("classroom")
+                )
+
+                if student_class_key != coach_class_key:
+                    continue
+
+            if (
+                selected_timeclass != "all"
+                and str(student.get("timeclass") or "").strip()
+                != selected_timeclass
+            ):
+                continue
+
+            student_data = {
+                "license": str(student.get("license") or "").strip(),
+                "name": str(student.get("name") or "").strip(),
+                "gender": str(student.get("gender") or "").strip(),
+                "birthdate": str(student.get("birthdate") or "").strip(),
+                "birth_year": get_birth_year_web(student.get("birthdate")),
+                "belt": str(student.get("belt") or "").strip(),
+                "classroom": str(student.get("classroom") or "").strip(),
+                "timeclass": str(student.get("timeclass") or "").strip(),
+                "clup": str(student.get("clup") or "").strip(),
+                "address": str(student.get("address") or "").strip(),
+                "family": str(student.get("family") or "").strip(),
+                "active": str(student.get("active") or "").strip(),
+                "photo_url": str(student.get("photo_url") or "").strip(),
+            }
+
+            name_parts = student_data["name"].split()
+
+            student_data["initial"] = (
+                name_parts[-1][0].upper()
+                if name_parts and name_parts[-1]
+                else "V"
+            )
+
+            rows.append(student_data)
+
+        rows.sort(
+            key=lambda item: remove_accents(
+                item.get("name") or ""
+            ).lower()
+        )
+
+        coach_class_label = (
+            "Tất cả lớp"
+            if coach_classroom == "*"
+            else coach_classroom
+        )
+
+        return render_template(
+            "coach_students.html",
+            coach=coach,
+            rows=rows,
+            coach_class_label=coach_class_label,
+            selected_timeclass=selected_timeclass,
+            active_page="coach_students"
+        )
+
+    except Exception as e:
+        print("[COACH STUDENTS ERROR]", repr(e))
+        flash(f"Không tải được danh sách võ sinh: {e}", "danger")
+
+        return render_template(
+            "coach_students.html",
+            coach=coach,
+            rows=[],
+            coach_class_label=(
+                "Tất cả lớp"
+                if coach_classroom == "*"
+                else coach_classroom
+            ),
+            selected_timeclass=selected_timeclass,
+            active_page="coach_students"
+        )
+
+
+# =========================================================
+# SỬA ĐĂNG NHẬP HLV
+# Trong hàm coach_login(), thay đúng dòng:
+#     return redirect(url_for("coach_exam"))
+# thành:
+#     return redirect(url_for("coach_students"))
+# =========================================================
 
 @app.get("/coach/exam")
 def coach_exam():
