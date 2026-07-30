@@ -1,0 +1,508 @@
+{% extends "coach_portal_base.html" %}
+
+{% block title %}Thông tin võ sinh{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-toolbar {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .student-summary {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .summary-chip {
+        min-width: 130px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+    }
+
+    .summary-chip span {
+        display: block;
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .summary-chip b {
+        display: block;
+        margin-top: 3px;
+        font-size: 18px;
+    }
+
+    .filter-field {
+        min-width: 210px;
+    }
+
+    .filter-field label {
+        display: block;
+        margin-bottom: 6px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .filter-field select {
+        width: 100%;
+        height: 44px;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        background: #fff;
+        color: #0f172a;
+        padding: 0 12px;
+        font: inherit;
+        font-weight: 800;
+        outline: none;
+    }
+
+    .filter-field select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+
+    .students-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
+        gap: 14px;
+    }
+
+    .student-card {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid #dbe7f5;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(15,23,42,.06);
+        cursor: pointer;
+        transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+
+    .student-card:focus-visible {
+        outline: 3px solid rgba(37,99,235,.25);
+        outline-offset: 2px;
+        border-color: #2563eb;
+    }
+
+    .student-card:hover {
+        transform: translateY(-2px);
+        border-color: #93c5fd;
+        box-shadow: 0 14px 28px rgba(37,99,235,.12);
+    }
+
+    .student-photo,
+    .student-photo-fallback {
+        width: 74px;
+        height: 92px;
+        border-radius: 14px;
+        flex: 0 0 auto;
+        border: 2px solid #e2e8f0;
+        background: #f8fafc;
+    }
+
+    .student-photo {
+        object-fit: cover;
+        display: block;
+    }
+
+    .student-photo-fallback {
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #facc15, #f59e0b);
+        color: #0f2a4a;
+        font-size: 27px;
+        font-weight: 1000;
+    }
+
+    .student-card-info {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .student-card-info h3 {
+        margin: 0 0 8px;
+        color: #0f4c9a;
+        font-size: 17px;
+        font-weight: 950;
+        white-space: normal;
+        overflow: visible;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
+    }
+
+    .student-meta {
+        display: grid;
+        grid-template-columns: repeat(3, max-content);
+        align-items: center;
+        gap: 8px 14px;
+        color: #475569;
+        font-size: 12px;
+    }
+
+    .student-meta span {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 3px;
+        white-space: nowrap;
+    }
+
+    .student-meta b {
+        color: #0f172a;
+    }
+
+
+    .empty-state {
+        padding: 44px 20px;
+        border: 1px dashed #94a3b8;
+        border-radius: 18px;
+        text-align: center;
+        color: #64748b;
+        background: #f8fafc;
+    }
+
+    .student-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: none;
+        place-items: center;
+        padding: 18px;
+        background: rgba(2,6,23,.68);
+        backdrop-filter: blur(5px);
+    }
+
+    .student-modal.show { display: grid; }
+
+    .student-modal-box {
+        position: relative;
+        width: min(620px, 100%);
+        max-height: calc(100vh - 36px);
+        overflow: auto;
+        border-radius: 22px;
+        background: #fff;
+        box-shadow: 0 28px 70px rgba(0,0,0,.32);
+        padding: 22px;
+    }
+
+    .student-modal-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 38px;
+        height: 38px;
+        border: 0;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #0f172a;
+        font-size: 23px;
+        cursor: pointer;
+    }
+
+    .student-detail-top {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding-right: 34px;
+    }
+
+    .student-detail-photo,
+    .student-detail-fallback {
+        width: 126px;
+        height: 158px;
+        border-radius: 18px;
+        border: 3px solid #dbeafe;
+        flex: 0 0 auto;
+    }
+
+    .student-detail-photo { object-fit: cover; }
+
+    .student-detail-fallback {
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #facc15, #f59e0b);
+        color: #0f2a4a;
+        font-size: 44px;
+        font-weight: 1000;
+    }
+
+    .student-detail-title h2 {
+        margin: 0;
+        color: #0f4c9a;
+        font-size: 25px;
+    }
+
+    .student-detail-title p {
+        margin: 7px 0 0;
+        color: #64748b;
+    }
+
+    .student-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .detail-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+    }
+
+    .detail-item span {
+        display: block;
+        color: #64748b;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .detail-item b {
+        display: block;
+        margin-top: 5px;
+        color: #0f172a;
+        font-size: 15px;
+    }
+
+
+    @media (max-width: 1180px) and (min-width: 621px) {
+        .students-grid {
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        }
+
+        .student-meta {
+            gap: 7px 10px;
+            font-size: 11px;
+        }
+    }
+
+    @media (max-width: 620px) {
+        .portal-content { padding: 14px; }
+        .students-grid { grid-template-columns: 1fr; }
+        .student-detail-top { align-items: flex-start; }
+        .student-detail-photo,
+        .student-detail-fallback { width: 94px; height: 118px; }
+        .student-detail-grid { grid-template-columns: 1fr; }
+        .student-detail-title h2 { font-size: 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block coach_content %}
+<div class="portal-page-head">
+    <h1>Thông tin võ sinh</h1>
+    <p>Danh sách võ sinh đang hoạt động thuộc lớp {{ coach_class_label }}.</p>
+</div>
+
+<div class="portal-card">
+    <div class="student-toolbar">
+        <div class="student-summary">
+            <div class="summary-chip">
+                <span>Lớp phụ trách</span>
+                <b>{{ coach_class_label }}</b>
+            </div>
+            <div class="summary-chip">
+                <span>Số võ sinh</span>
+                <b>{{ rows|length }}</b>
+            </div>
+        </div>
+
+        <form method="get" class="filter-field" id="timeclassFilterForm">
+            <label for="timeclass">Xem theo ca học</label>
+            <select name="timeclass" id="timeclass" onchange="this.form.submit()">
+                <option value="all" {{ 'selected' if selected_timeclass == 'all' else '' }}>Tất cả ca</option>
+                <option value="Ca 1" {{ 'selected' if selected_timeclass == 'Ca 1' else '' }}>Ca 1</option>
+                <option value="Ca 2" {{ 'selected' if selected_timeclass == 'Ca 2' else '' }}>Ca 2</option>
+            </select>
+        </form>
+    </div>
+
+    {% if rows %}
+        <div class="students-grid">
+            {% for student in rows %}
+                {% set name_parts = (student.name or '').split() %}
+                {% set given_name_initial = (name_parts[-1][0] if name_parts else 'V')|upper %}
+
+                <button type="button"
+                        class="student-card"
+                        data-student='{{ student|tojson|forceescape }}'
+                        onclick="openStudentDetail(this)"
+                        aria-label="Xem thông tin chi tiết của {{ student.name }}">
+                    {% if student.photo_url %}
+                        <img class="student-photo"
+                             src="{{ student.photo_url }}"
+                             alt="Ảnh {{ student.name }}"
+                             loading="lazy"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                        <div class="student-photo-fallback" style="display:none;">
+                            {{ given_name_initial }}
+                        </div>
+                    {% else %}
+                        <div class="student-photo-fallback">{{ given_name_initial }}</div>
+                    {% endif %}
+
+                    <div class="student-card-info">
+                        <h3>{{ student.name }}</h3>
+                        <div class="student-meta">
+                            <span>Giới tính: <b>{{ student.gender or '—' }}</b></span>
+                            <span>Năm sinh: <b>{{ student.birth_year or '—' }}</b></span>
+                            <span>Cấp đai: <b>{{ student.belt or '—' }}</b></span>
+                        </div>
+                    </div>
+                </button>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-user-group" style="font-size:34px;"></i>
+            <h3>Chưa có võ sinh phù hợp</h3>
+            <p>Không tìm thấy võ sinh đang hoạt động trong lớp và ca học đã chọn.</p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="student-modal" id="studentDetailModal" onclick="closeStudentDetailFromBackdrop(event)">
+    <div class="student-modal-box" role="dialog" aria-modal="true" aria-labelledby="detailName">
+        <button type="button" class="student-modal-close" onclick="closeStudentDetail()" aria-label="Đóng">×</button>
+
+        <div class="student-detail-top">
+            <img id="detailPhoto" class="student-detail-photo" alt="Ảnh võ sinh" style="display:none;">
+            <div id="detailFallback" class="student-detail-fallback">V</div>
+
+            <div class="student-detail-title">
+                <h2 id="detailName">—</h2>
+                <p id="detailLicense">—</p>
+            </div>
+        </div>
+
+        <div class="student-detail-grid">
+            <div class="detail-item"><span>Giới tính</span><b id="detailGender">—</b></div>
+            <div class="detail-item"><span>Ngày sinh</span><b id="detailBirthdate">—</b></div>
+            <div class="detail-item"><span>Năm sinh</span><b id="detailBirthYear">—</b></div>
+            <div class="detail-item"><span>Cấp đai hiện tại</span><b id="detailBelt">—</b></div>
+            <div class="detail-item"><span>Lớp</span><b id="detailClassroom">—</b></div>
+            <div class="detail-item"><span>Ca học</span><b id="detailTimeclass">—</b></div>
+            <div class="detail-item"><span>Câu lạc bộ</span><b id="detailClub">—</b></div>
+            <div class="detail-item"><span>Địa chỉ</span><b id="detailAddress">—</b></div>
+            <div class="detail-item"><span>Gia đình</span><b id="detailFamily">—</b></div>
+            <div class="detail-item"><span>Trạng thái</span><b id="detailActive">Đang hoạt động</b></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setStudentDetailText(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value || "—";
+}
+
+function getGivenNameInitial(fullName) {
+    const parts = String(fullName || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!parts.length) return "V";
+
+    return Array.from(parts[parts.length - 1])[0].toUpperCase();
+}
+
+function getActiveLabel(value) {
+    const normalized = String(value || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    return ["co", "true", "1", "yes"].includes(normalized)
+        ? "Đang hoạt động"
+        : (value || "—");
+}
+
+function openStudentDetail(card) {
+    const modal = document.getElementById("studentDetailModal");
+    if (!modal || !card) return;
+
+    let student = {};
+    try {
+        student = JSON.parse(card.getAttribute("data-student") || "{}");
+    } catch (e) {
+        return;
+    }
+
+    setStudentDetailText("detailName", student.name);
+    setStudentDetailText("detailLicense", student.license ? `Mã HV: ${student.license}` : "Mã HV: —");
+    setStudentDetailText("detailGender", student.gender);
+    setStudentDetailText("detailBirthdate", student.birthdate);
+    setStudentDetailText("detailBirthYear", student.birth_year);
+    setStudentDetailText("detailBelt", student.belt);
+    setStudentDetailText("detailClassroom", student.classroom);
+    setStudentDetailText("detailTimeclass", student.timeclass);
+    setStudentDetailText("detailClub", student.clup || student.club);
+    setStudentDetailText("detailAddress", student.address);
+    setStudentDetailText("detailFamily", student.family);
+    setStudentDetailText("detailActive", getActiveLabel(student.active));
+
+    const photo = document.getElementById("detailPhoto");
+    const fallback = document.getElementById("detailFallback");
+    fallback.textContent = getGivenNameInitial(student.name);
+
+    if (student.photo_url) {
+        photo.src = student.photo_url;
+        photo.style.display = "block";
+        fallback.style.display = "none";
+        photo.onerror = function () {
+            photo.style.display = "none";
+            fallback.style.display = "grid";
+        };
+    } else {
+        photo.removeAttribute("src");
+        photo.style.display = "none";
+        fallback.style.display = "grid";
+    }
+
+    modal.classList.add("show");
+    document.body.style.overflow = "hidden";
+}
+
+function closeStudentDetail() {
+    const modal = document.getElementById("studentDetailModal");
+    if (!modal) return;
+    modal.classList.remove("show");
+    document.body.style.overflow = "";
+}
+
+function closeStudentDetailFromBackdrop(event) {
+    if (event.target && event.target.id === "studentDetailModal") {
+        closeStudentDetail();
+    }
+}
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeStudentDetail();
+});
+</script>
+{% endblock %}

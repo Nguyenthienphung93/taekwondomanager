@@ -1247,6 +1247,12 @@
         </div>
 
         <nav class="portal-nav">
+            <a class="{{ 'active' if active_page == 'coach_students' else '' }}"
+               href="{{ url_for('coach_students') }}">
+                <i class="fa-solid fa-users"></i>
+                <span class="nav-text">Thông tin võ sinh</span>
+            </a>
+
             <a class="{{ 'active' if active_page == 'coach_exam' else '' }}"
                href="{{ url_for('coach_exam') }}">
                 <i class="fa-solid fa-clipboard-check"></i>
