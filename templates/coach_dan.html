@@ -204,6 +204,19 @@
     font-weight: 750;
 }
 
+
+.class-filter-result {
+    display: none;
+    padding: 28px 14px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 850;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    background: #f8fafc;
+    margin-top: 10px;
+}
+
 .empty-box {
     padding: 32px 14px;
     text-align: center;
@@ -258,6 +271,23 @@
             </select>
         </div>
 
+        <div class="field">
+            <label>Lớp</label>
+            <select id="classroomFilter" onchange="filterCoachExamByClass()">
+                <option value="all">Tất cả lớp</option>
+                {% set classroom_values = [] %}
+                {% for r in rows %}
+                    {% set classroom_value = (r.classroom or '')|trim %}
+                    {% if classroom_value and classroom_value not in classroom_values %}
+                        {% set _ = classroom_values.append(classroom_value) %}
+                    {% endif %}
+                {% endfor %}
+                {% for classroom_value in classroom_values|sort %}
+                    <option value="{{ classroom_value }}">{{ classroom_value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <button class="filter-btn" type="submit">
             <i class="fa-solid fa-filter"></i>
             Lọc danh sách
@@ -295,8 +325,8 @@
             <tbody>
                 {% for r in rows %}
                 {% set status = r.coach_check_status or 'Chưa KTra' %}
-                <tr>
-                    <td>{{ loop.index }}</td>
+                <tr data-classroom="{{ (r.classroom or '')|trim }}">
+                    <td class="row-index">{{ loop.index }}</td>
                     <td>{{ r.license }}</td>
                     <td class="text-left">{{ r.name }}</td>
                     <td>{{ r.birthdate or '—' }}</td>
@@ -357,6 +387,10 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <div id="classFilterEmpty" class="class-filter-result">
+        Không có võ sinh thuộc lớp đã chọn trong danh sách này.
     </div>
     {% else %}
         <div class="empty-box">
@@ -445,6 +479,54 @@ async function saveCoachCheck(el) {
             }
         }
 
+        function getVisibleCoachExamRows() {
+            return Array.from(
+                document.querySelectorAll(".coach-exam-table tbody tr")
+            ).filter(row => row.style.display !== "none");
+        }
+
+        function filterCoachExamByClass() {
+            const select = document.getElementById("classroomFilter");
+            const selectedClass = select ? select.value : "all";
+            const rows = Array.from(
+                document.querySelectorAll(".coach-exam-table tbody tr")
+            );
+
+            let visibleIndex = 0;
+
+            rows.forEach(row => {
+                const classroom = String(
+                    row.dataset.classroom || ""
+                ).trim();
+
+                const show = (
+                    selectedClass === "all"
+                    || classroom === selectedClass
+                );
+
+                row.style.display = show ? "" : "none";
+
+                if (show) {
+                    visibleIndex += 1;
+
+                    const indexCell = row.querySelector(".row-index");
+                    if (indexCell) {
+                        indexCell.textContent = visibleIndex;
+                    }
+                }
+            });
+
+            const emptyBox = document.getElementById("classFilterEmpty");
+
+            if (emptyBox) {
+                emptyBox.style.display = visibleIndex === 0
+                    ? "block"
+                    : "none";
+            }
+
+            updateCoachSummary();
+        }
+
         function updateCoachSummary() {
             let total = 0;
             let chuaKtra = 0;
@@ -452,7 +534,11 @@ async function saveCoachCheck(el) {
             let sai = 0;
             let ktra = 0;
 
-            document.querySelectorAll(".status-select").forEach(select => {
+            getVisibleCoachExamRows().forEach(row => {
+                const select = row.querySelector(".status-select");
+
+                if (!select) return;
+
                 total++;
 
                 if (select.value === "Đúng") {
@@ -479,6 +565,8 @@ async function saveCoachCheck(el) {
             if (ktraEl) ktraEl.textContent = ktra;
         }
 
-        document.addEventListener("DOMContentLoaded", updateCoachSummary);
+        document.addEventListener("DOMContentLoaded", function () {
+            filterCoachExamByClass();
+        });
         </script>
 {% endblock %}
