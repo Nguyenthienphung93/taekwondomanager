@@ -122,9 +122,20 @@ DEFAULT_APP_SETTINGS = {
         "exam_number_prefix": "{cap}_"
     },
     "class_options": {
-        "classrooms": ["2 - 4 - 6", "3 - 5 - 7", "T7 - CN", "Hẹn hò"],
-        "timeclasses": ["Ca 1", "Ca 2"],
-        "clubs": ["Hoa Hướng Dương Q1(CLB_00019)", "Hoa Hướng Dương Q10(CLB_00104)"]
+        "classrooms": [
+            "2 - 4 - 6",
+            "3 - 5 - 7",
+            "T7 - CN",
+            "Hẹn hò"
+        ],
+        "timeclasses": [
+            "Ca 1",
+            "Ca 2"
+        ],
+        "clubs": [
+            "CLB Hoa Hướng Dương Diên Hồng (CLB_00104)",
+            "CLB Hoa Hướng Dương Bến Thành (CLB_00019)"
+        ]
     },
 
     "club_info": {
@@ -6284,7 +6295,9 @@ def students_add():
         'name': form.get('name','').strip(),
         'birthdate': birthdate,
         'gender': form.get('gender','').strip(),
-        'classroom': form.get('classroom','').strip(),
+        'classroom': normalize_student_classroom_web(
+            form.get('classroom', '')
+        ),
         'timeclass': form.get('timeclass','').strip(),
         'clup': form.get('clup','').strip(),
         'phonenumber': form.get('phonenumber','').strip(),
@@ -6315,7 +6328,9 @@ def students_update(license_code):
         'name': form.get('name', '').strip(),
         'birthdate': birthdate,
         'gender': form.get('gender', '').strip(),
-        'classroom': form.get('classroom', '').strip(),
+        'classroom': normalize_student_classroom_web(
+            form.get('classroom', '')
+        ),
         'timeclass': form.get('timeclass', '').strip(),
         'clup': form.get('clup', '').strip(),
         'phonenumber': form.get('phonenumber', '').strip(),
@@ -6332,19 +6347,39 @@ def students_update(license_code):
 
 @app.get('/fees')
 def fees():
-    q = request.args.get('q','').strip()
+    q = request.args.get('q', '').strip()
     selected_license = request.args.get('ma_hv', '').strip()
-    query = supabase.table(HOCPHI_TABLE).select('*').order('thoi_gian', desc=True).limit(300)
+
+    fee_error_popup = session.pop(
+        "fee_error_popup",
+        ""
+    )
+
+    query = (
+        supabase.table(HOCPHI_TABLE)
+        .select('*')
+        .order('thoi_gian', desc=True)
+        .limit(300)
+    )
 
     if q:
-        query = query.or_(f'ma_hv.ilike.%{q}%,ho_ten.ilike.%{q}%')
+        query = query.or_(
+            f'ma_hv.ilike.%{q}%,ho_ten.ilike.%{q}%'
+        )
 
     rows = query.execute().data or []
 
-    students = supabase.table(STUDENT_TABLE) \
-        .select('license,name,birthdate,gender,classroom,timeclass,phonenumber,belt,family') \
-        .order('name') \
-        .execute().data or []
+    students = (
+        supabase.table(STUDENT_TABLE)
+        .select(
+            'license,name,birthdate,gender,'
+            'classroom,timeclass,phonenumber,belt,family'
+        )
+        .order('name')
+        .execute()
+        .data
+        or []
+    )
 
     now = datetime.now()
 
@@ -6355,7 +6390,96 @@ def fees():
         q=q,
         current_month=now.month,
         current_year=now.year,
-        selected_license=selected_license
+        selected_license=selected_license,
+        fee_error_popup=fee_error_popup,
+    )
+
+def extract_tuition_month_codes_web(value):
+    """
+    Tách mã tháng học phí từ dữ liệu ma_thang.
+
+    Hỗ trợ:
+    - 082026
+    - 072026 - 082026 - 092026
+
+    Kết quả:
+    {"072026", "082026", "092026"}
+    """
+    raw = str(value or "").strip()
+
+    if not raw:
+        return set()
+
+    result = set()
+
+    # Nhận mã tháng dạng MMYYYY.
+    for month_text, year_text in re.findall(
+        r"(?<!\d)(0[1-9]|1[0-2])(\d{4})(?!\d)",
+        raw
+    ):
+        result.add(f"{month_text}{year_text}")
+
+    return result
+
+
+def format_tuition_month_code_web(month_code):
+    """
+    082026 -> Tháng 8/2026
+    """
+    month_code = str(month_code or "").strip()
+
+    if not re.fullmatch(r"\d{6}", month_code):
+        return month_code
+
+    month_number = int(month_code[:2])
+    year_number = month_code[2:]
+
+    return f"Tháng {month_number}/{year_number}"
+
+
+def find_student_paid_month_conflicts_web(ma_hv, requested_codes):
+    """
+    Kiểm tra các tháng học viên đã đóng trước đó.
+
+    Trả về danh sách mã tháng bị trùng.
+    """
+    ma_hv = str(ma_hv or "").strip()
+
+    requested_codes = {
+        str(code or "").strip()
+        for code in (requested_codes or [])
+        if str(code or "").strip()
+    }
+
+    if not ma_hv or not requested_codes:
+        return []
+
+    rows = (
+        supabase.table(HOCPHI_TABLE)
+        .select("id,ma_thang,thang_dong_phi")
+        .eq("ma_hv", ma_hv)
+        .execute()
+        .data
+        or []
+    )
+
+    paid_codes = set()
+
+    for row in rows:
+        paid_codes.update(
+            extract_tuition_month_codes_web(
+                row.get("ma_thang")
+            )
+        )
+
+    conflicts = requested_codes & paid_codes
+
+    return sorted(
+        conflicts,
+        key=lambda code: (
+            int(code[2:]),
+            int(code[:2]),
+        )
     )
 
 @app.post('/fees/add')
@@ -6389,17 +6513,110 @@ def fees_add():
     # =========================
     # THÁNG HỌC PHÍ
     # =========================
-    months, years = [], []
+    months = []
+    years = []
+    requested_month_codes = []
+    duplicated_in_form = set()
 
     for i in range(1, 13):
-        m = f.get(f'month{i}', '').strip()
-        y = f.get(f'year{i}', '').strip()
+        month_raw = f.get(f"month{i}", "").strip()
+        year_raw = f.get(f"year{i}", "").strip()
 
-        if m and y:
-            months.append(int(m))
-            years.append(int(y))
+        if not month_raw or not year_raw:
+            continue
 
-    month_label, month_codes = build_month_codes(months, years)
+        try:
+            month_number = int(month_raw)
+            year_number = int(year_raw)
+        except (TypeError, ValueError):
+            flash(
+                "Tháng hoặc năm học phí không hợp lệ.",
+                "danger"
+            )
+            return redirect(
+                url_for("fees", ma_hv=ma_hv)
+            )
+
+        if not 1 <= month_number <= 12:
+            flash(
+                "Tháng học phí phải nằm trong khoảng từ tháng 1 đến tháng 12.",
+                "danger"
+            )
+            return redirect(
+                url_for("fees", ma_hv=ma_hv)
+            )
+
+        month_code = f"{month_number:02d}{year_number:04d}"
+
+        # Chặn chọn cùng một tháng nhiều lần ngay trong phiếu đang nhập.
+        if month_code in requested_month_codes:
+            duplicated_in_form.add(month_code)
+            continue
+
+        months.append(month_number)
+        years.append(year_number)
+        requested_month_codes.append(month_code)
+
+    # =========================
+    # CHẶN TRÙNG THÁNG TRONG CÙNG PHIẾU
+    # =========================
+    if duplicated_in_form:
+        duplicated_text = ", ".join(
+            format_tuition_month_code_web(code)
+            for code in sorted(
+                duplicated_in_form,
+                key=lambda value: (
+                    int(value[2:]),
+                    int(value[:2]),
+                )
+            )
+        )
+
+        session["fee_error_popup"] = (
+            f"Không thể lưu học phí.\n\n"
+            f"Học viên: {sv.get('name', ma_hv)}\n"
+            f"Lỗi: Đang chọn trùng {duplicated_text} "
+            f"trong cùng một phiếu.\n\n"
+            f"Mỗi học viên chỉ được đóng một lần cho mỗi tháng."
+        )
+
+        return redirect(
+            url_for("fees", ma_hv=ma_hv)
+        )
+
+    month_label, month_codes = build_month_codes(
+        months,
+        years
+    )
+
+    # =========================
+    # CHẶN THÁNG ĐÃ ĐÓNG TRƯỚC ĐÓ
+    # =========================
+    paid_month_conflicts = (
+        find_student_paid_month_conflicts_web(
+            ma_hv,
+            requested_month_codes,
+        )
+    )
+
+    if paid_month_conflicts:
+        conflict_text = ", ".join(
+            format_tuition_month_code_web(code)
+            for code in paid_month_conflicts
+        )
+
+        session["fee_error_popup"] = (
+            f"Không thể lưu học phí.\n\n"
+            f"Học viên: {sv.get('name', ma_hv)}\n"
+            f"Mã hội viên: {ma_hv}\n"
+            f"Tháng bị trùng: {conflict_text}\n\n"
+            f"Học viên này đã đóng học phí cho tháng trên. "
+            f"Vui lòng kiểm tra lại trước khi nhập."
+        )
+
+        return redirect(
+            url_for("fees", ma_hv=ma_hv)
+        )
 
     # =========================
     # THI CẤP / THI ĐẲNG
@@ -8848,6 +9065,9 @@ KETQUA_TABLE = "ketqua"
 HOATDONG_TABLE = "hoatdong"
 STUDENT_FEEDBACK_TABLE = "student_feedback"
 ADMIN_USERS_TABLE = "admin_users"
+COACH_ATTENDANCE_TABLE = "coach_attendance"
+CLUB_FINANCE_TABLE = "club_finance_transactions"
+EXAM_FINANCE_TABLE = "exam_finance_items"
 
 RESTORE_SECURITY_TABLE = "restore_security"
 RESTORE_HISTORY_TABLE = "restore_history"
@@ -14071,6 +14291,109 @@ def coach_logout():
     flash("Đã đăng xuất HLV.", "success")
     return redirect(url_for("coach_login"))
 
+
+def normalize_student_classroom_web(value):
+    """
+    Chuẩn hóa lớp học về một định dạng thống nhất.
+
+    Ví dụ:
+    2-4-7
+    2 -4- 7
+    2 / 4 / 7
+
+    Đều thành:
+    2 - 4 - 7
+    """
+    raw = str(value or "").strip()
+
+    if not raw:
+        return ""
+
+    normalized = remove_accents(raw).lower().strip()
+
+    # Giữ nguyên lớp cuối tuần.
+    compact = re.sub(r"[^a-z0-9]+", "", normalized)
+
+    if compact in {
+        "t7cn",
+        "7cn",
+        "thu7cn",
+        "thu7chunhat",
+        "weekend",
+    }:
+        return "T7 - CN"
+
+    if compact in {
+        "henho",
+        "henlich",
+    }:
+        return "Hẹn hò"
+
+    # Lấy các ngày từ 2 đến 7.
+    day_values = re.findall(r"(?<!\d)([2-7])(?!\d)", normalized)
+
+    result = []
+
+    for value in day_values:
+        day_number = int(value)
+
+        if day_number not in result:
+            result.append(day_number)
+
+    result.sort()
+
+    if not result:
+        return raw
+
+    return " - ".join(str(day) for day in result)
+
+
+def get_classroom_day_set_web(value):
+    """
+    Trả về tập ngày học của một lớp.
+
+    2 - 4 - 7 -> {2, 4, 7}
+    3 - 5 - 7 -> {3, 5, 7}
+    """
+    normalized = normalize_student_classroom_web(value)
+
+    if normalized == "T7 - CN":
+        return {"T7", "CN"}
+
+    return {
+        int(value)
+        for value in re.findall(r"(?<!\d)([2-7])(?!\d)", normalized)
+    }
+
+
+def coach_can_view_student_classroom_web(
+    coach_classroom,
+    student_classroom,
+):
+    """
+    HLV được xem học viên khi hai lịch học có ít nhất một ngày giao nhau.
+
+    Ví dụ:
+    HLV 2-4-6 và học viên 2-4-7 -> được xem.
+    HLV 3-5-7 và học viên 2-4-7 -> được xem.
+    """
+    coach_classroom = str(coach_classroom or "").strip()
+    student_classroom = str(student_classroom or "").strip()
+
+    if coach_classroom == "*":
+        return True
+
+    coach_days = get_classroom_day_set_web(coach_classroom)
+    student_days = get_classroom_day_set_web(student_classroom)
+
+    if not coach_days or not student_days:
+        return (
+            normalize_class_key_web(coach_classroom)
+            == normalize_class_key_web(student_classroom)
+        )
+
+    return bool(coach_days & student_days)
+
 # =========================================================
 # COACH PORTAL - THÔNG TIN VÕ SINH
 # Chèn khối này NGAY TRƯỚC route: @app.get("/coach/exam")
@@ -14080,6 +14403,7 @@ def normalize_class_key_web(value):
     """Chuẩn hóa tên lớp để so khớp được cả '2-4-6' và '2 - 4 - 6'."""
     text = remove_accents(str(value or "")).lower().strip()
     return re.sub(r"[^a-z0-9]+", "", text)
+
 
 
 def get_coach_classroom_web(coach):
@@ -14165,7 +14489,6 @@ def coach_students():
             or []
         )
 
-        coach_class_key = normalize_class_key_web(coach_classroom)
         rows = []
 
         for student in student_rows:
@@ -14173,14 +14496,13 @@ def coach_students():
             if not is_active_text(student.get("active")):
                 continue
 
-            # HLV Trưởng được xem toàn bộ; HLV khác chỉ xem đúng lớp.
-            if coach_classroom != "*":
-                student_class_key = normalize_class_key_web(
-                    student.get("classroom")
-                )
-
-                if student_class_key != coach_class_key:
-                    continue
+            # HLV Trưởng xem toàn bộ.
+            # HLV phụ trách được xem học viên có ít nhất một ngày học giao nhau.
+            if not coach_can_view_student_classroom_web(
+                coach_classroom,
+                student.get("classroom"),
+            ):
+                continue
 
             if (
                 selected_timeclass != "all"
@@ -15671,6 +15993,3487 @@ def student_portal_settings():
         unread_count=unread_count
     )
 
+# =========================================================
+# BÁO CÁO - CHẤM CÔNG HLV
+# THAY TOÀN BỘ KHỐI BÁO CÁO CŨ BẰNG KHỐI NÀY
+# =========================================================
+
+REPORT_CLASS_GROUPS = {
+    "all": {
+        "title": "Tất cả",
+        "setup_group": "",
+        "weekdays": {},
+    },
+
+    "246": {
+        "title": "Thứ 2 - 4 - 6",
+        "setup_group": "246",
+        "weekdays": {
+            0: "Thứ 2",
+            2: "Thứ 4",
+            4: "Thứ 6",
+        },
+    },
+
+    "357": {
+        "title": "Thứ 3 - 5 - 7",
+        "setup_group": "357",
+        "weekdays": {
+            1: "Thứ 3",
+            3: "Thứ 5",
+            5: "Thứ 7",
+        },
+    },
+
+    "weekend": {
+        "title": "Thứ 7 & Chủ nhật",
+        "setup_group": "weekend",
+        "weekdays": {
+            5: "Thứ 7",
+            6: "Chủ nhật",
+        },
+    },
+}
+
+
+def get_report_class_group_web(raw_value):
+    value = str(raw_value or "all").strip().lower()
+
+    if value not in REPORT_CLASS_GROUPS:
+        return "all"
+
+    return value
+
+
+def get_report_coaches_web(class_group):
+    """
+    Lấy HLV từ phần Setup.
+
+    all:
+    - Lấy đủ nhóm 246, 357 và weekend.
+
+    Các nhóm riêng:
+    - Chỉ lấy đúng nhóm đang chọn.
+    """
+    class_group = get_report_class_group_web(
+        class_group
+    )
+
+    settings = load_app_settings()
+
+    source_coaches = (
+        settings.get("club_info", {})
+        .get("coaches", [])
+        or []
+    )
+
+    if class_group == "all":
+        allowed_setup_groups = {
+            "246",
+            "357",
+            "weekend",
+        }
+    else:
+        allowed_setup_groups = {
+            REPORT_CLASS_GROUPS[
+                class_group
+            ]["setup_group"]
+        }
+
+    coaches = []
+    seen_keys = set()
+
+    for item in source_coaches:
+        setup_group = str(
+            item.get("group") or ""
+        ).strip()
+
+        if setup_group not in allowed_setup_groups:
+            continue
+
+        name = str(
+            item.get("name") or ""
+        ).strip()
+
+        role = str(
+            item.get("role") or "HLV"
+        ).strip() or "HLV"
+
+        if not name:
+            continue
+
+        actual_class_group = (
+            "weekend"
+            if setup_group == "weekend"
+            else setup_group
+        )
+
+        unique_key = (
+            remove_accents(name).strip().lower(),
+            actual_class_group,
+        )
+
+        if unique_key in seen_keys:
+            continue
+
+        seen_keys.add(unique_key)
+
+        coaches.append({
+            "name": name,
+            "role": role,
+            "class_group": actual_class_group,
+            "class_title": (
+                REPORT_CLASS_GROUPS[
+                    actual_class_group
+                ]["title"]
+            ),
+        })
+
+    group_order = {
+        "246": 1,
+        "357": 2,
+        "weekend": 3,
+    }
+
+    coaches.sort(
+        key=lambda item: (
+            group_order.get(
+                item["class_group"],
+                99,
+            ),
+            remove_accents(
+                item["name"]
+            ).lower(),
+        )
+    )
+
+    return coaches
+
+
+def get_report_teaching_days_web(
+    year,
+    month,
+    class_group,
+):
+    """
+    Nhóm riêng:
+    - Chỉ tạo ngày thuộc lịch của nhóm.
+
+    Tất cả:
+    - Hiện toàn bộ ngày trong tháng.
+    - Từng HLV chỉ có checkbox tại ngày thuộc lịch của mình.
+    """
+    class_group = get_report_class_group_web(
+        class_group
+    )
+
+    last_day = calendar.monthrange(
+        year,
+        month,
+    )[1]
+
+    weekday_names = {
+        0: "Thứ 2",
+        1: "Thứ 3",
+        2: "Thứ 4",
+        3: "Thứ 5",
+        4: "Thứ 6",
+        5: "Thứ 7",
+        6: "Chủ nhật",
+    }
+
+    result = []
+
+    for day_number in range(
+        1,
+        last_day + 1,
+    ):
+        current_date = date(
+            year,
+            month,
+            day_number,
+        )
+
+        weekday = current_date.weekday()
+
+        if class_group != "all":
+            allowed_weekdays = (
+                REPORT_CLASS_GROUPS[
+                    class_group
+                ]["weekdays"]
+            )
+
+            if weekday not in allowed_weekdays:
+                continue
+
+        result.append({
+            "day": day_number,
+            "iso": current_date.isoformat(),
+            "weekday": weekday,
+            "weekday_label": (
+                weekday_names[weekday]
+            ),
+        })
+
+    return result
+
+
+def get_valid_days_for_group_web(
+    year,
+    month,
+    class_group,
+):
+    """
+    Trả về tập hợp số ngày đúng lịch của một nhóm.
+    """
+    class_group = get_report_class_group_web(
+        class_group
+    )
+
+    if class_group == "all":
+        return set()
+
+    allowed_weekdays = (
+        REPORT_CLASS_GROUPS[
+            class_group
+        ]["weekdays"]
+    )
+
+    last_day = calendar.monthrange(
+        year,
+        month,
+    )[1]
+
+    result = set()
+
+    for day_number in range(
+        1,
+        last_day + 1,
+    ):
+        current_date = date(
+            year,
+            month,
+            day_number,
+        )
+
+        if (
+            current_date.weekday()
+            in allowed_weekdays
+        ):
+            result.add(day_number)
+
+    return result
+
+
+def normalize_attendance_days_web(value):
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        source = value
+
+    elif isinstance(value, tuple):
+        source = list(value)
+
+    elif isinstance(value, str):
+        text = value.strip().strip(
+            "{}[]"
+        )
+
+        if not text:
+            return []
+
+        source = [
+            item.strip()
+            for item in text.split(",")
+        ]
+
+    else:
+        source = []
+
+    result = []
+
+    for item in source:
+        try:
+            day_number = int(item)
+        except Exception:
+            continue
+
+        if (
+            1 <= day_number <= 31
+            and day_number not in result
+        ):
+            result.append(day_number)
+
+    result.sort()
+    return result
+
+
+def get_month_first_date_web(
+    year,
+    month,
+):
+    return date(
+        year,
+        month,
+        1,
+    ).isoformat()
+
+
+def ensure_report_month_rows_web(
+    year,
+    month,
+    coaches,
+):
+    """
+    Tạo một dòng theo tháng cho từng HLV.
+
+    Mặc định:
+    - Toàn bộ ngày đúng lịch của HLV đều có mặt.
+    """
+    attendance_month = (
+        get_month_first_date_web(
+            year,
+            month,
+        )
+    )
+
+    class_groups = sorted({
+        coach["class_group"]
+        for coach in coaches
+    })
+
+    existing_rows = []
+
+    for group_code in class_groups:
+        rows = (
+            supabase.table(
+                COACH_ATTENDANCE_TABLE
+            )
+            .select(
+                "id,coach_name,coach_role,"
+                "class_group,attendance_month,"
+                "attendance_days"
+            )
+            .eq(
+                "class_group",
+                group_code,
+            )
+            .eq(
+                "attendance_month",
+                attendance_month,
+            )
+            .execute().data
+            or []
+        )
+
+        existing_rows.extend(rows)
+
+    existing_map = {
+        (
+            str(
+                row.get("coach_name")
+                or ""
+            ).strip(),
+            str(
+                row.get("class_group")
+                or ""
+            ).strip(),
+        ): row
+        for row in existing_rows
+    }
+
+    new_rows = []
+
+    for coach in coaches:
+        key = (
+            coach["name"],
+            coach["class_group"],
+        )
+
+        if key in existing_map:
+            continue
+
+        default_days = sorted(
+            get_valid_days_for_group_web(
+                year,
+                month,
+                coach["class_group"],
+            )
+        )
+
+        new_rows.append({
+            "coach_name": coach["name"],
+            "coach_role": coach["role"],
+            "class_group": (
+                coach["class_group"]
+            ),
+            "attendance_month": (
+                attendance_month
+            ),
+            "attendance_days": (
+                default_days
+            ),
+            "updated_by": str(
+                session.get(
+                    "admin_username"
+                )
+                or "Admin"
+            ),
+            "created_at": (
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
+            ),
+            "updated_at": (
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
+            ),
+        })
+
+    if new_rows:
+        (
+            supabase.table(
+                COACH_ATTENDANCE_TABLE
+            )
+            .insert(new_rows)
+            .execute()
+        )
+
+        existing_rows.extend(new_rows)
+
+    return existing_rows
+
+
+def build_report_attendance_context_web(
+    year,
+    month,
+    class_group,
+):
+    class_group = get_report_class_group_web(
+        class_group
+    )
+
+    coaches = get_report_coaches_web(
+        class_group
+    )
+
+    display_days = (
+        get_report_teaching_days_web(
+            year,
+            month,
+            class_group,
+        )
+    )
+
+    attendance_rows = (
+        ensure_report_month_rows_web(
+            year,
+            month,
+            coaches,
+        )
+    )
+
+    attendance_by_key = {}
+
+    for row in attendance_rows:
+        row_key = (
+            str(
+                row.get("coach_name")
+                or ""
+            ).strip(),
+            str(
+                row.get("class_group")
+                or ""
+            ).strip(),
+        )
+
+        attendance_by_key[row_key] = set(
+            normalize_attendance_days_web(
+                row.get(
+                    "attendance_days"
+                )
+            )
+        )
+
+    attendance_map = {}
+    applicable_map = {}
+    coach_totals = {}
+
+    for coach in coaches:
+        coach_key = (
+            coach["name"],
+            coach["class_group"],
+        )
+
+        checked_days = (
+            attendance_by_key.get(
+                coach_key,
+                set(),
+            )
+        )
+
+        valid_days = (
+            get_valid_days_for_group_web(
+                year,
+                month,
+                coach["class_group"],
+            )
+        )
+
+        coach_totals[
+            (
+                f"{coach['name']}|"
+                f"{coach['class_group']}"
+            )
+        ] = len(
+            checked_days & valid_days
+        )
+
+        for day_item in display_days:
+            day_number = int(
+                day_item["day"]
+            )
+
+            map_key = (
+                f"{coach['name']}|"
+                f"{coach['class_group']}|"
+                f"{day_number}"
+            )
+
+            applicable_map[
+                map_key
+            ] = day_number in valid_days
+
+            attendance_map[
+                map_key
+            ] = (
+                day_number in checked_days
+            )
+
+    if class_group == "all":
+        class_title = "Tất cả lịch dạy"
+    else:
+        class_title = (
+            REPORT_CLASS_GROUPS[
+                class_group
+            ]["title"]
+        )
+
+    return {
+        "class_group": class_group,
+        "class_title": class_title,
+        "coaches": coaches,
+        "teaching_days": display_days,
+        "attendance_map": attendance_map,
+        "applicable_map": applicable_map,
+        "coach_totals": coach_totals,
+        "checked_count": sum(
+            coach_totals.values()
+        ),
+    }
+
+
+
+
+@app.post(
+    "/reports/attendance/save"
+)
+def reports_attendance_save():
+    payload = request.get_json(
+        silent=True
+    ) or {}
+
+    coach_name = str(
+        payload.get("coach_name")
+        or ""
+    ).strip()
+
+    coach_role = str(
+        payload.get("coach_role")
+        or "HLV"
+    ).strip() or "HLV"
+
+    class_group = (
+        get_report_class_group_web(
+            payload.get(
+                "class_group"
+            )
+        )
+    )
+
+    if class_group == "all":
+        return jsonify({
+            "ok": False,
+            "message": (
+                "Không thể lưu bằng "
+                "mã nhóm Tất cả."
+            ),
+        }), 400
+
+    try:
+        year = int(
+            payload.get("year")
+        )
+
+        month = int(
+            payload.get("month")
+        )
+
+        day_number = int(
+            payload.get("day")
+        )
+
+    except Exception:
+        return jsonify({
+            "ok": False,
+            "message": (
+                "Tháng hoặc ngày "
+                "không hợp lệ."
+            ),
+        }), 400
+
+    valid_days = (
+        get_valid_days_for_group_web(
+            year,
+            month,
+            class_group,
+        )
+    )
+
+    if day_number not in valid_days:
+        return jsonify({
+            "ok": False,
+            "message": (
+                "Ngày này không thuộc "
+                "lịch dạy của HLV."
+            ),
+        }), 400
+
+    attendance_month = (
+        get_month_first_date_web(
+            year,
+            month,
+        )
+    )
+
+    is_present = (
+        payload.get(
+            "is_present"
+        ) is True
+    )
+
+    try:
+        rows = (
+            supabase.table(
+                COACH_ATTENDANCE_TABLE
+            )
+            .select(
+                "id,attendance_days"
+            )
+            .eq(
+                "coach_name",
+                coach_name,
+            )
+            .eq(
+                "class_group",
+                class_group,
+            )
+            .eq(
+                "attendance_month",
+                attendance_month,
+            )
+            .limit(1)
+            .execute().data
+            or []
+        )
+
+        if rows:
+            row_id = rows[0]["id"]
+
+            attendance_days = set(
+                normalize_attendance_days_web(
+                    rows[0].get(
+                        "attendance_days"
+                    )
+                )
+            )
+
+        else:
+            row_id = None
+            attendance_days = set(
+                valid_days
+            )
+
+        if is_present:
+            attendance_days.add(
+                day_number
+            )
+        else:
+            attendance_days.discard(
+                day_number
+            )
+
+        save_data = {
+            "coach_name": coach_name,
+            "coach_role": coach_role,
+            "class_group": class_group,
+            "attendance_month": (
+                attendance_month
+            ),
+            "attendance_days": sorted(
+                attendance_days
+            ),
+            "updated_by": str(
+                session.get(
+                    "admin_username"
+                )
+                or "Admin"
+            ),
+            "updated_at": (
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
+            ),
+        }
+
+        if row_id:
+            (
+                supabase.table(
+                    COACH_ATTENDANCE_TABLE
+                )
+                .update(save_data)
+                .eq("id", row_id)
+                .execute()
+            )
+
+        else:
+            save_data[
+                "created_at"
+            ] = datetime.now(
+                timezone.utc
+            ).isoformat()
+
+            (
+                supabase.table(
+                    COACH_ATTENDANCE_TABLE
+                )
+                .insert(save_data)
+                .execute()
+            )
+
+        return jsonify({
+            "ok": True,
+            "attendance_days": sorted(
+                attendance_days
+            ),
+        })
+
+    except Exception as error:
+        print(
+            "[REPORT ATTENDANCE SAVE ERROR]",
+            repr(error),
+        )
+
+        return jsonify({
+            "ok": False,
+            "message": (
+                "Không lưu được "
+                f"chấm công: {error}"
+            ),
+        }), 500
+
+
+@app.get(
+    "/reports/attendance/export"
+)
+def reports_attendance_export():
+    now = datetime.now()
+
+    try:
+        month = int(
+            request.args.get(
+                "month",
+                now.month,
+            )
+        )
+
+        year = int(
+            request.args.get(
+                "year",
+                now.year,
+            )
+        )
+
+    except Exception:
+        month = now.month
+        year = now.year
+
+    class_group = (
+        get_report_class_group_web(
+            request.args.get(
+                "class_group",
+                "all",
+            )
+        )
+    )
+
+    report_data = (
+        build_report_attendance_context_web(
+            year,
+            month,
+            class_group,
+        )
+    )
+
+    coaches = report_data[
+        "coaches"
+    ]
+
+    teaching_days = report_data[
+        "teaching_days"
+    ]
+
+    attendance_map = report_data[
+        "attendance_map"
+    ]
+
+    applicable_map = report_data[
+        "applicable_map"
+    ]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = (
+        f"Cham cong {month:02d}-{year}"
+    )
+
+    total_columns = (
+        3
+        + len(teaching_days)
+        + 1
+    )
+
+    ws.merge_cells(
+        start_row=1,
+        start_column=1,
+        end_row=1,
+        end_column=total_columns,
+    )
+
+    ws["A1"] = (
+        "BẢNG CHẤM CÔNG "
+        "HUẤN LUYỆN VIÊN"
+    )
+
+    ws["A1"].font = Font(
+        bold=True,
+        size=17,
+        color="FFFFFF",
+    )
+
+    ws["A1"].fill = PatternFill(
+        "solid",
+        fgColor="0F2A4A",
+    )
+
+    ws["A1"].alignment = Alignment(
+        horizontal="center",
+        vertical="center",
+    )
+
+    headers = [
+        "STT",
+        "Họ và tên HLV",
+        "Lịch dạy",
+    ]
+
+    headers.extend([
+        (
+            f"{item['day']:02d}/"
+            f"{month:02d}"
+        )
+        for item in teaching_days
+    ])
+
+    headers.append(
+        "Tổng buổi"
+    )
+
+    thin = Side(
+        style="thin",
+        color="CBD5E1",
+    )
+
+    border = Border(
+        left=thin,
+        right=thin,
+        top=thin,
+        bottom=thin,
+    )
+
+    for column_index, value in enumerate(
+        headers,
+        start=1,
+    ):
+        cell = ws.cell(
+            row=3,
+            column=column_index,
+            value=value,
+        )
+
+        cell.font = Font(
+            bold=True,
+            color="FFFFFF",
+        )
+
+        cell.fill = PatternFill(
+            "solid",
+            fgColor="1D4ED8",
+        )
+
+        cell.alignment = Alignment(
+            horizontal="center",
+            vertical="center",
+            wrap_text=True,
+        )
+
+        cell.border = border
+
+    for row_index, coach in enumerate(
+        coaches,
+        start=4,
+    ):
+        ws.cell(
+            row=row_index,
+            column=1,
+            value=row_index - 3,
+        )
+
+        ws.cell(
+            row=row_index,
+            column=2,
+            value=coach["name"],
+        )
+
+        ws.cell(
+            row=row_index,
+            column=3,
+            value=coach["class_title"],
+        )
+
+        total = 0
+
+        for column_index, day_item in enumerate(
+            teaching_days,
+            start=4,
+        ):
+            map_key = (
+                f"{coach['name']}|"
+                f"{coach['class_group']}|"
+                f"{int(day_item['day'])}"
+            )
+
+            applicable = (
+                applicable_map.get(
+                    map_key,
+                    False,
+                )
+            )
+
+            present = (
+                attendance_map.get(
+                    map_key,
+                    False,
+                )
+            )
+
+            if not applicable:
+                value = "—"
+            else:
+                value = (
+                    "X"
+                    if present
+                    else ""
+                )
+
+                if present:
+                    total += 1
+
+            ws.cell(
+                row=row_index,
+                column=column_index,
+                value=value,
+            )
+
+        ws.cell(
+            row=row_index,
+            column=total_columns,
+            value=total,
+        )
+
+        for column_index in range(
+            1,
+            total_columns + 1,
+        ):
+            cell = ws.cell(
+                row=row_index,
+                column=column_index,
+            )
+
+            cell.border = border
+            cell.alignment = Alignment(
+                horizontal=(
+                    "left"
+                    if column_index in [2, 3]
+                    else "center"
+                ),
+                vertical="center",
+            )
+
+    ws.column_dimensions["A"].width = 7
+    ws.column_dimensions["B"].width = 30
+    ws.column_dimensions["C"].width = 22
+
+    for column_index in range(
+        4,
+        total_columns,
+    ):
+        ws.column_dimensions[
+            get_column_letter(
+                column_index
+            )
+        ].width = 9
+
+    ws.column_dimensions[
+        get_column_letter(
+            total_columns
+        )
+    ].width = 12
+
+    ws.freeze_panes = "D4"
+    ws.sheet_view.showGridLines = False
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = (
+        f"cham_cong_hlv_"
+        f"{class_group}_"
+        f"{year}_{month:02d}.xlsx"
+    )
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+    )
+
+# =========================================================
+# BÁO CÁO - THU CHI
+#
+# 1. Thêm hằng số này cùng nhóm các ..._TABLE:
+# CLUB_FINANCE_TABLE = "club_finance_transactions"
+#
+# 2. Chèn toàn bộ khối bên dưới trước:
+# if __name__ == "__main__":
+# =========================================================
+
+def parse_report_datetime_local_web(raw_value):
+    """
+    Nhận dữ liệu từ input datetime-local:
+    2026-07-31T20:30
+    """
+    raw_value = str(raw_value or "").strip()
+
+    if not raw_value:
+        return datetime.now(timezone.utc).isoformat()
+
+    try:
+        local_dt = datetime.strptime(
+            raw_value,
+            "%Y-%m-%dT%H:%M",
+        )
+
+        vietnam_tz = timezone(
+            timedelta(hours=7)
+        )
+
+        local_dt = local_dt.replace(
+            tzinfo=vietnam_tz
+        )
+
+        return local_dt.astimezone(
+            timezone.utc
+        ).isoformat()
+
+    except Exception:
+        raise ValueError(
+            "Ngày giờ chưa đúng định dạng."
+        )
+
+
+def money_number_web(value):
+    raw = str(value or "0").strip()
+
+    raw = (
+        raw
+        .replace("đ", "")
+        .replace("Đ", "")
+        .replace(" ", "")
+        .replace(".", "")
+        .replace(",", ".")
+    )
+
+    try:
+        number = float(raw or 0)
+    except Exception:
+        number = 0
+
+    return max(number, 0)
+
+
+
+
+@app.post("/reports/finance/add")
+def reports_finance_add():
+    form = request.form
+
+    transaction_type = str(
+        form.get(
+            "transaction_type"
+        ) or ""
+    ).strip()
+
+    if transaction_type not in {
+        "income",
+        "expense",
+    }:
+        flash(
+            "Loại giao dịch không hợp lệ.",
+            "danger",
+        )
+
+        return back_to_current_page(
+            "reports"
+        )
+
+    content = str(
+        form.get("content")
+        or ""
+    ).strip()
+
+    if not content:
+        flash(
+            "Ken chưa nhập nội dung.",
+            "danger",
+        )
+
+        return back_to_current_page(
+            "reports"
+        )
+
+    unit_price = money_number_web(
+        form.get("unit_price")
+    )
+
+    quantity = money_number_web(
+        form.get("quantity")
+    )
+
+    if quantity <= 0:
+        flash(
+            "Số lượng phải lớn hơn 0.",
+            "danger",
+        )
+
+        return back_to_current_page(
+            "reports"
+        )
+
+    total_amount = (
+        unit_price
+        * quantity
+    )
+
+    try:
+        transaction_datetime = (
+            parse_report_datetime_local_web(
+                form.get(
+                    "transaction_datetime"
+                )
+            )
+        )
+
+        payload = {
+            "transaction_type": (
+                transaction_type
+            ),
+            "transaction_datetime": (
+                transaction_datetime
+            ),
+            "content": content,
+            "unit_price": unit_price,
+            "quantity": quantity,
+            "total_amount": (
+                total_amount
+            ),
+            "note": str(
+                form.get("note")
+                or ""
+            ).strip(),
+            "has_invoice": (
+                form.get(
+                    "has_invoice"
+                ) == "on"
+            ),
+            "is_club_expense": (
+                transaction_type == "expense"
+                and form.get("is_club_expense") == "on"
+            ),
+            "created_by": str(
+                session.get(
+                    "admin_username"
+                )
+                or "Admin"
+            ),
+            "created_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+            "updated_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+        }
+
+        (
+            supabase.table(
+                CLUB_FINANCE_TABLE
+            )
+            .insert(payload)
+            .execute()
+        )
+
+        label = (
+            "thu"
+            if transaction_type
+            == "income"
+            else "chi"
+        )
+
+        flash(
+            f"Đã thêm khoản {label}: "
+            f"{content}.",
+            "success",
+        )
+
+    except Exception as error:
+        print(
+            "[REPORT FINANCE ADD ERROR]",
+            repr(error),
+        )
+
+        flash(
+            f"Không thêm được dữ liệu: "
+            f"{error}",
+            "danger",
+        )
+
+    return back_to_current_page(
+        "reports"
+    )
+
+
+@app.post(
+    "/reports/finance/<transaction_id>/delete"
+)
+def reports_finance_delete(
+    transaction_id,
+):
+    try:
+        (
+            supabase.table(
+                CLUB_FINANCE_TABLE
+            )
+            .delete()
+            .eq(
+                "id",
+                transaction_id,
+            )
+            .execute()
+        )
+
+        flash(
+            "Đã xóa khoản thu/chi.",
+            "success",
+        )
+
+    except Exception as error:
+        print(
+            "[REPORT FINANCE DELETE ERROR]",
+            repr(error),
+        )
+
+        flash(
+            f"Không xóa được dữ liệu: "
+            f"{error}",
+            "danger",
+        )
+
+    return back_to_current_page(
+        "reports"
+    )
+
+# =========================================================
+# BÁO CÁO THU CHI - CẬP NHẬT DÒNG
+#
+# Chèn route này vào app.py, gần các route:
+# - reports_finance_add
+# - reports_finance_delete
+#
+# Không xóa route thêm hoặc xóa hiện tại.
+# =========================================================
+
+@app.post(
+    "/reports/finance/<transaction_id>/update"
+)
+def reports_finance_update(
+    transaction_id,
+):
+    form = request.form
+
+    transaction_type = str(
+        form.get(
+            "transaction_type"
+        ) or ""
+    ).strip()
+
+    if transaction_type not in {
+        "income",
+        "expense",
+    }:
+        flash(
+            "Loại giao dịch không hợp lệ.",
+            "danger",
+        )
+
+        return back_to_current_page(
+            "reports"
+        )
+
+    content = str(
+        form.get("content")
+        or ""
+    ).strip()
+
+    if not content:
+        flash(
+            "Ken chưa nhập nội dung.",
+            "danger",
+        )
+
+        return back_to_current_page(
+            "reports"
+        )
+
+    unit_price = money_number_web(
+        form.get("unit_price")
+    )
+
+    quantity = money_number_web(
+        form.get("quantity")
+    )
+
+    if quantity <= 0:
+        flash(
+            "Số lượng phải lớn hơn 0.",
+            "danger",
+        )
+
+        return back_to_current_page(
+            "reports"
+        )
+
+    total_amount = (
+        unit_price
+        * quantity
+    )
+
+    try:
+        transaction_datetime = (
+            parse_report_datetime_local_web(
+                form.get(
+                    "transaction_datetime"
+                )
+            )
+        )
+
+        payload = {
+            "transaction_type": (
+                transaction_type
+            ),
+            "transaction_datetime": (
+                transaction_datetime
+            ),
+            "content": content,
+            "unit_price": unit_price,
+            "quantity": quantity,
+            "total_amount": (
+                total_amount
+            ),
+            "note": str(
+                form.get("note")
+                or ""
+            ).strip(),
+            "has_invoice": (
+                form.get(
+                    "has_invoice"
+                ) == "on"
+            ),
+            "is_club_expense": (
+                transaction_type == "expense"
+                and form.get("is_club_expense") == "on"
+            ),
+            "updated_at": datetime.now(
+                timezone.utc
+            ).isoformat(),
+        }
+
+        (
+            supabase.table(
+                CLUB_FINANCE_TABLE
+            )
+            .update(payload)
+            .eq(
+                "id",
+                transaction_id,
+            )
+            .execute()
+        )
+
+        label = (
+            "thu"
+            if transaction_type
+            == "income"
+            else "chi"
+        )
+
+        flash(
+            f"Đã cập nhật khoản {label}: "
+            f"{content}.",
+            "success",
+        )
+
+    except Exception as error:
+        print(
+            "[REPORT FINANCE UPDATE ERROR]",
+            repr(error),
+        )
+
+        flash(
+            f"Không cập nhật được dữ liệu: "
+            f"{error}",
+            "danger",
+        )
+
+    return back_to_current_page(
+        "reports"
+    )
+# =========================================================
+# BÁO CÁO > TAB THI CẤP
+# =========================================================
+#
+# A. Cùng nhóm hằng số TABLE, thêm:
+#
+# EXAM_FINANCE_TABLE = "exam_finance_items"
+#
+# B. Chèn toàn bộ KHỐI 1 bên dưới trước route:
+#
+# @app.get("/reports")
+# def reports():
+#
+# C. Trong route reports(), thực hiện 3 thay đổi ở KHỐI 2.
+# =========================================================
+
+
+# =========================================================
+# KHỐI 1
+# HÀM ĐỌC, TẠO MẶC ĐỊNH VÀ LƯU THU CHI THI CẤP
+# =========================================================
+
+EXAM_FINANCE_DEFAULT_INCOME = [
+    {
+        "content": "Phí thi cấp đai",
+        "unit_price": 300000,
+        "quantity": 0,
+        "note": "",
+        "linked_to_income": False,
+    },
+]
+
+
+EXAM_FINANCE_DEFAULT_EXPENSES = [
+    {
+        "content": "Bồi dưỡng HLV cơ sở",
+        "unit_price": 90000,
+        "quantity": 0,
+        "note": "",
+        "linked_to_income": True,
+    },
+    {
+        "content": "Lệ phí thi cấp nộp về HTF",
+        "unit_price": 30000,
+        "quantity": 0,
+        "note": "",
+        "linked_to_income": True,
+    },
+    {
+        "content": "Đai màu",
+        "unit_price": 30000,
+        "quantity": 0,
+        "note": "",
+        "linked_to_income": True,
+    },
+    {
+        "content": "Standee thi cấp",
+        "unit_price": 130000,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Decal số báo danh",
+        "unit_price": 6500,
+        "quantity": 0,
+        "note": "",
+        "linked_to_income": True,
+    },
+    {
+        "content": "Decal vị trí thi",
+        "unit_price": 9500,
+        "quantity": 6,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Băng keo, giấy, bút, kim băng",
+        "unit_price": 100000,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Tiền vận chuyển",
+        "unit_price": 150000,
+        "quantity": 2,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Bồi dưỡng Giám Sát",
+        "unit_price": 0,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Bồi dưỡng Giám khảo",
+        "unit_price": 0,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Bồi dưỡng thư ký VTF",
+        "unit_price": 200000,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Bồi dưỡng BTC",
+        "unit_price": 500000,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": (
+            "Bồi dưỡng tổ điều khiển, điều phối, quay phim, "
+            "hậu cần, vệ sinh"
+        ),
+        "unit_price": 200000,
+        "quantity": 8,
+        "note": "",
+        "linked_to_income": False,
+    },
+    {
+        "content": "Teabreak",
+        "unit_price": 0,
+        "quantity": 1,
+        "note": "",
+        "linked_to_income": False,
+    },
+]
+
+
+def normalize_exam_finance_quarter_web(value):
+    quarter = str(value or "").strip().upper()
+
+    if quarter not in {
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4",
+    }:
+        quarter = "Q1"
+
+    return quarter
+
+
+def build_default_exam_finance_rows_web():
+    income_rows = [
+        dict(row)
+        for row in EXAM_FINANCE_DEFAULT_INCOME
+    ]
+
+    expense_rows = [
+        dict(row)
+        for row in EXAM_FINANCE_DEFAULT_EXPENSES
+    ]
+
+    for index, row in enumerate(
+        income_rows,
+        start=1,
+    ):
+        row["id"] = ""
+        row["transaction_type"] = "income"
+        row["sort_order"] = index
+        row["total_amount"] = (
+            float(row.get("unit_price") or 0)
+            * float(row.get("quantity") or 0)
+        )
+
+    for index, row in enumerate(
+        expense_rows,
+        start=1,
+    ):
+        row["id"] = ""
+        row["transaction_type"] = "expense"
+        row["sort_order"] = index
+        row["total_amount"] = (
+            float(row.get("unit_price") or 0)
+            * float(row.get("quantity") or 0)
+        )
+
+    return income_rows, expense_rows
+
+
+def get_report_exam_finance_rows_web(
+    year,
+    quarter,
+):
+    year = int(year)
+    quarter = normalize_exam_finance_quarter_web(
+        quarter
+    )
+
+    rows = (
+        supabase.table(
+            EXAM_FINANCE_TABLE
+        )
+        .select("*")
+        .eq(
+            "year",
+            year,
+        )
+        .eq(
+            "quarter",
+            quarter,
+        )
+        .order(
+            "transaction_type"
+        )
+        .order(
+            "sort_order"
+        )
+        .execute().data
+        or []
+    )
+
+    if rows:
+        income_rows = [
+            dict(row)
+            for row in rows
+            if row.get(
+                "transaction_type"
+            ) == "income"
+        ]
+
+        expense_rows = [
+            dict(row)
+            for row in rows
+            if row.get(
+                "transaction_type"
+            ) == "expense"
+        ]
+
+    else:
+        (
+            income_rows,
+            expense_rows,
+        ) = build_default_exam_finance_rows_web()
+
+    for row in (
+        income_rows
+        + expense_rows
+    ):
+        unit_price = float(
+            row.get("unit_price")
+            or 0
+        )
+
+        quantity = float(
+            row.get("quantity")
+            or 0
+        )
+
+        row["unit_price"] = unit_price
+        row["quantity"] = quantity
+        row["total_amount"] = (
+            unit_price
+            * quantity
+        )
+
+        row["linked_to_income"] = bool(
+            row.get("linked_to_income")
+        )
+
+    income_rows.sort(
+        key=lambda row: int(
+            row.get("sort_order")
+            or 0
+        )
+    )
+
+    expense_rows.sort(
+        key=lambda row: int(
+            row.get("sort_order")
+            or 0
+        )
+    )
+
+    total_income = sum(
+        float(
+            row.get("total_amount")
+            or 0
+        )
+        for row in income_rows
+    )
+
+    total_expense = sum(
+        float(
+            row.get("total_amount")
+            or 0
+        )
+        for row in expense_rows
+    )
+
+    return {
+        "income_rows": income_rows,
+        "expense_rows": expense_rows,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "remaining": (
+            total_income
+            - total_expense
+        ),
+    }
+
+
+def build_exam_finance_form_rows_web(
+    form,
+    prefix,
+):
+    contents = form.getlist(
+        f"{prefix}_content"
+    )
+
+    prices = form.getlist(
+        f"{prefix}_unit_price"
+    )
+
+    quantities = form.getlist(
+        f"{prefix}_quantity"
+    )
+
+    notes = form.getlist(
+        f"{prefix}_note"
+    )
+
+    linked_values = form.getlist(
+        f"{prefix}_linked"
+    )
+
+    row_count = max(
+        len(contents),
+        len(prices),
+        len(quantities),
+        len(notes),
+        len(linked_values),
+    )
+
+    rows = []
+
+    for index in range(row_count):
+        content = str(
+            contents[index]
+            if index < len(contents)
+            else ""
+        ).strip()
+
+        if not content:
+            continue
+
+        unit_price = money_number_web(
+            prices[index]
+            if index < len(prices)
+            else 0
+        )
+
+        quantity = money_number_web(
+            quantities[index]
+            if index < len(quantities)
+            else 0
+        )
+
+        note = str(
+            notes[index]
+            if index < len(notes)
+            else ""
+        ).strip()
+
+        linked_to_income = (
+            str(
+                linked_values[index]
+                if index < len(linked_values)
+                else "0"
+            ).strip()
+            == "1"
+        )
+
+        rows.append({
+            "content": content,
+            "unit_price": unit_price,
+            "quantity": quantity,
+            "total_amount": (
+                unit_price
+                * quantity
+            ),
+            "note": note,
+            "linked_to_income": (
+                linked_to_income
+            ),
+            "sort_order": len(rows) + 1,
+        })
+
+    return rows
+
+
+# =========================================================
+# LIÊN KẾT THI CẤP VỚI TAB THU CHI
+#
+# 1. Chạy file SQL trước.
+#
+# 2. Trong app.py, tìm và XÓA TOÀN BỘ route cũ:
+#
+# @app.post("/reports/exam-finance/save")
+# def reports_exam_finance_save():
+#     ...
+#
+# 3. Chèn toàn bộ khối dưới đây vào đúng vị trí route cũ.
+# Không giữ đồng thời route cũ và route mới.
+# =========================================================
+
+
+def build_exam_finance_month_datetime_web(
+    year,
+    month,
+):
+    """
+    Lưu giao dịch liên kết vào ngày đầu tháng lúc 12:00
+    theo giờ Việt Nam để bộ lọc tháng luôn nhận đúng.
+    """
+    vietnam_tz = timezone(
+        timedelta(hours=7)
+    )
+
+    local_datetime = datetime(
+        int(year),
+        int(month),
+        1,
+        12,
+        0,
+        0,
+        tzinfo=vietnam_tz,
+    )
+
+    return local_datetime.astimezone(
+        timezone.utc
+    ).isoformat()
+
+
+def save_exam_finance_link_web(
+    exam_year,
+    quarter,
+    link_year,
+    link_month,
+    total_income,
+    total_expense,
+    admin_name,
+):
+    """
+    Mỗi kỳ thi chỉ có tối đa:
+    - 1 dòng Thu liên kết
+    - 1 dòng Chi liên kết
+
+    Lưu lại cùng kỳ sẽ cập nhật, không tạo trùng.
+    Chọn tháng khác sẽ chuyển hai dòng sang tháng mới.
+    """
+    transaction_datetime = (
+        build_exam_finance_month_datetime_web(
+            link_year,
+            link_month,
+        )
+    )
+
+    now_iso = datetime.now(
+        timezone.utc
+    ).isoformat()
+
+    source_base = {
+        "source_type": "exam_finance",
+        "source_year": int(exam_year),
+        "source_quarter": quarter,
+    }
+
+    linked_rows = [
+        {
+            **source_base,
+            "source_record_type": "income",
+            "transaction_type": "income",
+            "transaction_datetime": transaction_datetime,
+            "content": (
+                f"Thi cấp quý {quarter}/{exam_year}"
+            ),
+            "unit_price": float(
+                total_income
+                or 0
+            ),
+            "quantity": 1,
+            "total_amount": float(
+                total_income
+                or 0
+            ),
+            "note": (
+                f"Liên kết từ tab Thi cấp "
+                f"{quarter}/{exam_year}"
+            ),
+            "has_invoice": False,
+            "is_club_expense": False,
+        },
+        {
+            **source_base,
+            "source_record_type": "expense",
+            "transaction_type": "expense",
+            "transaction_datetime": transaction_datetime,
+            "content": (
+                f"Tổ chức kỳ thi cấp quý "
+                f"{quarter}/{exam_year}"
+            ),
+            "unit_price": float(
+                total_expense
+                or 0
+            ),
+            "quantity": 1,
+            "total_amount": float(
+                total_expense
+                or 0
+            ),
+            "note": (
+                f"Liên kết từ tab Thi cấp "
+                f"{quarter}/{exam_year}"
+            ),
+            "has_invoice": False,
+            # Khoản tổ chức kỳ thi là khoản CLB đã chi.
+            "is_club_expense": True,
+        },
+    ]
+
+    for linked_row in linked_rows:
+        source_record_type = linked_row[
+            "source_record_type"
+        ]
+
+        existing_rows = (
+            supabase.table(
+                CLUB_FINANCE_TABLE
+            )
+            .select("id")
+            .eq(
+                "source_type",
+                "exam_finance",
+            )
+            .eq(
+                "source_year",
+                int(exam_year),
+            )
+            .eq(
+                "source_quarter",
+                quarter,
+            )
+            .eq(
+                "source_record_type",
+                source_record_type,
+            )
+            .limit(1)
+            .execute().data
+            or []
+        )
+
+        payload = {
+            **linked_row,
+            "updated_at": now_iso,
+        }
+
+        if existing_rows:
+            (
+                supabase.table(
+                    CLUB_FINANCE_TABLE
+                )
+                .update(payload)
+                .eq(
+                    "id",
+                    existing_rows[0]["id"],
+                )
+                .execute()
+            )
+
+        else:
+            payload.update({
+                "created_by": admin_name,
+                "created_at": now_iso,
+            })
+
+            (
+                supabase.table(
+                    CLUB_FINANCE_TABLE
+                )
+                .insert(payload)
+                .execute()
+            )
+
+
+@app.post(
+    "/reports/exam-finance/save"
+)
+def reports_exam_finance_save():
+    form = request.form
+
+    try:
+        year = int(
+            form.get("year")
+            or datetime.now().year
+        )
+
+    except Exception:
+        year = datetime.now().year
+
+    year = min(
+        max(year, 2020),
+        2100,
+    )
+
+    quarter = normalize_exam_finance_quarter_web(
+        form.get("quarter")
+    )
+
+    link_to_finance = (
+        str(
+            form.get("link_to_finance")
+            or "0"
+        ).strip()
+        == "1"
+    )
+
+    link_month = None
+    link_year = None
+
+    if link_to_finance:
+        try:
+            link_month = int(
+                form.get("link_month")
+            )
+
+            link_year = int(
+                form.get("link_year")
+            )
+
+        except Exception:
+            flash(
+                "Tháng hoặc năm Thu chi liên kết "
+                "không hợp lệ.",
+                "danger",
+            )
+
+            return redirect(
+                url_for(
+                    "reports",
+                    tab="exam_finance",
+                    year=year,
+                    quarter=quarter,
+                )
+            )
+
+        if not 1 <= link_month <= 12:
+            flash(
+                "Tháng Thu chi phải từ 1 đến 12.",
+                "danger",
+            )
+
+            return redirect(
+                url_for(
+                    "reports",
+                    tab="exam_finance",
+                    year=year,
+                    quarter=quarter,
+                )
+            )
+
+        link_year = min(
+            max(link_year, 2020),
+            2100,
+        )
+
+    try:
+        income_rows = (
+            build_exam_finance_form_rows_web(
+                form,
+                "income",
+            )
+        )
+
+        expense_rows = (
+            build_exam_finance_form_rows_web(
+                form,
+                "expense",
+            )
+        )
+
+        if not income_rows:
+            flash(
+                "Khung thu phải có ít nhất "
+                "một nội dung.",
+                "danger",
+            )
+
+            return redirect(
+                url_for(
+                    "reports",
+                    tab="exam_finance",
+                    year=year,
+                    quarter=quarter,
+                )
+            )
+
+        total_income = sum(
+            float(
+                row.get("total_amount")
+                or 0
+            )
+            for row in income_rows
+        )
+
+        total_expense = sum(
+            float(
+                row.get("total_amount")
+                or 0
+            )
+            for row in expense_rows
+        )
+
+        now_iso = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        admin_name = str(
+            session.get(
+                "admin_username"
+            )
+            or "Admin"
+        )
+
+        payloads = []
+
+        for transaction_type, rows in [
+            ("income", income_rows),
+            ("expense", expense_rows),
+        ]:
+            for row in rows:
+                payloads.append({
+                    "year": year,
+                    "quarter": quarter,
+                    "transaction_type": (
+                        transaction_type
+                    ),
+                    "content": row["content"],
+                    "unit_price": (
+                        row["unit_price"]
+                    ),
+                    "quantity": (
+                        row["quantity"]
+                    ),
+                    "total_amount": (
+                        row["total_amount"]
+                    ),
+                    "note": row["note"],
+                    "linked_to_income": (
+                        row[
+                            "linked_to_income"
+                        ]
+                    ),
+                    "sort_order": (
+                        row["sort_order"]
+                    ),
+                    "created_by": admin_name,
+                    "created_at": now_iso,
+                    "updated_at": now_iso,
+                })
+
+        # Chỉ xóa sau khi đã kiểm tra toàn bộ form.
+        (
+            supabase.table(
+                EXAM_FINANCE_TABLE
+            )
+            .delete()
+            .eq(
+                "year",
+                year,
+            )
+            .eq(
+                "quarter",
+                quarter,
+            )
+            .execute()
+        )
+
+        if payloads:
+            (
+                supabase.table(
+                    EXAM_FINANCE_TABLE
+                )
+                .insert(payloads)
+                .execute()
+            )
+
+        if link_to_finance:
+            save_exam_finance_link_web(
+                exam_year=year,
+                quarter=quarter,
+                link_year=link_year,
+                link_month=link_month,
+                total_income=total_income,
+                total_expense=total_expense,
+                admin_name=admin_name,
+            )
+
+            flash(
+                f"Đã lưu kỳ thi {quarter}/{year} "
+                f"và kết nối vào Thu chi "
+                f"tháng {link_month:02d}/{link_year}.",
+                "success",
+            )
+
+        else:
+            flash(
+                f"Đã lưu thu chi thi cấp "
+                f"{quarter}/{year}.",
+                "success",
+            )
+
+    except Exception as error:
+        print(
+            "[REPORT EXAM FINANCE SAVE ERROR]",
+            repr(error),
+        )
+
+        flash(
+            f"Không lưu được thu chi thi cấp: "
+            f"{error}",
+            "danger",
+        )
+
+    return redirect(
+        url_for(
+            "reports",
+            tab="exam_finance",
+            year=year,
+            quarter=quarter,
+        )
+    )
+
+
+
+# =========================================================
+# 3. THAY ROUTE reports() HIỆN TẠI BẰNG ROUTE NÀY
+# Không giữ đồng thời hai hàm @app.get("/reports").
+# =========================================================
+
+@app.get("/reports")
+def reports():
+    now = datetime.now()
+
+    try:
+        month = int(
+            request.args.get(
+                "month",
+                now.month,
+            )
+        )
+
+        year = int(
+            request.args.get(
+                "year",
+                now.year,
+            )
+        )
+
+    except Exception:
+        month = now.month
+        year = now.year
+
+    month = min(
+        max(month, 1),
+        12,
+    )
+
+    year = min(
+        max(year, 2020),
+        2100,
+    )
+
+    active_tab = str(
+        request.args.get(
+            "tab",
+            "attendance",
+        )
+    ).strip().lower()
+
+    if active_tab not in {
+        "attendance",
+        "finance",
+        "exam_finance",
+    }:
+        active_tab = "attendance"
+
+    exam_quarter = normalize_exam_finance_quarter_web(
+        request.args.get(
+           "quarter",
+            f"Q{((now.month - 1) // 3) + 1}",
+        )
+    )
+
+    class_group = (
+        get_report_class_group_web(
+            request.args.get(
+                "class_group",
+                "all",
+            )
+        )
+    )
+
+    try:
+        report_data = (
+            build_report_attendance_context_web(
+                year,
+                month,
+                class_group,
+            )
+        )
+
+    except Exception as error:
+        print(
+            "[REPORT ATTENDANCE LOAD ERROR]",
+            repr(error),
+        )
+
+        flash(
+            "Không đọc được dữ liệu chấm công.",
+            "danger",
+        )
+
+        report_data = {
+            "class_group": class_group,
+            "class_title": "",
+            "coaches": [],
+            "teaching_days": [],
+            "attendance_map": {},
+            "applicable_map": {},
+            "coach_totals": {},
+            "checked_count": 0,
+        }
+
+    try:
+        finance_data = (
+            get_report_finance_rows_web(
+                year,
+                month,
+            )
+        )
+
+    except Exception as error:
+        print(
+            "[REPORT FINANCE LOAD ERROR]",
+            repr(error),
+        )
+
+        finance_data = {
+            "income_rows": [],
+            "expense_rows": [],
+            "total_income": 0,
+            "total_expense": 0,
+            "club_expense": 0,
+            "remaining": 0,
+        }
+
+        if active_tab == "finance":
+            flash(
+                "Không đọc được dữ liệu thu chi. "
+                "Ken hãy kiểm tra bảng "
+                "club_finance_transactions.",
+                "danger",
+            )
+
+    try:
+        exam_finance_data = (
+            get_report_exam_finance_rows_web(
+                year,
+                exam_quarter,
+            )
+        )
+    
+    except Exception as error:
+        print(
+            "[REPORT EXAM FINANCE LOAD ERROR]",
+            repr(error),
+        )
+    
+        exam_finance_data = {
+            "income_rows": [],
+            "expense_rows": [],
+            "total_income": 0,
+            "total_expense": 0,
+            "remaining": 0,
+        }
+    
+        if active_tab == "exam_finance":
+            flash(
+                "Không đọc được dữ liệu thu chi thi cấp. "
+                "Ken hãy kiểm tra bảng exam_finance_items.",
+                "danger",
+            )
+
+    return render_template(
+        "reports.html",
+        active_tab=active_tab,
+        month=month,
+        year=year,
+        current_year=now.year,
+        exam_quarter=exam_quarter,
+        exam_finance_data=exam_finance_data,
+        class_groups=REPORT_CLASS_GROUPS,
+        finance_data=finance_data,
+        **report_data,
+    )
+
+# =========================================================
+# BÁO CÁO THU CHI - SẮP XẾP + XUẤT 1 SHEET
+#
+# A. Trong hàm get_report_finance_rows_web(year, month),
+#    tìm đoạn tạo income_rows và expense_rows hiện tại,
+#    rồi THAY BẰNG đoạn dưới đây.
+# =========================================================
+
+    income_rows = [
+        row
+        for row in rows
+        if row.get(
+            "transaction_type"
+        ) == "income"
+    ]
+
+    expense_rows = [
+        row
+        for row in rows
+        if row.get(
+            "transaction_type"
+        ) == "expense"
+    ]
+
+    def finance_datetime_sort_value_web(row):
+        raw_value = str(
+            row.get(
+                "transaction_datetime"
+            ) or ""
+        ).strip()
+
+        try:
+            return datetime.fromisoformat(
+                raw_value.replace(
+                    "Z",
+                    "+00:00",
+                )
+            )
+        except Exception:
+            return datetime.min.replace(
+                tzinfo=timezone.utc
+            )
+
+    # THU:
+    # 1. Đơn giá cao nhất trước.
+    # 2. Nếu cùng đơn giá thì thời gian cũ hơn đứng trước.
+    income_rows.sort(
+        key=lambda row: (
+            -float(
+                row.get(
+                    "unit_price"
+                ) or 0
+            ),
+            finance_datetime_sort_value_web(
+                row
+            ),
+        )
+    )
+
+    # CHI:
+    # Dữ liệu cũ hơn đứng trước.
+    expense_rows.sort(
+        key=finance_datetime_sort_value_web
+    )
+
+# =========================================================
+# BÁO CÁO THU CHI - BẢN HOÀN CHỈNH
+#
+# THỰC HIỆN:
+#
+# 1. Tìm và XÓA TOÀN BỘ hàm cũ:
+#    def get_report_finance_rows_web(year, month):
+#
+#    Sau đó thay bằng HÀM 1 bên dưới.
+#
+# 2. Tìm và XÓA TOÀN BỘ route cũ:
+#    @app.get("/reports/finance/export")
+#    def reports_finance_export():
+#
+#    Sau đó thay bằng HÀM 2 bên dưới.
+# =========================================================
+
+
+# =========================================================
+# HÀM 1
+# ĐỌC DỮ LIỆU + SẮP XẾP ĐÚNG CHO WEB VÀ EXCEL
+# =========================================================
+
+def get_report_finance_rows_web(
+    year,
+    month,
+):
+    vietnam_tz = timezone(
+        timedelta(hours=7)
+    )
+
+    month_start = datetime(
+        year,
+        month,
+        1,
+        tzinfo=vietnam_tz,
+    )
+
+    if month == 12:
+        next_month = datetime(
+            year + 1,
+            1,
+            1,
+            tzinfo=vietnam_tz,
+        )
+    else:
+        next_month = datetime(
+            year,
+            month + 1,
+            1,
+            tzinfo=vietnam_tz,
+        )
+
+    month_start_utc = (
+        month_start.astimezone(
+            timezone.utc
+        ).isoformat()
+    )
+
+    next_month_utc = (
+        next_month.astimezone(
+            timezone.utc
+        ).isoformat()
+    )
+
+    rows = (
+        supabase.table(
+            CLUB_FINANCE_TABLE
+        )
+        .select("*")
+        .gte(
+            "transaction_datetime",
+            month_start_utc,
+        )
+        .lt(
+            "transaction_datetime",
+            next_month_utc,
+        )
+        .execute().data
+        or []
+    )
+
+    for row in rows:
+        raw_dt = str(
+            row.get(
+                "transaction_datetime"
+            ) or ""
+        ).strip()
+
+        parsed_datetime = (
+            datetime.min.replace(
+                tzinfo=timezone.utc
+            )
+        )
+
+        try:
+            parsed_datetime = (
+                datetime.fromisoformat(
+                    raw_dt.replace(
+                        "Z",
+                        "+00:00",
+                    )
+                )
+            )
+
+            if (
+                parsed_datetime.tzinfo
+                is None
+            ):
+                parsed_datetime = (
+                    parsed_datetime.replace(
+                        tzinfo=timezone.utc
+                    )
+                )
+
+            row[
+                "display_datetime"
+            ] = (
+                parsed_datetime.astimezone(
+                    vietnam_tz
+                ).strftime(
+                    "%d/%m/%Y %H:%M"
+                )
+            )
+
+        except Exception:
+            row[
+                "display_datetime"
+            ] = raw_dt
+
+        row[
+            "_sort_datetime"
+        ] = parsed_datetime
+
+        try:
+            row["unit_price"] = float(
+                row.get("unit_price")
+                or 0
+            )
+        except Exception:
+            row["unit_price"] = 0
+
+        try:
+            row["quantity"] = float(
+                row.get("quantity")
+                or 0
+            )
+        except Exception:
+            row["quantity"] = 0
+
+        try:
+            row["total_amount"] = float(
+                row.get("total_amount")
+                or 0
+            )
+        except Exception:
+            row["total_amount"] = 0
+
+    income_rows = [
+        row
+        for row in rows
+        if row.get(
+            "transaction_type"
+        ) == "income"
+    ]
+
+    expense_rows = [
+        row
+        for row in rows
+        if row.get(
+            "transaction_type"
+        ) == "expense"
+    ]
+
+    # =========================================
+    # THU:
+    # Đơn giá cao nhất đứng trước.
+    # Nếu trùng đơn giá:
+    # thời gian cũ hơn đứng trước.
+    # =========================================
+    income_rows.sort(
+        key=lambda row: (
+            -float(
+                row.get(
+                    "unit_price"
+                ) or 0
+            ),
+            row.get(
+                "_sort_datetime"
+            ),
+        )
+    )
+
+    # =========================================
+    # CHI:
+    # Thời gian cũ nhất đứng trước.
+    # Nếu trùng thời gian:
+    # id cũ đứng trước để thứ tự ổn định.
+    # =========================================
+    expense_rows.sort(
+        key=lambda row: (
+            row.get(
+                "_sort_datetime"
+            ),
+            str(
+                row.get("id")
+                or ""
+            ),
+        )
+    )
+
+    total_income = sum(
+        float(
+            row.get(
+                "total_amount"
+            ) or 0
+        )
+        for row in income_rows
+    )
+
+    total_expense = sum(
+        float(
+            row.get(
+                "total_amount"
+            ) or 0
+        )
+        for row in expense_rows
+    )
+
+    
+
+    club_expense = sum(
+        float(
+            row.get("total_amount")
+            or 0
+        )
+        for row in expense_rows
+        if row.get("is_club_expense") is True
+    )
+
+    remaining = (
+        total_income
+        - club_expense
+    )
+
+    return {
+        "income_rows": income_rows,
+        "expense_rows": expense_rows,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "club_expense": club_expense,
+        "remaining": remaining,
+    }
+
+
+# =========================================================
+# HÀM 2
+# XUẤT EXCEL MỘT SHEET
+# =========================================================
+
+@app.get("/reports/finance/export")
+def reports_finance_export():
+    now = datetime.now()
+
+    try:
+        month = int(
+            request.args.get(
+                "month",
+                now.month,
+            )
+        )
+
+        year = int(
+            request.args.get(
+                "year",
+                now.year,
+            )
+        )
+
+    except Exception:
+        month = now.month
+        year = now.year
+
+    month = min(
+        max(month, 1),
+        12,
+    )
+
+    year = min(
+        max(year, 2020),
+        2100,
+    )
+
+    try:
+        finance_data = (
+            get_report_finance_rows_web(
+                year,
+                month,
+            )
+        )
+
+    except Exception as error:
+        print(
+            "[REPORT FINANCE EXPORT ERROR]",
+            repr(error),
+        )
+
+        flash(
+            f"Không xuất được Excel thu chi: {error}",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "reports",
+                tab="finance",
+                month=month,
+                year=year,
+            )
+        )
+
+    wb = Workbook()
+    ws = wb.active
+
+    # Tên sheet theo tháng đang xem
+    ws.title = (
+        f"Thu chi tháng {month:02d}"
+    )
+
+    thin_side = Side(
+        style="thin",
+        color="CBD5E1",
+    )
+
+    medium_side = Side(
+        style="medium",
+        color="64748B",
+    )
+
+    thin_border = Border(
+        left=thin_side,
+        right=thin_side,
+        top=thin_side,
+        bottom=thin_side,
+    )
+
+    total_border = Border(
+        left=medium_side,
+        right=medium_side,
+        top=medium_side,
+        bottom=medium_side,
+    )
+
+    center = Alignment(
+        horizontal="center",
+        vertical="center",
+        wrap_text=True,
+    )
+
+    left = Alignment(
+        horizontal="left",
+        vertical="center",
+        wrap_text=True,
+    )
+
+    right = Alignment(
+        horizontal="right",
+        vertical="center",
+    )
+
+    headers = [
+        "STT",
+        "Ngày giờ",
+        "Nội dung",
+        "Đơn giá",
+        "Số lượng",
+        "Thành tiền",
+        "Ghi chú",
+        "Có hóa đơn",
+    ]
+
+    # =========================================
+    # TIÊU ĐỀ CHÍNH
+    # =========================================
+    ws.merge_cells("A1:H1")
+
+    ws["A1"] = (
+        f"BÁO CÁO THU CHI "
+        f"THÁNG {month:02d}/{year}"
+    )
+
+    ws["A1"].font = Font(
+        bold=True,
+        size=18,
+        color="FFFFFF",
+    )
+
+    ws["A1"].fill = PatternFill(
+        "solid",
+        fgColor="0F2A4A",
+    )
+
+    ws["A1"].alignment = center
+    ws.row_dimensions[1].height = 32
+
+    current_row = 3
+
+    def write_section(
+        section_title,
+        rows,
+        theme_color,
+        total_label,
+        total_value,
+    ):
+        nonlocal current_row
+
+        ws.merge_cells(
+            start_row=current_row,
+            start_column=1,
+            end_row=current_row,
+            end_column=8,
+        )
+
+        section_cell = ws.cell(
+            row=current_row,
+            column=1,
+            value=section_title,
+        )
+
+        section_cell.font = Font(
+            bold=True,
+            size=15,
+            color="FFFFFF",
+        )
+
+        section_cell.fill = PatternFill(
+            "solid",
+            fgColor=theme_color,
+        )
+
+        section_cell.alignment = left
+
+        ws.row_dimensions[
+            current_row
+        ].height = 27
+
+        current_row += 1
+
+        for column_index, header in enumerate(
+            headers,
+            start=1,
+        ):
+            cell = ws.cell(
+                row=current_row,
+                column=column_index,
+                value=header,
+            )
+
+            cell.font = Font(
+                bold=True,
+                size=12,
+                color="FFFFFF",
+            )
+
+            cell.fill = PatternFill(
+                "solid",
+                fgColor=theme_color,
+            )
+
+            cell.alignment = center
+            cell.border = thin_border
+
+        ws.row_dimensions[
+            current_row
+        ].height = 26
+
+        current_row += 1
+
+        for stt, row in enumerate(
+            rows,
+            start=1,
+        ):
+            quantity = float(
+                row.get("quantity")
+                or 0
+            )
+
+            if quantity.is_integer():
+                quantity = int(quantity)
+
+            values = [
+                stt,
+                row.get(
+                    "display_datetime"
+                ) or "",
+                row.get("content") or "",
+                float(
+                    row.get(
+                        "unit_price"
+                    ) or 0
+                ),
+                quantity,
+                float(
+                    row.get(
+                        "total_amount"
+                    ) or 0
+                ),
+                row.get("note") or "",
+                (
+                    "Có"
+                    if row.get(
+                        "has_invoice"
+                    )
+                    else "Không"
+                ),
+            ]
+
+            for column_index, value in enumerate(
+                values,
+                start=1,
+            ):
+                cell = ws.cell(
+                    row=current_row,
+                    column=column_index,
+                    value=value,
+                )
+
+                cell.font = Font(size=12)
+                cell.border = thin_border
+
+                if column_index in [
+                    1,
+                    2,
+                    5,
+                    8,
+                ]:
+                    cell.alignment = center
+
+                elif column_index in [
+                    4,
+                    6,
+                ]:
+                    cell.alignment = right
+
+                else:
+                    cell.alignment = left
+
+            ws.cell(
+                row=current_row,
+                column=4,
+            ).number_format = (
+                '#,##0 "đ"'
+            )
+
+            ws.cell(
+                row=current_row,
+                column=6,
+            ).number_format = (
+                '#,##0 "đ"'
+            )
+
+            ws.row_dimensions[
+                current_row
+            ].height = 23
+
+            current_row += 1
+
+        if not rows:
+            ws.merge_cells(
+                start_row=current_row,
+                start_column=1,
+                end_row=current_row,
+                end_column=8,
+            )
+
+            empty_cell = ws.cell(
+                row=current_row,
+                column=1,
+                value="Chưa có dữ liệu.",
+            )
+
+            empty_cell.alignment = center
+
+            empty_cell.font = Font(
+                italic=True,
+                color="64748B",
+            )
+
+            for column_index in range(
+                1,
+                9,
+            ):
+                ws.cell(
+                    row=current_row,
+                    column=column_index,
+                ).border = thin_border
+
+            current_row += 1
+
+        ws.merge_cells(
+            start_row=current_row,
+            start_column=1,
+            end_row=current_row,
+            end_column=5,
+        )
+
+        total_label_cell = ws.cell(
+            row=current_row,
+            column=1,
+            value=total_label,
+        )
+
+        total_label_cell.font = Font(
+            bold=True,
+            size=14,
+        )
+
+        total_label_cell.fill = PatternFill(
+            "solid",
+            fgColor="FEF3C7",
+        )
+
+        total_label_cell.alignment = center
+
+        total_value_cell = ws.cell(
+            row=current_row,
+            column=6,
+            value=float(
+                total_value
+                or 0
+            ),
+        )
+
+        total_value_cell.font = Font(
+            bold=True,
+            size=14,
+            color="B91C1C",
+        )
+
+        total_value_cell.fill = PatternFill(
+            "solid",
+            fgColor="FEF3C7",
+        )
+
+        total_value_cell.number_format = (
+            '#,##0 "đ"'
+        )
+
+        total_value_cell.alignment = right
+
+        for column_index in [
+            7,
+            8,
+        ]:
+            ws.cell(
+                row=current_row,
+                column=column_index,
+            ).fill = PatternFill(
+                "solid",
+                fgColor="FEF3C7",
+            )
+
+        for column_index in range(
+            1,
+            9,
+        ):
+            ws.cell(
+                row=current_row,
+                column=column_index,
+            ).border = total_border
+
+        current_row += 2
+
+    # =========================================
+    # KHUNG THU
+    # ĐÃ SẮP ĐƠN GIÁ CAO TRƯỚC
+    # =========================================
+    write_section(
+        section_title="KHUNG THU",
+        rows=finance_data[
+            "income_rows"
+        ],
+        theme_color="15803D",
+        total_label="TỔNG CỘNG THU",
+        total_value=finance_data[
+            "total_income"
+        ],
+    )
+
+    # =========================================
+    # KHUNG CHI
+    # ĐÃ SẮP THỜI GIAN CŨ TRƯỚC
+    # =========================================
+    write_section(
+        section_title="KHUNG CHI",
+        rows=finance_data[
+            "expense_rows"
+        ],
+        theme_color="DC2626",
+        total_label="TỔNG CỘNG CHI",
+        total_value=finance_data[
+            "total_expense"
+        ],
+    )
+
+    # =========================================
+    # KHUNG TỔNG
+    # CHỈ GIỮ 2 DÒNG:
+    # - CLB đã chi
+    # - Còn lại
+    #
+    # KHÔNG CÓ CỘT GHI CHÚ CÁCH TÍNH
+    # =========================================
+    ws.merge_cells(
+        start_row=current_row,
+        start_column=1,
+        end_row=current_row,
+        end_column=8,
+    )
+
+    total_title_cell = ws.cell(
+        row=current_row,
+        column=1,
+        value="KHUNG TỔNG",
+    )
+
+    total_title_cell.font = Font(
+        bold=True,
+        size=15,
+        color="FFFFFF",
+    )
+
+    total_title_cell.fill = PatternFill(
+        "solid",
+        fgColor="1D4ED8",
+    )
+
+    total_title_cell.alignment = left
+
+    current_row += 1
+
+    summary_rows = [
+        (
+            "CLB đã chi",
+            float(
+                finance_data[
+                    "club_expense"
+                ]
+                or 0
+            ),
+        ),
+        (
+            "Còn lại",
+            float(
+                finance_data[
+                    "remaining"
+                ]
+                or 0
+            ),
+        ),
+    ]
+
+    for stt, item in enumerate(
+        summary_rows,
+        start=1,
+    ):
+        # STT
+        ws.cell(
+            row=current_row,
+            column=1,
+            value=stt,
+        )
+
+        # Gộp tên nội dung
+        ws.merge_cells(
+            start_row=current_row,
+            start_column=2,
+            end_row=current_row,
+            end_column=5,
+        )
+
+        ws.cell(
+            row=current_row,
+            column=2,
+            value=item[0],
+        )
+
+        # Số tiền
+        ws.cell(
+            row=current_row,
+            column=6,
+            value=item[1],
+        )
+
+        # Cột 7, 8 để trống
+        ws.cell(
+            row=current_row,
+            column=7,
+            value="",
+        )
+
+        ws.cell(
+            row=current_row,
+            column=8,
+            value="",
+        )
+
+        for column_index in range(
+            1,
+            9,
+        ):
+            cell = ws.cell(
+                row=current_row,
+                column=column_index,
+            )
+
+            cell.border = thin_border
+            cell.font = Font(
+                bold=True,
+                size=12,
+            )
+
+            if column_index == 1:
+                cell.alignment = center
+
+            elif column_index == 6:
+                cell.alignment = right
+                cell.number_format = (
+                    '#,##0 "đ"'
+                )
+
+            else:
+                cell.alignment = left
+
+        if item[0] == "Còn lại":
+            for column_index in range(
+                1,
+                9,
+            ):
+                ws.cell(
+                    row=current_row,
+                    column=column_index,
+                ).fill = PatternFill(
+                    "solid",
+                    fgColor="DBEAFE",
+                )
+
+        current_row += 1
+
+    # =========================================
+    # ĐỘ RỘNG CỘT
+    # =========================================
+    widths = {
+        "A": 8,
+        "B": 21,
+        "C": 32,
+        "D": 16,
+        "E": 12,
+        "F": 18,
+        "G": 34,
+        "H": 14,
+    }
+
+    for column_name, width in widths.items():
+        ws.column_dimensions[
+            column_name
+        ].width = width
+
+    ws.freeze_panes = "A5"
+    ws.sheet_view.showGridLines = False
+
+    ws.page_setup.orientation = (
+        "landscape"
+    )
+
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
+    ws.print_title_rows = "1:4"
+
+    try:
+        wb.calculation.fullCalcOnLoad = True
+        wb.calculation.forceFullCalc = True
+        wb.calculation.calcMode = "auto"
+    except Exception:
+        pass
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = (
+        f"bao_cao_thu_chi_"
+        f"{year}_{month:02d}.xlsx"
+    )
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+    )
 
 if __name__ == '__main__':
     app.run(

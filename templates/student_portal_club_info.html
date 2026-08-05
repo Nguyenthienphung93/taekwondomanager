@@ -2,6 +2,11 @@
 {% set active_page = 'club_info' %}
 {% block title %}Thông tin CLB{% endblock %}
 
+{% macro name_initial(full_name, fallback='?') -%}
+    {%- set parts = (full_name or '').strip().split() -%}
+    {{- ((parts[-1][0]) if parts else fallback) | upper -}}
+{%- endmacro %}
+
 {% block extra_css %}
 <style>
 .club-info-wrap{display:grid;gap:16px;}
@@ -171,7 +176,7 @@
                             {% if head.photo_url %}
                                 <img class="coach-chief-photo" src="{{ head.photo_url }}" alt="{{ head.name or 'HLV Trưởng' }}">
                             {% else %}
-                                <div class="coach-chief-placeholder">{{ (head.name or 'NTP')[:3] }}</div>
+                                <div class="coach-chief-placeholder">{{ name_initial(head.name, 'P') }}</div>
                             {% endif %}
                         </div>
                         <div>
@@ -196,7 +201,7 @@
                         <div class="coach-person-list">
                             {% for c in coaches_246 %}
                             <div class="coach-person-card"><div class="coach-person-top">
-                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
+                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ name_initial(c.name, 'H') }}</div>{% endif %}
                                 <div>
                                     <h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4>
                                     <p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p>
@@ -216,7 +221,7 @@
                         <div class="coach-person-list">
                             {% for c in coaches_357 %}
                             <div class="coach-person-card"><div class="coach-person-top">
-                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
+                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ name_initial(c.name, 'H') }}</div>{% endif %}
                                 <div>
                                     <h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4>
                                     <p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p>
@@ -236,7 +241,7 @@
                         <div class="coach-person-list">
                             {% for c in coaches_weekend %}
                             <div class="coach-person-card"><div class="coach-person-top">
-                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ (c.name or 'HLV')[:3] }}</div>{% endif %}
+                                {% if c.photo_url %}<img class="coach-person-photo" src="{{ c.photo_url }}" alt="{{ c.name }}">{% else %}<div class="coach-person-placeholder">{{ name_initial(c.name, 'H') }}</div>{% endif %}
                                 <div>
                                     <h4 class="coach-person-name">{{ c.name or 'Đang cập nhật' }}</h4>
                                     <p class="coach-meta"><b>Chức vụ:</b> {{ c.role or 'Đang cập nhật' }}</p>
@@ -268,7 +273,7 @@
         <div class="club-accordion-body">
             <div class="registrar-card">
                 <div class="registrar-layout">
-                    <div>{% if registrar.photo_url %}<img class="registrar-photo" src="{{ registrar.photo_url }}" alt="{{ registrar.name or 'Người ghi danh' }}">{% else %}<div class="registrar-placeholder">{{ (registrar.name or 'GD')[:2] }}</div>{% endif %}</div>
+                    <div>{% if registrar.photo_url %}<img class="registrar-photo" src="{{ registrar.photo_url }}" alt="{{ registrar.name or 'Người ghi danh' }}">{% else %}<div class="registrar-placeholder">{{ name_initial(registrar.name, 'G') }}</div>{% endif %}</div>
                     <div><div class="registrar-badge"><i class="fa-solid fa-star"></i>{{ registrar.role or 'Người ghi danh' }}</div><h3 class="registrar-name">{{ registrar.name or 'Đang cập nhật' }}</h3><p class="registrar-desc">{{ registrar.description or 'Phụ trách tư vấn, tiếp nhận thông tin đăng ký và hỗ trợ phụ huynh, võ sinh trong quá trình ghi danh tại CLB.' }}</p></div>
                     <div class="registrar-contact-box"><h4 class="registrar-contact-title">Số điện thoại liên hệ</h4><div class="registrar-phone"><i class="fa-solid fa-phone-volume"></i><span>{{ registrar.phone or 'Đang cập nhật' }}</span></div></div>
                 </div>

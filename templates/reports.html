@@ -1,0 +1,3226 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.report-page{
+    max-width:1600px;
+    margin:0 auto;
+    padding:22px;
+}
+
+.report-head h1{
+    margin:0;
+    color:#0f2a4a;
+    font-size:28px;
+    font-weight:950;
+}
+
+.report-head p{
+    margin:6px 0 18px;
+    color:#64748b;
+    font-weight:700;
+}
+
+.report-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    border-bottom:1px solid #dbe3ee;
+}
+
+.report-tab-link{
+    padding:12px 18px;
+    color:#64748b;
+    border-bottom:3px solid transparent;
+    font-weight:900;
+    text-decoration:none;
+}
+
+.report-tab-link.active{
+    color:#1d4ed8;
+    border-bottom-color:#1d4ed8;
+}
+
+.report-card{
+    overflow:hidden;
+    background:#fff;
+    border:1px solid #dbe3ee;
+    border-radius:18px;
+    box-shadow:0 10px 28px rgba(15,42,74,.08);
+}
+
+.report-toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:16px 18px;
+    background:#f8fafc;
+    border-bottom:1px solid #e2e8f0;
+}
+
+.report-filter{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+.report-filter label{
+    color:#475569;
+    font-size:13px;
+    font-weight:900;
+}
+
+.report-filter select{
+    height:42px;
+    min-width:108px;
+    padding:0 34px 0 12px;
+    color:#0f172a;
+    background:#fff;
+    border:1px solid #cbd5e1;
+    border-radius:11px;
+    font-weight:800;
+}
+
+.report-filter .class-select{
+    min-width:190px;
+}
+
+.btn-report{
+    height:42px;
+    padding:0 16px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    border:0;
+    border-radius:11px;
+    color:#fff;
+    font-weight:900;
+    text-decoration:none;
+    cursor:pointer;
+}
+
+.btn-view{background:#1d4ed8}
+.btn-excel{background:#15803d}
+
+.summary-strip{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:14px 18px;
+}
+
+.summary-box{
+    min-width:160px;
+    padding:10px 14px;
+    background:#eff6ff;
+    border:1px solid #bfdbfe;
+    border-radius:12px;
+}
+
+.summary-box span{
+    display:block;
+    color:#64748b;
+    font-size:12px;
+    font-weight:800;
+}
+
+.summary-box b{
+    display:block;
+    margin-top:3px;
+    color:#0f2a4a;
+    font-size:20px;
+}
+
+/* =========================
+   CHẤM CÔNG
+========================= */
+.table-wrap{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:visible;
+    padding:0 18px 18px;
+    scrollbar-gutter:stable;
+    -webkit-overflow-scrolling:touch;
+}
+
+.table-wrap::-webkit-scrollbar{
+    height:12px;
+}
+
+.table-wrap::-webkit-scrollbar-track{
+    background:#e2e8f0;
+    border-radius:999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb{
+    background:#94a3b8;
+    border:2px solid #e2e8f0;
+    border-radius:999px;
+}
+
+.attendance-table{
+    width:max-content;
+    min-width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    table-layout:fixed;
+    font-size:13px;
+}
+
+.attendance-table th,
+.attendance-table td{
+    height:52px;
+    padding:8px 7px;
+    text-align:center;
+    background:#fff;
+    border-right:1px solid #dbe3ee;
+    border-bottom:1px solid #dbe3ee;
+    box-sizing:border-box;
+}
+
+.attendance-table thead th{
+    position:sticky;
+    top:0;
+    z-index:2;
+    color:#fff;
+    background:#0f2a4a;
+    font-weight:900;
+}
+
+.attendance-table tr:first-child th{
+    border-top:1px solid #dbe3ee;
+}
+
+.attendance-table th:first-child,
+.attendance-table td:first-child{
+    border-left:1px solid #dbe3ee;
+}
+
+.attendance-table .coach-col{
+    position:sticky;
+    left:0;
+    z-index:3;
+    width:210px;
+    min-width:210px;
+    max-width:210px;
+    padding:9px 10px;
+    text-align:left;
+    color:#0f172a;
+    background:#fff;
+    box-shadow:3px 0 8px rgba(15,23,42,.06);
+}
+
+.attendance-table thead .coach-col{
+    color:#fff;
+    background:#0f2a4a;
+    z-index:5;
+}
+
+.coach-full-name{
+    display:block;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    line-height:1.25;
+    font-size:13px;
+    font-weight:950;
+}
+
+.coach-role{
+    display:block;
+    margin-top:3px;
+    color:#64748b;
+    line-height:1.2;
+    font-size:10px;
+    font-weight:800;
+}
+
+.coach-schedule{
+    display:inline-block;
+    margin-top:4px;
+    padding:2px 6px;
+    border-radius:999px;
+    color:#1d4ed8;
+    background:#dbeafe;
+    font-size:9px;
+    font-weight:900;
+}
+
+.day-head,
+.attendance-table td.attendance-cell,
+.attendance-table td.not-applicable{
+    width:76px;
+    min-width:76px;
+    max-width:76px;
+}
+
+.day-head{
+    white-space:nowrap;
+}
+
+.day-head small{
+    display:block;
+    margin-top:4px;
+    color:#facc15;
+    font-size:10px;
+    white-space:nowrap;
+}
+
+.total-head,
+.total-cell{
+    width:86px;
+    min-width:86px;
+    max-width:86px;
+}
+
+.attendance-table thead th.weekend-column{
+    background:#475569;
+}
+
+.attendance-table thead th.weekend-column small{
+    color:#fef3c7;
+}
+
+.attendance-table tbody td.weekend-column{
+    background:#f1f5f9;
+}
+
+.attendance-table tbody td.weekend-column.saved-cell{
+    background:#e2e8f0!important;
+}
+
+.attendance-table tbody td.weekend-column.not-applicable{
+    background:#eef2f7!important;
+    color:#94a3b8;
+}
+
+.attendance-check{
+    width:22px;
+    height:22px;
+    accent-color:#16a34a;
+    cursor:pointer;
+}
+
+.saved-cell{
+    background:#f0fdf4!important;
+}
+
+.not-applicable{
+    color:#cbd5e1;
+    background:#f8fafc!important;
+    font-weight:900;
+}
+
+.save-state{
+    min-width:max-content;
+    margin-top:10px;
+    color:#64748b;
+    font-size:12px;
+    font-weight:800;
+}
+
+/* =========================
+   THU CHI
+========================= */
+.finance-toolbar{
+    padding:16px 18px;
+}
+
+.finance-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:18px;
+    padding:0 18px 18px;
+}
+
+.finance-panel{
+    overflow:hidden;
+    border:1px solid #dbe3ee;
+    border-radius:16px;
+    background:#fff;
+}
+
+.finance-panel-total{
+    grid-column:auto;
+}
+
+.finance-panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    color:#fff;
+}
+
+.finance-panel-head.income{
+    background:linear-gradient(135deg,#15803d,#16a34a);
+}
+
+.finance-panel-head.expense{
+    background:linear-gradient(135deg,#b91c1c,#dc2626);
+}
+
+.finance-panel-head.total{
+    background:linear-gradient(135deg,#0f2a4a,#1d4ed8);
+}
+
+.finance-panel-head h3{
+    margin:0;
+    font-size:18px;
+    font-weight:950;
+}
+
+.finance-add-btn{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:12px;
+    color:#0f172a;
+    background:#fff;
+    font-size:22px;
+    font-weight:950;
+    cursor:pointer;
+}
+
+.finance-table-wrap{
+    overflow-x:auto;
+}
+
+.finance-table{
+    width:100%;
+    min-width:950px;
+    border-collapse:collapse;
+    font-size:12px;
+}
+
+.finance-table th,
+.finance-table td{
+    padding:10px;
+    border-bottom:1px solid #e2e8f0;
+    vertical-align:middle;
+}
+
+.finance-table th{
+    color:#334155;
+    background:#f8fafc;
+    text-align:center;
+    font-weight:900;
+}
+
+.finance-table td{
+    color:#0f172a;
+}
+
+.finance-table td.money{
+    text-align:right;
+    white-space:nowrap;
+    font-weight:850;
+}
+
+.finance-table td.center{
+    text-align:center;
+}
+
+.finance-table th:first-child,
+.finance-table td.finance-stt{
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+    text-align:center;
+    white-space:nowrap;
+    font-weight:900;
+}
+
+.finance-note{
+    max-width:220px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+}
+
+.invoice-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 7px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:900;
+}
+
+.invoice-yes{
+    color:#166534;
+    background:#dcfce7;
+}
+
+.invoice-no{
+    color:#64748b;
+    background:#f1f5f9;
+}
+
+.finance-actions{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    white-space:nowrap;
+}
+
+.finance-edit,
+.finance-delete{
+    width:32px;
+    height:32px;
+    border:0;
+    border-radius:9px;
+    color:#fff;
+    cursor:pointer;
+}
+
+.finance-edit{
+    background:#2563eb;
+}
+
+.finance-delete{
+    background:#dc2626;
+}
+
+.finance-edit:hover,
+.finance-delete:hover{
+    filter:brightness(1.05);
+    transform:translateY(-1px);
+}
+
+.finance-panel-total-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    background:#f8fafc;
+    border-top:1px solid #e2e8f0;
+}
+
+.finance-panel-total-line span{
+    color:#475569;
+    font-weight:900;
+}
+
+.finance-panel-total-line b{
+    color:#0f172a;
+    font-size:20px;
+}
+
+.total-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    padding:18px;
+}
+
+.total-summary-card{
+    padding:18px;
+    border:1px solid #cbd5e1;
+    border-radius:14px;
+    background:#f8fafc;
+}
+
+.total-summary-card span{
+    display:block;
+    color:#64748b;
+    font-size:12px;
+    font-weight:900;
+}
+
+.total-summary-card b{
+    display:block;
+    margin-top:7px;
+    color:#0f2a4a;
+    font-size:26px;
+}
+
+.total-summary-card.remaining{
+    background:#eff6ff;
+    border-color:#93c5fd;
+}
+
+.finance-empty{
+    padding:24px;
+    color:#64748b;
+    text-align:center;
+    font-weight:800;
+}
+
+
+/* =========================
+   THI CẤP - THU CHI
+========================= */
+.exam-finance-toolbar{
+    padding:16px 18px;
+}
+
+.exam-finance-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:18px;
+    padding:0 18px 18px;
+}
+
+.exam-finance-panel{
+    overflow:hidden;
+    border:1px solid #dbe3ee;
+    border-radius:16px;
+    background:#fff;
+}
+
+.exam-finance-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    color:#fff;
+}
+
+.exam-finance-head.income{
+    background:linear-gradient(135deg,#15803d,#16a34a);
+}
+
+.exam-finance-head.expense{
+    background:linear-gradient(135deg,#b91c1c,#dc2626);
+}
+
+.exam-finance-head.remaining{
+    background:linear-gradient(135deg,#0f2a4a,#1d4ed8);
+}
+
+.exam-finance-head h3{
+    margin:0;
+    font-size:18px;
+    font-weight:950;
+}
+
+.exam-finance-add{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:12px;
+    color:#0f172a;
+    background:#fff;
+    font-size:22px;
+    font-weight:950;
+    cursor:pointer;
+}
+
+.exam-finance-table-wrap{
+    width:100%;
+    overflow-x:auto;
+}
+
+.exam-finance-table{
+    width:100%;
+    min-width:1180px;
+    border-collapse:collapse;
+    table-layout:fixed;
+}
+
+.exam-finance-table th,
+.exam-finance-table td{
+    padding:10px 9px;
+    border-bottom:1px solid #e2e8f0;
+    vertical-align:middle;
+}
+
+.exam-finance-table th{
+    color:#334155;
+    background:#f8fafc;
+    text-align:center;
+    font-size:14px;
+    font-weight:900;
+}
+
+.exam-finance-table td{
+    color:#0f172a;
+    font-size:14px;
+}
+
+.exam-finance-table th:nth-child(1),
+.exam-finance-table td:nth-child(1){
+    width:56px;
+}
+
+.exam-finance-table th:nth-child(2),
+.exam-finance-table td:nth-child(2){
+    width:320px;
+}
+
+.exam-finance-table th:nth-child(3),
+.exam-finance-table td:nth-child(3){
+    width:145px;
+}
+
+.exam-finance-table th:nth-child(4),
+.exam-finance-table td:nth-child(4){
+    width:125px;
+}
+
+.exam-finance-table th:nth-child(5),
+.exam-finance-table td:nth-child(5){
+    width:155px;
+}
+
+.exam-finance-table th:nth-child(6),
+.exam-finance-table td:nth-child(6){
+    width:300px;
+}
+
+.exam-finance-table th:nth-child(7),
+.exam-finance-table td:nth-child(7){
+    width:58px;
+}
+
+.exam-finance-table .exam-stt{
+    width:56px;
+    text-align:center;
+    font-size:15px;
+    font-weight:950;
+}
+
+.exam-finance-table input{
+    width:100%;
+    height:42px;
+    padding:0 11px;
+    border:1px solid #cbd5e1;
+    border-radius:9px;
+    box-sizing:border-box;
+    font-size:14px;
+    font-weight:700;
+}
+
+.exam-finance-table .exam-content-input{
+    min-width:0;
+}
+
+.exam-finance-table .exam-note-input{
+    min-width:0;
+}
+
+.exam-money-cell{
+    min-width:0;
+}
+
+.exam-qty-cell{
+    min-width:0;
+}
+
+.exam-total-cell{
+    min-width:0;
+    text-align:right;
+    white-space:nowrap;
+    font-size:14px;
+    font-weight:950;
+}
+
+.exam-delete-row{
+    width:32px;
+    height:32px;
+    border:0;
+    border-radius:9px;
+    color:#fff;
+    background:#dc2626;
+    cursor:pointer;
+}
+
+.exam-finance-total-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    background:#f8fafc;
+    border-top:1px solid #e2e8f0;
+}
+
+.exam-finance-total-line span{
+    color:#475569;
+    font-weight:900;
+}
+
+.exam-finance-total-line b{
+    color:#0f172a;
+    font-size:21px;
+}
+
+.exam-remaining-box{
+    padding:22px;
+    text-align:center;
+    background:#eff6ff;
+}
+
+.exam-remaining-box span{
+    display:block;
+    color:#64748b;
+    font-weight:900;
+}
+
+.exam-remaining-box b{
+    display:block;
+    margin-top:8px;
+    color:#0f2a4a;
+    font-size:32px;
+}
+
+.exam-finance-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    padding:0 18px 18px;
+}
+
+.exam-finance-save{
+    height:44px;
+    padding:0 20px;
+    border:0;
+    border-radius:11px;
+    color:#fff;
+    background:#1d4ed8;
+    font-weight:950;
+    cursor:pointer;
+}
+
+.exam-link-hint{
+    padding:10px 16px;
+    color:#64748b;
+    background:#f8fafc;
+    border-top:1px solid #e2e8f0;
+    font-size:12px;
+    font-weight:800;
+}
+
+
+/* =========================
+   POPUP LIÊN KẾT THU CHI
+========================= */
+.exam-link-modal{
+    position:fixed;
+    inset:0;
+    z-index:100000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(15,23,42,.62);
+}
+
+.exam-link-modal.show{
+    display:flex;
+}
+
+.exam-link-card{
+    width:min(560px,100%);
+    overflow:hidden;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 30px 80px rgba(0,0,0,.30);
+}
+
+.exam-link-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:16px 18px;
+    border-bottom:1px solid #e2e8f0;
+}
+
+.exam-link-head h3{
+    margin:0;
+    color:#0f2a4a;
+    font-size:20px;
+    font-weight:950;
+}
+
+.exam-link-close{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:11px;
+    color:#fff;
+    background:#475569;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.exam-link-body{
+    padding:18px;
+}
+
+.exam-link-message{
+    margin:0 0 16px;
+    color:#475569;
+    line-height:1.55;
+    font-weight:750;
+}
+
+.exam-link-preview{
+    display:grid;
+    gap:10px;
+    margin-bottom:16px;
+    padding:14px;
+    border:1px solid #bfdbfe;
+    border-radius:12px;
+    background:#eff6ff;
+}
+
+.exam-link-preview-row{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+}
+
+.exam-link-preview-row span{
+    color:#64748b;
+    font-weight:850;
+}
+
+.exam-link-preview-row b{
+    color:#0f2a4a;
+    text-align:right;
+}
+
+.exam-link-fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+}
+
+.exam-link-field{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+
+.exam-link-field label{
+    color:#334155;
+    font-size:12px;
+    font-weight:900;
+}
+
+.exam-link-field select{
+    height:44px;
+    padding:0 12px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    color:#0f172a;
+    background:#fff;
+    font-weight:850;
+}
+
+.exam-link-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:0 18px 18px;
+}
+
+.exam-link-actions button{
+    min-height:44px;
+    padding:0 16px;
+    border:0;
+    border-radius:10px;
+    color:#fff;
+    font-weight:950;
+    cursor:pointer;
+}
+
+.exam-save-only{
+    background:#64748b;
+}
+
+.exam-save-link{
+    background:#1d4ed8;
+}
+
+@media(max-width:600px){
+    .exam-link-fields{
+        grid-template-columns:1fr;
+    }
+
+    .exam-link-actions button{
+        width:100%;
+    }
+}
+
+/* =========================
+   MODAL
+========================= */
+.finance-modal{
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(15,23,42,.58);
+}
+
+.finance-modal.show{
+    display:flex;
+}
+
+.finance-modal-card{
+    width:min(720px,100%);
+    max-height:92vh;
+    overflow:auto;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 30px 70px rgba(0,0,0,.28);
+}
+
+.finance-modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:16px 18px;
+    border-bottom:1px solid #e2e8f0;
+}
+
+.finance-modal-head h3{
+    margin:0;
+    color:#0f2a4a;
+    font-size:20px;
+}
+
+.finance-modal-close{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:11px;
+    color:#fff;
+    background:#475569;
+    font-size:19px;
+    cursor:pointer;
+}
+
+.finance-form{
+    padding:18px;
+}
+
+.finance-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+}
+
+.finance-form-group{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+
+.finance-form-group.full{
+    grid-column:1 / -1;
+}
+
+.finance-form-group label{
+    color:#334155;
+    font-size:12px;
+    font-weight:900;
+}
+
+.finance-form-group input,
+.finance-form-group textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    font:inherit;
+    box-sizing:border-box;
+}
+
+.finance-form-group textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+.finance-total-preview{
+    padding:12px;
+    border:1px solid #bfdbfe;
+    border-radius:10px;
+    color:#0f2a4a;
+    background:#eff6ff;
+    font-size:18px;
+    font-weight:950;
+}
+
+.finance-checkbox{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-height:44px;
+}
+
+.finance-checkbox input{
+    width:20px;
+    height:20px;
+}
+
+.finance-checkbox-stack{
+    display:flex;
+    align-items:center;
+    gap:24px;
+    flex-wrap:wrap;
+}
+
+.finance-form-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:18px;
+}
+
+.finance-form-actions button{
+    height:42px;
+    padding:0 18px;
+    border:0;
+    border-radius:10px;
+    color:#fff;
+    font-weight:900;
+    cursor:pointer;
+}
+
+.btn-cancel{
+    background:#64748b;
+}
+
+.btn-save{
+    background:#1d4ed8;
+}
+
+.empty-state{
+    padding:38px;
+    color:#64748b;
+    text-align:center;
+    font-weight:800;
+}
+
+@media(max-width:900px){
+    .finance-grid{
+        grid-template-columns:1fr;
+    }
+
+    .finance-panel-total{
+        grid-column:auto;
+    }
+}
+
+@media(max-width:760px){
+    .report-page{
+        padding:12px;
+    }
+
+    .attendance-table .coach-col{
+        width:185px;
+        min-width:185px;
+        max-width:185px;
+    }
+
+    .day-head,
+    .attendance-table td.attendance-cell,
+    .attendance-table td.not-applicable{
+        width:70px;
+        min-width:70px;
+        max-width:70px;
+    }
+
+    .finance-form-grid,
+    .total-summary-grid{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+
+{% set active_tab = request.args.get('tab', 'attendance') %}
+{% set current_month = request.args.get('month', month) %}
+{% set current_year_value = request.args.get('year', year) %}
+
+<div class="report-page">
+    <div class="report-head">
+        <h1>Báo cáo</h1>
+        <p>Tổng hợp và xuất dữ liệu quản lý của câu lạc bộ.</p>
+    </div>
+
+    <div class="report-tabs">
+        <a class="report-tab-link {% if active_tab == 'attendance' %}active{% endif %}"
+           href="{{ url_for(
+                'reports',
+                tab='attendance',
+                class_group=class_group,
+                month=month,
+                year=year
+           ) }}">
+            Chấm công
+        </a>
+
+        <a class="report-tab-link {% if active_tab == 'finance' %}active{% endif %}"
+           href="{{ url_for(
+                'reports',
+                tab='finance',
+                month=month,
+                year=year
+           ) }}">
+            Thu chi
+        </a>
+
+        <a class="report-tab-link {% if active_tab == 'exam_finance' %}active{% endif %}"
+           href="{{ url_for(
+                'reports',
+                tab='exam_finance',
+                quarter=exam_quarter,
+                year=year
+           ) }}">
+            Thi cấp
+        </a>
+    </div>
+
+    {% if active_tab == 'exam_finance' %}
+    <section class="report-card">
+        <form class="report-toolbar exam-finance-toolbar"
+              method="get"
+              action="{{ url_for('reports') }}">
+
+            <input type="hidden"
+                   name="tab"
+                   value="exam_finance">
+
+            <div class="report-filter">
+                <label for="examQuarter">Kỳ thi</label>
+
+                <select id="examQuarter"
+                        name="quarter">
+                    {% for q in ['Q1','Q2','Q3','Q4'] %}
+                    <option value="{{ q }}"
+                            {% if q == exam_quarter %}selected{% endif %}>
+                        {{ q }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="examFinanceYear">Năm</label>
+
+                <select id="examFinanceYear"
+                        name="year">
+                    {% for y in range(current_year - 2, current_year + 3) %}
+                    <option value="{{ y }}"
+                            {% if y == year %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <button class="btn-report btn-view"
+                        type="submit">
+                    <i class="fa-solid fa-filter"></i>
+                    Xem kỳ thi
+                </button>
+            </div>
+        </form>
+
+        <form id="examFinanceForm"
+              method="post"
+              action="{{ url_for('reports_exam_finance_save') }}">
+
+            <input type="hidden"
+                   name="year"
+                   value="{{ year }}">
+
+            <input type="hidden"
+                   name="quarter"
+                   value="{{ exam_quarter }}">
+
+            <input id="examLinkToFinance"
+                   type="hidden"
+                   name="link_to_finance"
+                   value="0">
+
+            <input id="examLinkMonth"
+                   type="hidden"
+                   name="link_month"
+                   value="">
+
+            <input id="examLinkYear"
+                   type="hidden"
+                   name="link_year"
+                   value="">
+
+            <div class="exam-finance-grid">
+                <section class="exam-finance-panel">
+                    <div class="exam-finance-head income">
+                        <h3>Khung thu</h3>
+
+                        <button type="button"
+                                class="exam-finance-add"
+                                onclick="addExamFinanceRow('income')"
+                                title="Thêm nội dung thu">
+                            +
+                        </button>
+                    </div>
+
+                    <div class="exam-finance-table-wrap">
+                        <table class="exam-finance-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Nội dung</th>
+                                    <th>Đơn giá</th>
+                                    <th>Số lượng</th>
+                                    <th>Thành tiền</th>
+                                    <th>Ghi chú</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="examIncomeBody">
+                                {% for row in exam_finance_data.income_rows %}
+                                <tr class="exam-finance-row"
+                                    data-type="income"
+                                    data-linked="{{ '1' if row.linked_to_income else '0' }}">
+                                    <td class="exam-stt">
+                                        {{ loop.index }}
+                                    </td>
+
+                                    <td>
+                                        <input type="hidden"
+                                               name="income_linked"
+                                               value="{{ '1' if row.linked_to_income else '0' }}">
+
+                                        <input class="exam-content-input"
+                                               type="text"
+                                               name="income_content"
+                                               value="{{ row.content|e }}"
+                                               required>
+                                    </td>
+
+                                    <td class="exam-money-cell">
+                                        <input class="exam-money-input"
+                                               type="text"
+                                               name="income_unit_price"
+                                               inputmode="numeric"
+                                               value="{{ row.unit_price|int }}"
+                                               required>
+                                    </td>
+
+                                    <td class="exam-qty-cell">
+                                        <input class="exam-qty-input exam-main-income-qty"
+                                               type="number"
+                                               name="income_quantity"
+                                               min="0"
+                                               step="1"
+                                               inputmode="numeric"
+                                               value="{{ row.quantity|int if row.quantity == row.quantity|int else row.quantity }}"
+                                               required>
+                                    </td>
+
+                                    <td class="exam-total-cell">
+                                        <span class="exam-row-total">
+                                            {{ row.total_amount|money }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <input class="exam-note-input"
+                                               type="text"
+                                               name="income_note"
+                                               value="{{ (row.note or '')|e }}">
+                                    </td>
+
+                                    <td class="center">
+                                        <button type="button"
+                                                class="exam-delete-row"
+                                                onclick="removeExamFinanceRow(this)"
+                                                title="Xóa dòng">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="exam-finance-total-line">
+                        <span>Tổng cộng thu</span>
+                        <b id="examIncomeTotal">
+                            {{ exam_finance_data.total_income|money }}
+                        </b>
+                    </div>
+                </section>
+
+                <section class="exam-finance-panel">
+                    <div class="exam-finance-head expense">
+                        <h3>Khung chi</h3>
+
+                        <button type="button"
+                                class="exam-finance-add"
+                                onclick="addExamFinanceRow('expense')"
+                                title="Thêm nội dung chi">
+                            +
+                        </button>
+                    </div>
+
+                    <div class="exam-finance-table-wrap">
+                        <table class="exam-finance-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Nội dung</th>
+                                    <th>Đơn giá</th>
+                                    <th>Số lượng</th>
+                                    <th>Thành tiền</th>
+                                    <th>Ghi chú</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="examExpenseBody">
+                                {% for row in exam_finance_data.expense_rows %}
+                                <tr class="exam-finance-row"
+                                    data-type="expense"
+                                    data-linked="{{ '1' if row.linked_to_income else '0' }}">
+                                    <td class="exam-stt">
+                                        {{ loop.index }}
+                                    </td>
+
+                                    <td>
+                                        <input type="hidden"
+                                               name="expense_linked"
+                                               value="{{ '1' if row.linked_to_income else '0' }}">
+
+                                        <input class="exam-content-input"
+                                               type="text"
+                                               name="expense_content"
+                                               value="{{ row.content|e }}"
+                                               required>
+                                    </td>
+
+                                    <td class="exam-money-cell">
+                                        <input class="exam-money-input"
+                                               type="text"
+                                               name="expense_unit_price"
+                                               inputmode="numeric"
+                                               value="{{ row.unit_price|int }}"
+                                               required>
+                                    </td>
+
+                                    <td class="exam-qty-cell">
+                                        <input class="exam-qty-input"
+                                               type="number"
+                                               name="expense_quantity"
+                                               min="0"
+                                               step="1"
+                                               inputmode="numeric"
+                                               value="{{ row.quantity|int if row.quantity == row.quantity|int else row.quantity }}"
+                                               {% if row.linked_to_income %}
+                                               data-follow-income="1"
+                                               {% endif %}
+                                               required>
+                                    </td>
+
+                                    <td class="exam-total-cell">
+                                        <span class="exam-row-total">
+                                            {{ row.total_amount|money }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <input class="exam-note-input"
+                                               type="text"
+                                               name="expense_note"
+                                               value="{{ (row.note or '')|e }}">
+                                    </td>
+
+                                    <td class="center">
+                                        <button type="button"
+                                                class="exam-delete-row"
+                                                onclick="removeExamFinanceRow(this)"
+                                                title="Xóa dòng">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="exam-link-hint">
+                        Các dòng có số lượng theo số võ sinh sẽ tự đổi theo
+                        số lượng của dòng “Phí thi cấp đai”. Ken vẫn có thể
+                        bấm vào ô số lượng để sửa riêng khi cần.
+                    </div>
+
+                    <div class="exam-finance-total-line">
+                        <span>Tổng cộng chi</span>
+                        <b id="examExpenseTotal">
+                            {{ exam_finance_data.total_expense|money }}
+                        </b>
+                    </div>
+                </section>
+
+                <section class="exam-finance-panel">
+                    <div class="exam-finance-head remaining">
+                        <h3>Khung còn lại</h3>
+                    </div>
+
+                    <div class="exam-remaining-box">
+                        <span>Tổng thu − Tổng chi</span>
+                        <b id="examRemainingTotal">
+                            {{ exam_finance_data.remaining|money }}
+                        </b>
+                    </div>
+                </section>
+            </div>
+
+            <div class="exam-finance-actions">
+                <button class="exam-finance-save"
+                        type="button"
+                        onclick="openExamLinkModal()">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Lưu dữ liệu kỳ thi
+                </button>
+            </div>
+        </form>
+    </section>
+
+    {% elif active_tab == 'finance' %}
+    <section class="report-card">
+        <form class="report-toolbar finance-toolbar"
+              method="get"
+              action="{{ url_for('reports') }}">
+
+            <input type="hidden"
+                   name="tab"
+                   value="finance">
+
+            <div class="report-filter">
+                <label for="financeMonth">Tháng</label>
+
+                <select id="financeMonth"
+                        name="month">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}"
+                            {% if m == month %}selected{% endif %}>
+                        Tháng {{ m }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="financeYear">Năm</label>
+
+                <select id="financeYear"
+                        name="year">
+                    {% for y in range(current_year - 2, current_year + 3) %}
+                    <option value="{{ y }}"
+                            {% if y == year %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <button class="btn-report btn-view"
+                        type="submit">
+                    <i class="fa-solid fa-filter"></i>
+                    Xem thu chi
+                </button>
+            </div>
+
+            <a class="btn-report btn-excel"
+               href="{{ url_for(
+                    'reports_finance_export',
+                    month=month,
+                    year=year
+               ) }}">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </a>
+        </form>
+
+        <div class="finance-grid">
+            <section class="finance-panel">
+                <div class="finance-panel-head income">
+                    <h3>Khung thu</h3>
+
+                    <button type="button"
+                            class="finance-add-btn"
+                            onclick="openFinanceModal('income')"
+                            title="Thêm khoản thu">
+                        +
+                    </button>
+                </div>
+
+                {% if finance_data.income_rows %}
+                <div class="finance-table-wrap">
+                    <table class="finance-table">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Ngày giờ</th>
+                                <th>Nội dung thu</th>
+                                <th>Đơn giá</th>
+                                <th>Số lượng</th>
+                                <th>Thành tiền</th>
+                                <th>Ghi chú</th>
+                                <th>Hóa đơn</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for row in finance_data.income_rows %}
+                            <tr>
+                                <td class="center finance-stt">
+                                    {{ loop.index }}
+                                </td>
+
+                                <td class="center">
+                                    {{ row.display_datetime }}
+                                </td>
+
+                                <td>{{ row.content }}</td>
+
+                                <td class="money">
+                                    {{ row.unit_price|money }}
+                                </td>
+
+                                <td class="center">
+                                    {{ row.quantity|int if row.quantity == row.quantity|int else row.quantity }}
+                                </td>
+
+                                <td class="money">
+                                    {{ row.total_amount|money }}
+                                </td>
+
+                                <td class="finance-note">
+                                    {{ row.note or '—' }}
+                                </td>
+
+                                <td class="center">
+                                    {% if row.has_invoice %}
+                                    <span class="invoice-badge invoice-yes">
+                                        <i class="fa-solid fa-check"></i>
+                                        Có
+                                    </span>
+                                    {% else %}
+                                    <span class="invoice-badge invoice-no">
+                                        Không
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="center">
+                                    <div class="finance-actions">
+                                        <button
+                                            class="finance-edit"
+                                            type="button"
+                                            title="Sửa"
+                                            data-id="{{ row.id }}"
+                                            data-type="income"
+                                            data-datetime="{{ row.transaction_datetime|e }}"
+                                            data-content="{{ row.content|e }}"
+                                            data-unit-price="{{ row.unit_price }}"
+                                            data-quantity="{{ row.quantity }}"
+                                            data-note="{{ (row.note or '')|e }}"
+                                            data-has-invoice="{{ '1' if row.has_invoice else '0' }}"
+                                            data-is-club-expense="{{ '1' if row.is_club_expense else '0' }}"
+                                            onclick="openFinanceEditModal(this)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+
+                                        <form method="post"
+                                              action="{{ url_for(
+                                                    'reports_finance_delete',
+                                                    transaction_id=row.id
+                                              ) }}"
+                                              onsubmit="return confirm('Xóa khoản thu này?');">
+                                            <button class="finance-delete"
+                                                    type="submit"
+                                                    title="Xóa">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="finance-empty">
+                    Chưa có khoản thu trong tháng này.
+                </div>
+                {% endif %}
+
+                <div class="finance-panel-total-line">
+                    <span>Tổng cộng thu</span>
+                    <b>{{ finance_data.total_income|money }}</b>
+                </div>
+            </section>
+
+            <section class="finance-panel">
+                <div class="finance-panel-head expense">
+                    <h3>Khung chi</h3>
+
+                    <button type="button"
+                            class="finance-add-btn"
+                            onclick="openFinanceModal('expense')"
+                            title="Thêm khoản chi">
+                        +
+                    </button>
+                </div>
+
+                {% if finance_data.expense_rows %}
+                <div class="finance-table-wrap">
+                    <table class="finance-table">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Ngày giờ</th>
+                                <th>Nội dung chi</th>
+                                <th>Đơn giá</th>
+                                <th>Số lượng</th>
+                                <th>Thành tiền</th>
+                                <th>Ghi chú</th>
+                                <th>Hóa đơn</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for row in finance_data.expense_rows %}
+                            <tr>
+                                <td class="center finance-stt">
+                                    {{ loop.index }}
+                                </td>
+
+                                <td class="center">
+                                    {{ row.display_datetime }}
+                                </td>
+
+                                <td>{{ row.content }}</td>
+
+                                <td class="money">
+                                    {{ row.unit_price|money }}
+                                </td>
+
+                                <td class="center">
+                                    {{ row.quantity|int if row.quantity == row.quantity|int else row.quantity }}
+                                </td>
+
+                                <td class="money">
+                                    {{ row.total_amount|money }}
+                                </td>
+
+                                <td class="finance-note">
+                                    {{ row.note or '—' }}
+                                </td>
+
+                                <td class="center">
+                                    {% if row.has_invoice %}
+                                    <span class="invoice-badge invoice-yes">
+                                        <i class="fa-solid fa-check"></i>
+                                        Có
+                                    </span>
+                                    {% else %}
+                                    <span class="invoice-badge invoice-no">
+                                        Không
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="center">
+                                    <div class="finance-actions">
+                                        <button
+                                            class="finance-edit"
+                                            type="button"
+                                            title="Sửa"
+                                            data-id="{{ row.id }}"
+                                            data-type="expense"
+                                            data-datetime="{{ row.transaction_datetime|e }}"
+                                            data-content="{{ row.content|e }}"
+                                            data-unit-price="{{ row.unit_price }}"
+                                            data-quantity="{{ row.quantity }}"
+                                            data-note="{{ (row.note or '')|e }}"
+                                            data-has-invoice="{{ '1' if row.has_invoice else '0' }}"
+                                            data-is-club-expense="{{ '1' if row.is_club_expense else '0' }}"
+                                            onclick="openFinanceEditModal(this)">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+
+                                        <form method="post"
+                                              action="{{ url_for(
+                                                    'reports_finance_delete',
+                                                    transaction_id=row.id
+                                              ) }}"
+                                              onsubmit="return confirm('Xóa khoản chi này?');">
+                                            <button class="finance-delete"
+                                                    type="submit"
+                                                    title="Xóa">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="finance-empty">
+                    Chưa có khoản chi trong tháng này.
+                </div>
+                {% endif %}
+
+                <div class="finance-panel-total-line">
+                    <span>Tổng cộng chi</span>
+                    <b>{{ finance_data.total_expense|money }}</b>
+                </div>
+            </section>
+
+            <section class="finance-panel finance-panel-total">
+                <div class="finance-panel-head total">
+                    <h3>Khung tổng</h3>
+                </div>
+
+                <div class="total-summary-grid">
+                    <div class="total-summary-card">
+                        <span>
+                            CLB đã chi
+                            <br>
+                            <small>
+                                Cộng các khoản Chi có chữ “CLB”
+                                trong phần ghi chú
+                            </small>
+                        </span>
+
+                        <b>{{ finance_data.club_expense|money }}</b>
+                    </div>
+
+                    <div class="total-summary-card remaining">
+                        <span>
+                            Còn lại
+                            <br>
+                            <small>Tổng thu − CLB đã chi</small>
+                        </span>
+
+                        <b>{{ finance_data.remaining|money }}</b>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    {% else %}
+    <section class="report-card">
+        <form class="report-toolbar"
+              method="get"
+              action="{{ url_for('reports') }}">
+
+            <input type="hidden"
+                   name="tab"
+                   value="attendance">
+
+            <div class="report-filter">
+                <label for="class_group">Lịch dạy</label>
+
+                <select id="class_group"
+                        name="class_group"
+                        class="class-select">
+                    {% for group_key, group_info in class_groups.items() %}
+                    <option value="{{ group_key }}"
+                            {% if group_key == class_group %}selected{% endif %}>
+                        {{ group_info.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="month">Tháng</label>
+
+                <select id="month" name="month">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}"
+                            {% if m == month %}selected{% endif %}>
+                        Tháng {{ m }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label for="year">Năm</label>
+
+                <select id="year" name="year">
+                    {% for y in range(current_year - 2, current_year + 3) %}
+                    <option value="{{ y }}"
+                            {% if y == year %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <button class="btn-report btn-view"
+                        type="submit">
+                    <i class="fa-solid fa-filter"></i>
+                    Xem báo cáo
+                </button>
+            </div>
+
+            <a class="btn-report btn-excel"
+               href="{{ url_for(
+                    'reports_attendance_export',
+                    month=month,
+                    year=year,
+                    class_group=class_group
+               ) }}">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </a>
+        </form>
+
+        <div class="summary-strip">
+            <div class="summary-box">
+                <span>Lịch đang xem</span>
+                <b>{{ class_title }}</b>
+            </div>
+
+            <div class="summary-box">
+                <span>Số HLV</span>
+                <b>{{ coaches|length }}</b>
+            </div>
+
+            <div class="summary-box">
+                <span>Số ngày đang hiển thị</span>
+                <b>{{ teaching_days|length }}</b>
+            </div>
+
+            <div class="summary-box">
+                <span>Tổng lượt có mặt</span>
+                <b id="checkedCount">{{ checked_count }}</b>
+            </div>
+        </div>
+
+        {% if coaches and teaching_days %}
+        <div class="table-wrap">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th class="coach-col">Huấn luyện viên</th>
+
+                        {% for day in teaching_days %}
+                        {% set is_weekend = day.weekday in [5, 6] %}
+
+                        <th class="day-head {% if is_weekend %}weekend-column{% endif %}">
+                            {{ '%02d'|format(day.day) }}/{{ '%02d'|format(month) }}
+                            <small>{{ day.weekday_label }}</small>
+                        </th>
+                        {% endfor %}
+
+                        <th class="total-head">Tổng buổi</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for coach in coaches %}
+                    {% set coach_total_key = coach.name ~ '|' ~ coach.class_group %}
+
+                    <tr data-coach="{{ coach.name }}"
+                        data-class-group="{{ coach.class_group }}">
+
+                        <td class="coach-col">
+                            <span class="coach-full-name">
+                                {{ coach.name }}
+                            </span>
+
+                            <span class="coach-role">
+                                {{ coach.role }}
+                            </span>
+
+                            {% if class_group == 'all' %}
+                            <span class="coach-schedule">
+                                {{ coach.class_title }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        {% for day in teaching_days %}
+                        {% set key = coach.name ~ '|' ~ coach.class_group ~ '|' ~ day.day %}
+                        {% set applicable = applicable_map.get(key, false) %}
+                        {% set present = attendance_map.get(key, false) %}
+                        {% set is_weekend = day.weekday in [5, 6] %}
+
+                        {% if applicable %}
+                        <td class="attendance-cell {% if present %}saved-cell{% endif %} {% if is_weekend %}weekend-column{% endif %}">
+                            <input
+                                class="attendance-check"
+                                type="checkbox"
+                                data-coach-name="{{ coach.name }}"
+                                data-coach-role="{{ coach.role }}"
+                                data-class-group="{{ coach.class_group }}"
+                                data-day="{{ day.day }}"
+                                {% if present %}checked{% endif %}
+                            >
+                        </td>
+                        {% else %}
+                        <td class="not-applicable {% if is_weekend %}weekend-column{% endif %}">
+                            —
+                        </td>
+                        {% endif %}
+                        {% endfor %}
+
+                        <td class="total-cell">
+                            <b class="coach-total">
+                                {{ coach_totals.get(coach_total_key, 0) }}
+                            </b>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div id="saveState" class="save-state">
+                Chế độ Tất cả chỉ dùng để xem chung.
+                Dữ liệu vẫn được lưu riêng theo từng HLV,
+                lịch dạy và tháng.
+                Lớp cuối tuần gồm cả Thứ 7 và Chủ nhật.
+            </div>
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            Chưa có HLV phù hợp trong phần Setup.
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>
+
+
+<div id="examLinkModal"
+     class="exam-link-modal"
+     onclick="closeExamLinkModalByBackdrop(event)">
+
+    <div class="exam-link-card">
+        <div class="exam-link-head">
+            <h3>Lưu và liên kết Thu chi</h3>
+
+            <button type="button"
+                    class="exam-link-close"
+                    onclick="closeExamLinkModal()">
+                ×
+            </button>
+        </div>
+
+        <div class="exam-link-body">
+            <p class="exam-link-message">
+                Ken muốn kết nối kết quả thu chi của kỳ thi
+                <b>{{ exam_quarter }}/{{ year }}</b>
+                vào tab Thu chi của tháng nào?
+            </p>
+
+            <div class="exam-link-preview">
+                <div class="exam-link-preview-row">
+                    <span>Dòng Thu sẽ tạo</span>
+                    <b>
+                        Thi cấp quý {{ exam_quarter }}/{{ year }}
+                    </b>
+                </div>
+
+                <div class="exam-link-preview-row">
+                    <span>Dòng Chi sẽ tạo</span>
+                    <b>
+                        Tổ chức kỳ thi cấp quý {{ exam_quarter }}/{{ year }}
+                    </b>
+                </div>
+
+                <div class="exam-link-preview-row">
+                    <span>Tổng Thu hiện tại</span>
+                    <b id="examLinkIncomePreview">
+                        {{ exam_finance_data.total_income|money }}
+                    </b>
+                </div>
+
+                <div class="exam-link-preview-row">
+                    <span>Tổng Chi hiện tại</span>
+                    <b id="examLinkExpensePreview">
+                        {{ exam_finance_data.total_expense|money }}
+                    </b>
+                </div>
+            </div>
+
+            <div class="exam-link-fields">
+                <div class="exam-link-field">
+                    <label for="examLinkMonthSelect">
+                        Tháng Thu chi
+                    </label>
+
+                    <select id="examLinkMonthSelect">
+                        {% for m in range(1,13) %}
+                        <option value="{{ m }}"
+                                {% if m == month %}selected{% endif %}>
+                            Tháng {{ m }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="exam-link-field">
+                    <label for="examLinkYearSelect">
+                        Năm Thu chi
+                    </label>
+
+                    <select id="examLinkYearSelect">
+                        {% for y in range(current_year - 2, current_year + 3) %}
+                        <option value="{{ y }}"
+                                {% if y == year %}selected{% endif %}>
+                            {{ y }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="exam-link-actions">
+            <button type="button"
+                    class="exam-save-only"
+                    onclick="submitExamFinance(false)">
+                Chỉ lưu kỳ thi
+            </button>
+
+            <button type="button"
+                    class="exam-save-link"
+                    onclick="submitExamFinance(true)">
+                Lưu và kết nối Thu chi
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="financeModal"
+     class="finance-modal"
+     onclick="closeFinanceModalByBackdrop(event)">
+
+    <div class="finance-modal-card">
+        <div class="finance-modal-head">
+            <h3 id="financeModalTitle">
+                Thêm khoản thu
+            </h3>
+
+            <button type="button"
+                    class="finance-modal-close"
+                    onclick="closeFinanceModal()">
+                ×
+            </button>
+        </div>
+
+        <form id="financeForm"
+              class="finance-form"
+              method="post"
+              action="{{ url_for('reports_finance_add') }}">
+
+            <input id="financeTransactionType"
+                   type="hidden"
+                   name="transaction_type"
+                   value="income">
+
+            <div class="finance-form-grid">
+                <div class="finance-form-group">
+                    <label>Ngày giờ</label>
+
+                    <input id="financeDateTime"
+                           type="datetime-local"
+                           name="transaction_datetime"
+                           required>
+                </div>
+
+                <div class="finance-form-group">
+                    <label id="financeContentLabel">
+                        Nội dung thu
+                    </label>
+
+                    <input id="financeContent"
+                           type="text"
+                           name="content"
+                           required
+                           placeholder="Nhập nội dung">
+                </div>
+
+                <div class="finance-form-group">
+                    <label>Đơn giá</label>
+
+                    <input id="financeUnitPrice"
+                           type="text"
+                           name="unit_price"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           placeholder="Nhập đơn giá"
+                           required>
+                </div>
+
+                <div class="finance-form-group">
+                    <label>Số lượng</label>
+
+                    <input id="financeQuantity"
+                           type="number"
+                           name="quantity"
+                           min="0.01"
+                           step="0.01"
+                           placeholder="Nhập số lượng"
+                           required>
+                </div>
+
+                <div class="finance-form-group full">
+                    <label>Thành tiền</label>
+
+                    <div id="financeTotalPreview"
+                         class="finance-total-preview">
+                        0đ
+                    </div>
+                </div>
+
+                <div class="finance-form-group full">
+                    <label>Ghi chú</label>
+
+                    <textarea id="financeNote"
+                              name="note"
+                              placeholder="Ví dụ: CLB thanh toán..."></textarea>
+                </div>
+
+                <div class="finance-form-group full">
+                    <div class="finance-checkbox-stack">
+                        <label class="finance-checkbox">
+                            <input id="financeHasInvoice"
+                                   type="checkbox"
+                                   name="has_invoice">
+                            <span>Có hóa đơn</span>
+                        </label>
+
+                        <label id="financeClubExpenseWrap"
+                               class="finance-checkbox">
+                            <input id="financeIsClubExpense"
+                                   type="checkbox"
+                                   name="is_club_expense">
+                            <span>CLB thanh toán</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="finance-form-actions">
+                <button class="btn-cancel"
+                        type="button"
+                        onclick="closeFinanceModal()">
+                    Hủy
+                </button>
+
+                <button id="financeSubmitButton"
+                        class="btn-save"
+                        type="submit">
+                    Lưu thông tin
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function(){
+    const checks = Array.from(
+        document.querySelectorAll(
+            ".attendance-check"
+        )
+    );
+
+    const stateEl = document.getElementById(
+        "saveState"
+    );
+
+    const checkedCountEl = document.getElementById(
+        "checkedCount"
+    );
+
+    function refreshTotals(){
+        let allChecked = 0;
+
+        document
+            .querySelectorAll(
+                "tbody tr[data-coach]"
+            )
+            .forEach(function(row){
+                const count = row.querySelectorAll(
+                    ".attendance-check:checked"
+                ).length;
+
+                const total = row.querySelector(
+                    ".coach-total"
+                );
+
+                if(total){
+                    total.textContent = count;
+                }
+
+                allChecked += count;
+            });
+
+        if(checkedCountEl){
+            checkedCountEl.textContent = allChecked;
+        }
+    }
+
+    checks.forEach(function(input){
+        input.addEventListener(
+            "change",
+            async function(){
+                const cell = input.closest(
+                    ".attendance-cell"
+                );
+
+                const oldValue = !input.checked;
+
+                input.disabled = true;
+
+                if(stateEl){
+                    stateEl.textContent =
+                        "Đang lưu chấm công...";
+                }
+
+                try{
+                    const response = await fetch(
+                        "{{ url_for('reports_attendance_save') }}",
+                        {
+                            method:"POST",
+                            headers:{
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body:JSON.stringify({
+                                coach_name:
+                                    input.dataset.coachName,
+
+                                coach_role:
+                                    input.dataset.coachRole,
+
+                                class_group:
+                                    input.dataset.classGroup,
+
+                                year:{{ year }},
+                                month:{{ month }},
+
+                                day:parseInt(
+                                    input.dataset.day,
+                                    10
+                                ),
+
+                                is_present:
+                                    input.checked
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if(!response.ok || !data.ok){
+                        throw new Error(
+                            data.message
+                            || "Không lưu được dữ liệu."
+                        );
+                    }
+
+                    cell.classList.toggle(
+                        "saved-cell",
+                        input.checked
+                    );
+
+                    refreshTotals();
+
+                    if(stateEl){
+                        stateEl.textContent =
+                            "Đã lưu lúc "
+                            + new Date().toLocaleTimeString(
+                                "vi-VN"
+                            );
+                    }
+
+                }catch(error){
+                    input.checked = oldValue;
+
+                    cell.classList.toggle(
+                        "saved-cell",
+                        input.checked
+                    );
+
+                    refreshTotals();
+
+                    if(stateEl){
+                        stateEl.textContent =
+                            "Lỗi: " + error.message;
+                    }
+
+                    alert(error.message);
+
+                }finally{
+                    input.disabled = false;
+                }
+            }
+        );
+    });
+})();
+
+
+function getLocalDateTimeValue(){
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const local = new Date(
+        now.getTime()
+        - offset * 60 * 1000
+    );
+
+    return local
+        .toISOString()
+        .slice(0,16);
+}
+
+
+function resetFinanceForm(){
+    const form = document.getElementById("financeForm");
+    const typeInput = document.getElementById("financeTransactionType");
+    const title = document.getElementById("financeModalTitle");
+    const contentLabel = document.getElementById("financeContentLabel");
+    const submitButton = document.getElementById("financeSubmitButton");
+
+    if(form){
+        form.reset();
+        form.action = "{{ url_for('reports_finance_add') }}";
+    }
+
+    if(typeInput){
+        typeInput.value = "income";
+    }
+
+    if(title){
+        title.textContent = "Thêm khoản thu";
+    }
+
+    if(contentLabel){
+        contentLabel.textContent = "Nội dung thu";
+    }
+
+    if(submitButton){
+        submitButton.textContent = "Lưu thông tin";
+    }
+
+    const price = document.getElementById("financeUnitPrice");
+    const quantity = document.getElementById("financeQuantity");
+    const dateTime = document.getElementById("financeDateTime");
+    const clubExpenseInput = document.getElementById("financeIsClubExpense");
+
+    if(price){
+        price.value = "";
+    }
+
+    if(quantity){
+        quantity.value = "";
+    }
+
+    if(dateTime){
+        dateTime.value = getLocalDateTimeValue();
+    }
+
+    if(clubExpenseInput){
+        clubExpenseInput.checked = false;
+    }
+
+    updateFinanceTotalPreview();
+}
+
+
+function setFinanceModalType(type, isEdit){
+    const typeInput = document.getElementById("financeTransactionType");
+    const title = document.getElementById("financeModalTitle");
+    const contentLabel = document.getElementById("financeContentLabel");
+    const submitButton = document.getElementById("financeSubmitButton");
+
+    if(typeInput){
+        typeInput.value = type;
+    }
+
+    const isExpense = type === "expense";
+
+    if(title){
+        title.textContent = isEdit
+            ? (isExpense ? "Sửa khoản chi" : "Sửa khoản thu")
+            : (isExpense ? "Thêm khoản chi" : "Thêm khoản thu");
+    }
+
+    if(contentLabel){
+        contentLabel.textContent = isExpense
+            ? "Nội dung chi"
+            : "Nội dung thu";
+    }
+
+    if(submitButton){
+        submitButton.textContent = isEdit
+            ? "Cập nhật"
+            : "Lưu thông tin";
+    }
+
+    const clubExpenseWrap = document.getElementById(
+        "financeClubExpenseWrap"
+    );
+
+    const clubExpenseInput = document.getElementById(
+        "financeIsClubExpense"
+    );
+
+    if(clubExpenseWrap){
+        clubExpenseWrap.style.display = isExpense
+            ? "flex"
+            : "none";
+    }
+
+    if(!isExpense && clubExpenseInput){
+        clubExpenseInput.checked = false;
+    }
+}
+
+
+function isoToLocalDateTimeValue(rawValue){
+    if(!rawValue){
+        return getLocalDateTimeValue();
+    }
+
+    const date = new Date(rawValue);
+
+    if(Number.isNaN(date.getTime())){
+        return String(rawValue).slice(0,16);
+    }
+
+    const pad = value => String(value).padStart(2,"0");
+
+    return (
+        date.getFullYear()
+        + "-"
+        + pad(date.getMonth() + 1)
+        + "-"
+        + pad(date.getDate())
+        + "T"
+        + pad(date.getHours())
+        + ":"
+        + pad(date.getMinutes())
+    );
+}
+
+
+function showFinanceModal(){
+    const modal = document.getElementById("financeModal");
+
+    if(modal){
+        modal.classList.add("show");
+    }
+
+    document.body.style.overflow = "hidden";
+}
+
+
+function openFinanceModal(type){
+    resetFinanceForm();
+    setFinanceModalType(type, false);
+    showFinanceModal();
+}
+
+
+function openFinanceEditModal(button){
+    resetFinanceForm();
+
+    const type = button.dataset.type || "income";
+    const transactionId = button.dataset.id || "";
+
+    setFinanceModalType(type, true);
+
+    const form = document.getElementById("financeForm");
+    const dateTime = document.getElementById("financeDateTime");
+    const content = document.getElementById("financeContent");
+    const unitPrice = document.getElementById("financeUnitPrice");
+    const quantity = document.getElementById("financeQuantity");
+    const note = document.getElementById("financeNote");
+    const hasInvoice = document.getElementById("financeHasInvoice");
+    const isClubExpense = document.getElementById("financeIsClubExpense");
+
+    if(form){
+        form.action = "/reports/finance/"
+            + encodeURIComponent(transactionId)
+            + "/update";
+    }
+
+    if(dateTime){
+        dateTime.value = isoToLocalDateTimeValue(
+            button.dataset.datetime || ""
+        );
+    }
+
+    if(content){
+        content.value = button.dataset.content || "";
+    }
+
+    if(unitPrice){
+        unitPrice.value = formatMoneyInputValue(
+            button.dataset.unitPrice || ""
+        );
+    }
+
+    if(quantity){
+        quantity.value = button.dataset.quantity || "";
+    }
+
+    if(note){
+        note.value = button.dataset.note || "";
+    }
+
+    if(hasInvoice){
+        hasInvoice.checked = button.dataset.hasInvoice === "1";
+    }
+
+    if(isClubExpense){
+        isClubExpense.checked = button.dataset.isClubExpense === "1";
+    }
+
+    updateFinanceTotalPreview();
+    showFinanceModal();
+}
+
+
+function closeFinanceModal(){
+    const modal = document.getElementById(
+        "financeModal"
+    );
+
+    if(modal){
+        modal.classList.remove("show");
+    }
+
+    document.body.style.overflow = "";
+    resetFinanceForm();
+}
+
+
+function closeFinanceModalByBackdrop(event){
+    if(event.target.id === "financeModal"){
+        closeFinanceModal();
+    }
+}
+
+
+function parseMoneyInputValue(value){
+    const digits = String(value || "")
+        .replace(/[^\d]/g, "");
+
+    return digits ? parseInt(digits, 10) : 0;
+}
+
+
+function formatMoneyInputValue(value){
+    const amount = parseMoneyInputValue(value);
+
+    if(!amount){
+        return "";
+    }
+
+    return new Intl.NumberFormat(
+        "vi-VN"
+    ).format(amount) + " đ";
+}
+
+
+function updateFinanceTotalPreview(){
+    const priceInput = document.getElementById(
+        "financeUnitPrice"
+    );
+
+    const quantityInput = document.getElementById(
+        "financeQuantity"
+    );
+
+    const price = parseMoneyInputValue(
+        priceInput?.value
+    );
+
+    const quantity = parseFloat(
+        quantityInput?.value || 0
+    );
+
+    const total = (
+        Math.max(price, 0)
+        * Math.max(quantity, 0)
+    );
+
+    const preview = document.getElementById(
+        "financeTotalPreview"
+    );
+
+    if(preview){
+        preview.textContent = new Intl.NumberFormat(
+            "vi-VN"
+        ).format(total) + " đ";
+    }
+}
+
+
+document
+    .getElementById(
+        "financeUnitPrice"
+    )
+    ?.addEventListener(
+        "input",
+        function(event){
+            const input = event.target;
+            const digits = String(
+                input.value || ""
+            ).replace(/[^\d]/g, "");
+
+            input.value = digits
+                ? new Intl.NumberFormat(
+                    "vi-VN"
+                ).format(
+                    parseInt(digits, 10)
+                ) + " đ"
+                : "";
+
+            updateFinanceTotalPreview();
+        }
+    );
+
+
+document
+    .getElementById(
+        "financeQuantity"
+    )
+    ?.addEventListener(
+        "input",
+        updateFinanceTotalPreview
+    );
+
+
+document.addEventListener(
+    "keydown",
+    function(event){
+        if(event.key === "Escape"){
+            closeFinanceModal();
+        }
+    }
+);
+
+document
+    .getElementById("financeForm")
+    ?.addEventListener(
+        "submit",
+        function(){
+            const priceInput = document.getElementById(
+                "financeUnitPrice"
+            );
+
+            if(priceInput){
+                priceInput.value = String(
+                    parseMoneyInputValue(
+                        priceInput.value
+                    )
+                );
+            }
+        }
+    );
+
+
+
+function examParseMoney(value){
+    const digits = String(value || "")
+        .replace(/[^\d]/g, "");
+
+    return digits ? parseInt(digits, 10) : 0;
+}
+
+
+function examFormatMoney(value){
+    return new Intl.NumberFormat(
+        "vi-VN"
+    ).format(
+        Number(value) || 0
+    ) + " đ";
+}
+
+
+function examFormatMoneyInput(input){
+    const amount = examParseMoney(input.value);
+
+    input.value = amount
+        ? examFormatMoney(amount)
+        : "";
+}
+
+
+function refreshExamFinanceStt(){
+    ["examIncomeBody", "examExpenseBody"]
+        .forEach(function(bodyId){
+            const body = document.getElementById(bodyId);
+
+            if(!body){
+                return;
+            }
+
+            body.querySelectorAll(
+                ".exam-finance-row"
+            ).forEach(function(row, index){
+                const stt = row.querySelector(
+                    ".exam-stt"
+                );
+
+                if(stt){
+                    stt.textContent = index + 1;
+                }
+            });
+        });
+}
+
+
+function getExamMainIncomeQuantity(){
+    const input = document.querySelector(
+        "#examIncomeBody .exam-main-income-qty"
+    );
+
+    return Math.max(
+        parseInt(input?.value || 0, 10),
+        0
+    );
+}
+
+
+function syncExamLinkedQuantities(){
+    const quantity = getExamMainIncomeQuantity();
+
+    document.querySelectorAll(
+        '#examExpenseBody .exam-qty-input[data-follow-income="1"]'
+    ).forEach(function(input){
+        if(input.dataset.manualOverride !== "1"){
+            input.value = quantity;
+        }
+    });
+}
+
+
+function calculateExamFinance(){
+    let incomeTotal = 0;
+    let expenseTotal = 0;
+
+    document.querySelectorAll(
+        ".exam-finance-row"
+    ).forEach(function(row){
+        const priceInput = row.querySelector(
+            ".exam-money-input"
+        );
+
+        const quantityInput = row.querySelector(
+            ".exam-qty-input"
+        );
+
+        const totalElement = row.querySelector(
+            ".exam-row-total"
+        );
+
+        const price = examParseMoney(
+            priceInput?.value
+        );
+
+        const quantity = Math.max(
+            parseInt(
+                quantityInput?.value || 0,
+                10
+            ),
+            0
+        );
+
+        const total = price * quantity;
+
+        if(totalElement){
+            totalElement.textContent = examFormatMoney(total);
+        }
+
+        if(row.dataset.type === "income"){
+            incomeTotal += total;
+        }else{
+            expenseTotal += total;
+        }
+    });
+
+    const incomeEl = document.getElementById(
+        "examIncomeTotal"
+    );
+
+    const expenseEl = document.getElementById(
+        "examExpenseTotal"
+    );
+
+    const remainingEl = document.getElementById(
+        "examRemainingTotal"
+    );
+
+    if(incomeEl){
+        incomeEl.textContent = examFormatMoney(incomeTotal);
+    }
+
+    if(expenseEl){
+        expenseEl.textContent = examFormatMoney(expenseTotal);
+    }
+
+    if(remainingEl){
+        remainingEl.textContent = examFormatMoney(
+            incomeTotal - expenseTotal
+        );
+    }
+}
+
+
+function bindExamFinanceRow(row){
+    const moneyInput = row.querySelector(
+        ".exam-money-input"
+    );
+
+    const quantityInput = row.querySelector(
+        ".exam-qty-input"
+    );
+
+    if(moneyInput){
+        examFormatMoneyInput(moneyInput);
+
+        moneyInput.addEventListener(
+            "input",
+            function(){
+                examFormatMoneyInput(moneyInput);
+                calculateExamFinance();
+            }
+        );
+    }
+
+    if(quantityInput){
+        quantityInput.value = String(
+            Math.max(
+                parseInt(
+                    quantityInput.value || 0,
+                    10
+                ),
+                0
+            )
+        );
+
+        quantityInput.addEventListener(
+            "input",
+            function(){
+                const parsedQuantity = parseInt(
+                    quantityInput.value || 0,
+                    10
+                );
+
+                quantityInput.value = Number.isNaN(
+                    parsedQuantity
+                )
+                    ? ""
+                    : String(
+                        Math.max(
+                            parsedQuantity,
+                            0
+                        )
+                    );
+                if(
+                    quantityInput.dataset.followIncome === "1"
+                    && !quantityInput.classList.contains(
+                        "exam-main-income-qty"
+                    )
+                ){
+                    quantityInput.dataset.manualOverride = "1";
+                }
+
+                if(
+                    quantityInput.classList.contains(
+                        "exam-main-income-qty"
+                    )
+                ){
+                    syncExamLinkedQuantities();
+                }
+
+                calculateExamFinance();
+            }
+        );
+    }
+}
+
+
+function buildExamFinanceRow(type){
+    const isIncome = type === "income";
+    const body = document.getElementById(
+        isIncome
+            ? "examIncomeBody"
+            : "examExpenseBody"
+    );
+
+    if(!body){
+        return;
+    }
+
+    const row = document.createElement("tr");
+
+    row.className = "exam-finance-row";
+    row.dataset.type = type;
+    row.dataset.linked = "0";
+
+    const prefix = isIncome
+        ? "income"
+        : "expense";
+
+    row.innerHTML = `
+        <td class="exam-stt"></td>
+        <td>
+            <input type="hidden"
+                   name="${prefix}_linked"
+                   value="0">
+            <input class="exam-content-input"
+                   type="text"
+                   name="${prefix}_content"
+                   placeholder="Nhập nội dung"
+                   required>
+        </td>
+        <td class="exam-money-cell">
+            <input class="exam-money-input"
+                   type="text"
+                   name="${prefix}_unit_price"
+                   inputmode="numeric"
+                   placeholder="Nhập đơn giá"
+                   required>
+        </td>
+        <td class="exam-qty-cell">
+            <input class="exam-qty-input"
+                   type="number"
+                   name="${prefix}_quantity"
+                   min="0"
+                   step="1"
+                   inputmode="numeric"
+                   placeholder="Số lượng"
+                   required>
+        </td>
+        <td class="exam-total-cell">
+            <span class="exam-row-total">0 đ</span>
+        </td>
+        <td>
+            <input class="exam-note-input"
+                   type="text"
+                   name="${prefix}_note"
+                   placeholder="Nhập ghi chú">
+        </td>
+        <td class="center">
+            <button type="button"
+                    class="exam-delete-row"
+                    onclick="removeExamFinanceRow(this)"
+                    title="Xóa dòng">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </td>
+    `;
+
+    body.appendChild(row);
+    bindExamFinanceRow(row);
+    refreshExamFinanceStt();
+    calculateExamFinance();
+}
+
+
+function addExamFinanceRow(type){
+    buildExamFinanceRow(type);
+}
+
+
+function removeExamFinanceRow(button){
+    const row = button.closest(
+        ".exam-finance-row"
+    );
+
+    if(row){
+        row.remove();
+    }
+
+    refreshExamFinanceStt();
+    calculateExamFinance();
+}
+
+
+document.querySelectorAll(
+    ".exam-finance-row"
+).forEach(bindExamFinanceRow);
+
+
+const examFinanceForm = document.getElementById(
+    "examFinanceForm"
+);
+
+if(examFinanceForm){
+    refreshExamFinanceStt();
+    syncExamLinkedQuantities();
+    calculateExamFinance();
+
+    examFinanceForm.addEventListener(
+        "submit",
+        function(){
+            document.querySelectorAll(
+                "#examFinanceForm .exam-money-input"
+            ).forEach(function(input){
+                input.value = String(
+                    examParseMoney(input.value)
+                );
+            });
+        }
+    );
+}
+
+
+
+function openExamLinkModal(){
+    calculateExamFinance();
+
+    const modal = document.getElementById(
+        "examLinkModal"
+    );
+
+    const incomePreview = document.getElementById(
+        "examLinkIncomePreview"
+    );
+
+    const expensePreview = document.getElementById(
+        "examLinkExpensePreview"
+    );
+
+    const currentIncome = document.getElementById(
+        "examIncomeTotal"
+    );
+
+    const currentExpense = document.getElementById(
+        "examExpenseTotal"
+    );
+
+    if(incomePreview && currentIncome){
+        incomePreview.textContent = currentIncome.textContent;
+    }
+
+    if(expensePreview && currentExpense){
+        expensePreview.textContent = currentExpense.textContent;
+    }
+
+    if(modal){
+        modal.classList.add("show");
+    }
+
+    document.body.style.overflow = "hidden";
+}
+
+
+function closeExamLinkModal(){
+    const modal = document.getElementById(
+        "examLinkModal"
+    );
+
+    if(modal){
+        modal.classList.remove("show");
+    }
+
+    document.body.style.overflow = "";
+}
+
+
+function closeExamLinkModalByBackdrop(event){
+    if(event.target.id === "examLinkModal"){
+        closeExamLinkModal();
+    }
+}
+
+
+function submitExamFinance(linkToFinance){
+    const form = document.getElementById(
+        "examFinanceForm"
+    );
+
+    const linkInput = document.getElementById(
+        "examLinkToFinance"
+    );
+
+    const monthInput = document.getElementById(
+        "examLinkMonth"
+    );
+
+    const yearInput = document.getElementById(
+        "examLinkYear"
+    );
+
+    const monthSelect = document.getElementById(
+        "examLinkMonthSelect"
+    );
+
+    const yearSelect = document.getElementById(
+        "examLinkYearSelect"
+    );
+
+    if(!form){
+        return;
+    }
+
+    if(linkInput){
+        linkInput.value = linkToFinance
+            ? "1"
+            : "0";
+    }
+
+    if(monthInput){
+        monthInput.value = linkToFinance
+            ? String(monthSelect?.value || "")
+            : "";
+    }
+
+    if(yearInput){
+        yearInput.value = linkToFinance
+            ? String(yearSelect?.value || "")
+            : "";
+    }
+
+    closeExamLinkModal();
+
+    if(typeof form.requestSubmit === "function"){
+        form.requestSubmit();
+    }else{
+        form.submit();
+    }
+}
+
+
+document.addEventListener(
+    "keydown",
+    function(event){
+        if(
+            event.key === "Escape"
+            && document.getElementById(
+                "examLinkModal"
+            )?.classList.contains("show")
+        ){
+            closeExamLinkModal();
+        }
+    }
+);
+
+</script>
+{% endblock %}

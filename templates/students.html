@@ -103,14 +103,84 @@
                     </select>
                 </div>
 
-                <div class="field-box">
+                <div class="field-box classroom-field-box">
                     <label>Lớp <b>*</b></label>
-                    <select name="classroom" required>
+
+                    <select
+                        id="classroomPreset"
+                        onchange="handleClassroomPresetChange()"
+                        required
+                    >
                         <option value="">Chọn lớp</option>
-                        {% for item in class_options.classrooms %}
-                        <option value="{{ item }}">{{ item }}</option>
-                        {% endfor %}
+                        <option value="2 - 4 - 6">2 - 4 - 6</option>
+                        <option value="3 - 5 - 7">3 - 5 - 7</option>
+                        <option value="T7 - CN">T7 - CN</option>
+                        <option value="Hẹn hò">Hẹn hò</option>
+                        <option value="__other__">Khác...</option>
                     </select>
+
+                    <input
+                        type="hidden"
+                        name="classroom"
+                        id="classroomValue"
+                        required
+                    >
+
+                    <div
+                        id="customClassroomBox"
+                        class="custom-classroom-box"
+                        hidden
+                    >
+                        <div class="custom-classroom-title">
+                            Nhập tối đa 3 ngày học
+                        </div>
+
+                        <div class="custom-classroom-inputs">
+                            <input
+                                type="number"
+                                id="customClassDay1"
+                                min="2"
+                                max="7"
+                                maxlength="1"
+                                inputmode="numeric"
+                                placeholder="Ngày 1"
+                                oninput="updateCustomClassroomValue(this)"
+                            >
+
+                            <span>−</span>
+
+                            <input
+                                type="number"
+                                id="customClassDay2"
+                                min="2"
+                                max="7"
+                                maxlength="1"
+                                inputmode="numeric"
+                                placeholder="Ngày 2"
+                                oninput="updateCustomClassroomValue(this)"
+                            >
+
+                            <span>−</span>
+
+                            <input
+                                type="number"
+                                id="customClassDay3"
+                                min="2"
+                                max="7"
+                                maxlength="1"
+                                inputmode="numeric"
+                                placeholder="Ngày 3"
+                                oninput="updateCustomClassroomValue(this)"
+                            >
+                        </div>
+
+                        <div
+                            id="customClassroomPreview"
+                            class="custom-classroom-preview"
+                        >
+                            Chưa nhập lịch học
+                        </div>
+                    </div>
                 </div>
 
                 <div class="field-box">
@@ -308,13 +378,79 @@
                     </select>
                 </div>
 
-                <div class="field-box">
+                <div class="field-box classroom-field-box">
                     <label>Lớp</label>
-                    <select name="classroom" id="edit_classroom">
-                        {% for item in class_options.classrooms %}
-                        <option value="{{ item }}">{{ item }}</option>
-                        {% endfor %}
+
+                    <select
+                        id="edit_classroom_preset"
+                        onchange="handleEditClassroomPresetChange()"
+                    >
+                        <option value="">Chọn lớp</option>
+                        <option value="2 - 4 - 6">2 - 4 - 6</option>
+                        <option value="3 - 5 - 7">3 - 5 - 7</option>
+                        <option value="T7 - CN">T7 - CN</option>
+                        <option value="Hẹn hò">Hẹn hò</option>
+                        <option value="__other__">Khác...</option>
                     </select>
+
+                    <input
+                        type="hidden"
+                        name="classroom"
+                        id="edit_classroom"
+                    >
+
+                    <div
+                        id="editCustomClassroomBox"
+                        class="custom-classroom-box"
+                        hidden
+                    >
+                        <div class="custom-classroom-title">
+                            Nhập tối đa 3 ngày học
+                        </div>
+
+                        <div class="custom-classroom-inputs">
+                            <input
+                                type="number"
+                                id="editCustomClassDay1"
+                                min="2"
+                                max="7"
+                                inputmode="numeric"
+                                placeholder="Ngày 1"
+                                oninput="updateEditCustomClassroomValue(this)"
+                            >
+
+                            <span>−</span>
+
+                            <input
+                                type="number"
+                                id="editCustomClassDay2"
+                                min="2"
+                                max="7"
+                                inputmode="numeric"
+                                placeholder="Ngày 2"
+                                oninput="updateEditCustomClassroomValue(this)"
+                            >
+
+                            <span>−</span>
+
+                            <input
+                                type="number"
+                                id="editCustomClassDay3"
+                                min="2"
+                                max="7"
+                                inputmode="numeric"
+                                placeholder="Ngày 3"
+                                oninput="updateEditCustomClassroomValue(this)"
+                            >
+                        </div>
+
+                        <div
+                            id="editCustomClassroomPreview"
+                            class="custom-classroom-preview"
+                        >
+                            Chưa nhập lịch học
+                        </div>
+                    </div>
                 </div>
 
                 <div class="field-box">
@@ -588,6 +724,213 @@ document.getElementById("birthInput").addEventListener("blur", function () {
     buildHVCode();
 });
 
+const DEFAULT_CLASSROOMS = [
+    "2 - 4 - 6",
+    "3 - 5 - 7",
+    "T7 - CN",
+    "Hẹn hò"
+];
+
+function sanitizeClassDayInput(input) {
+    let value = String(input.value || "")
+        .replace(/\D/g, "")
+        .slice(0, 1);
+
+    if (value && !["2", "3", "4", "5", "6", "7"].includes(value)) {
+        value = "";
+    }
+
+    input.value = value;
+
+    return value;
+}
+
+function buildClassroomFromInputs(inputIds) {
+    const days = [];
+
+    inputIds.forEach(id => {
+        const input = document.getElementById(id);
+
+        if (!input) return;
+
+        const value = sanitizeClassDayInput(input);
+
+        if (value && !days.includes(Number(value))) {
+            days.push(Number(value));
+        }
+    });
+
+    days.sort((a, b) => a - b);
+
+    return days.join(" - ");
+}
+
+/* =========================
+   THÊM HỘI VIÊN
+========================= */
+function handleClassroomPresetChange() {
+    const preset = document.getElementById("classroomPreset");
+    const hiddenValue = document.getElementById("classroomValue");
+    const customBox = document.getElementById("customClassroomBox");
+
+    if (!preset || !hiddenValue || !customBox) return;
+
+    if (preset.value === "__other__") {
+        customBox.hidden = false;
+        updateCustomClassroomValue();
+        return;
+    }
+
+    customBox.hidden = true;
+    hiddenValue.value = preset.value || "";
+
+    clearCustomClassroomInputs([
+        "customClassDay1",
+        "customClassDay2",
+        "customClassDay3"
+    ]);
+
+    updateClassroomPreview(
+        "customClassroomPreview",
+        ""
+    );
+}
+
+function updateCustomClassroomValue(currentInput) {
+    if (currentInput) {
+        sanitizeClassDayInput(currentInput);
+    }
+
+    const classroom = buildClassroomFromInputs([
+        "customClassDay1",
+        "customClassDay2",
+        "customClassDay3"
+    ]);
+
+    document.getElementById("classroomValue").value = classroom;
+
+    updateClassroomPreview(
+        "customClassroomPreview",
+        classroom
+    );
+}
+
+/* =========================
+   CHỈNH SỬA HỘI VIÊN
+========================= */
+function handleEditClassroomPresetChange() {
+    const preset = document.getElementById("edit_classroom_preset");
+    const hiddenValue = document.getElementById("edit_classroom");
+    const customBox = document.getElementById("editCustomClassroomBox");
+
+    if (!preset || !hiddenValue || !customBox) return;
+
+    if (preset.value === "__other__") {
+        customBox.hidden = false;
+        updateEditCustomClassroomValue();
+        return;
+    }
+
+    customBox.hidden = true;
+    hiddenValue.value = preset.value || "";
+
+    clearCustomClassroomInputs([
+        "editCustomClassDay1",
+        "editCustomClassDay2",
+        "editCustomClassDay3"
+    ]);
+
+    updateClassroomPreview(
+        "editCustomClassroomPreview",
+        ""
+    );
+}
+
+function updateEditCustomClassroomValue(currentInput) {
+    if (currentInput) {
+        sanitizeClassDayInput(currentInput);
+    }
+
+    const classroom = buildClassroomFromInputs([
+        "editCustomClassDay1",
+        "editCustomClassDay2",
+        "editCustomClassDay3"
+    ]);
+
+    document.getElementById("edit_classroom").value = classroom;
+
+    updateClassroomPreview(
+        "editCustomClassroomPreview",
+        classroom
+    );
+}
+
+function clearCustomClassroomInputs(inputIds) {
+    inputIds.forEach(id => {
+        const input = document.getElementById(id);
+
+        if (input) {
+            input.value = "";
+        }
+    });
+}
+
+function updateClassroomPreview(previewId, classroom) {
+    const preview = document.getElementById(previewId);
+
+    if (!preview) return;
+
+    preview.textContent = classroom
+        ? `Lớp sẽ lưu: ${classroom}`
+        : "Chưa nhập lịch học";
+}
+
+function setEditClassroomValue(classroom) {
+    const value = String(classroom || "").trim();
+
+    const preset = document.getElementById("edit_classroom_preset");
+    const hiddenValue = document.getElementById("edit_classroom");
+    const customBox = document.getElementById("editCustomClassroomBox");
+
+    if (!preset || !hiddenValue || !customBox) return;
+
+    hiddenValue.value = value;
+
+    clearCustomClassroomInputs([
+        "editCustomClassDay1",
+        "editCustomClassDay2",
+        "editCustomClassDay3"
+    ]);
+
+    if (DEFAULT_CLASSROOMS.includes(value)) {
+        preset.value = value;
+        customBox.hidden = true;
+        return;
+    }
+
+    preset.value = "__other__";
+    customBox.hidden = false;
+
+    const days = value.match(/[2-7]/g) || [];
+
+    const inputs = [
+        document.getElementById("editCustomClassDay1"),
+        document.getElementById("editCustomClassDay2"),
+        document.getElementById("editCustomClassDay3")
+    ];
+
+    inputs.forEach((input, index) => {
+        if (input) {
+            input.value = days[index] || "";
+        }
+    });
+
+    updateClassroomPreview(
+        "editCustomClassroomPreview",
+        value
+    );
+}
+
 function openEditModal(license, name, birthdate, gender, classroom, timeclass, clup, phone, address, belt, family, active, telegramId) {
     document.getElementById("editForm").action = `/students/${license}/update`;
 
@@ -595,7 +938,7 @@ function openEditModal(license, name, birthdate, gender, classroom, timeclass, c
     document.getElementById("edit_name").value = name || "";
     document.getElementById("edit_birthdate").value = birthdate || "";
     document.getElementById("edit_gender").value = gender || "Nam";
-    document.getElementById("edit_classroom").value = classroom || "";
+    setEditClassroomValue(classroom);
     document.getElementById("edit_timeclass").value = timeclass || "";
     document.getElementById("edit_clup").value = clup || "";
     document.getElementById("edit_phonenumber").value = phone || "";
@@ -1165,7 +1508,67 @@ document.addEventListener("click", function(e) {
     }
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+    const addForm = document.querySelector(
+        'form[action="/students/add"]'
+    );
 
+    if (addForm) {
+        addForm.addEventListener("submit", function (event) {
+            const classroom = (
+                document.getElementById("classroomValue").value || ""
+            ).trim();
+
+            if (!classroom) {
+                event.preventDefault();
+                alert("Ken cần chọn hoặc nhập lớp học.");
+                return;
+            }
+
+            const preset = document.getElementById("classroomPreset");
+
+            if (
+                preset.value === "__other__"
+                && classroom.split(" - ").length < 2
+            ) {
+                event.preventDefault();
+                alert(
+                    "Lớp Khác cần nhập ít nhất 2 ngày học khác nhau."
+                );
+            }
+        });
+    }
+
+    const editForm = document.getElementById("editForm");
+
+    if (editForm) {
+        editForm.addEventListener("submit", function (event) {
+            const classroom = (
+                document.getElementById("edit_classroom").value || ""
+            ).trim();
+
+            if (!classroom) {
+                event.preventDefault();
+                alert("Ken cần chọn hoặc nhập lớp học.");
+                return;
+            }
+
+            const preset = document.getElementById(
+                "edit_classroom_preset"
+            );
+
+            if (
+                preset.value === "__other__"
+                && classroom.split(" - ").length < 2
+            ) {
+                event.preventDefault();
+                alert(
+                    "Lớp Khác cần nhập ít nhất 2 ngày học khác nhau."
+                );
+            }
+        });
+    }
+});
 </script>
 
 
@@ -1795,6 +2198,69 @@ document.addEventListener("click", function(e) {
     z-index: 20001;
 }
 
+
+/* =========================
+   LỚP HỌC ĐẶC BIỆT
+========================= */
+.classroom-field-box {
+    align-self: start;
+}
+
+.custom-classroom-box {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid #f3c94a;
+    border-radius: 10px;
+    background: #fffaf0;
+}
+
+.custom-classroom-box[hidden] {
+    display: none !important;
+}
+
+.custom-classroom-title {
+    margin-bottom: 7px;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.custom-classroom-inputs {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        14px
+        minmax(0, 1fr)
+        14px
+        minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+}
+
+.custom-classroom-inputs span {
+    color: #92400e;
+    font-size: 16px;
+    font-weight: 900;
+    text-align: center;
+}
+
+.custom-classroom-inputs input {
+    min-width: 0;
+    padding: 0 5px !important;
+    text-align: center;
+    font-weight: 850 !important;
+}
+
+.custom-classroom-preview {
+    margin-top: 7px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: #fff2bf;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+}
 </style>
 
 {% endblock %}

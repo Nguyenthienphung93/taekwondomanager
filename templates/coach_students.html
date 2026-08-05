@@ -42,6 +42,92 @@
         font-size: 18px;
     }
 
+
+    .student-search {
+        flex: 1 1 360px;
+        min-width: 280px;
+    }
+
+    .student-search label {
+        display: block;
+        margin-bottom: 6px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .student-search-wrap {
+        position: relative;
+    }
+
+    .student-search-wrap i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        pointer-events: none;
+    }
+
+    .student-search input {
+        width: 100%;
+        height: 44px;
+        box-sizing: border-box;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        background: #fff;
+        color: #0f172a;
+        padding: 0 42px 0 40px;
+        font: inherit;
+        font-weight: 800;
+        outline: none;
+    }
+
+    .student-search input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+
+    .student-search-clear {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 30px;
+        height: 30px;
+        border: 0;
+        border-radius: 9px;
+        background: #e2e8f0;
+        color: #334155;
+        font-size: 18px;
+        cursor: pointer;
+        display: none;
+    }
+
+    .student-search-clear.show {
+        display: grid;
+        place-items: center;
+    }
+
+    .student-search-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+    }
+
+    .student-search-head label {
+        margin: 0;
+    }
+
+    .student-search-result {
+        color: #16a34a;
+        font-size: 12px;
+        font-weight: 950;
+        text-align: right;
+    }
+
     .filter-field {
         min-width: 210px;
     }
@@ -152,7 +238,7 @@
 
     .student-meta {
         display: grid;
-        grid-template-columns: repeat(3, max-content);
+        grid-template-columns: repeat(2, max-content);
         align-items: center;
         gap: 8px 14px;
         color: #475569;
@@ -322,6 +408,7 @@
             min-width: 0;
         }
 
+        .student-search,
         .filter-field {
             width: 100%;
             min-width: 0;
@@ -415,6 +502,14 @@
         .student-detail-grid {
             grid-template-columns: minmax(0, 1fr);
         }
+
+        .student-search-head {
+            align-items: flex-end;
+        }
+
+        .student-search-result {
+            font-size: 11px;
+        }
     }
 </style>
 {% endblock %}
@@ -438,6 +533,36 @@
             </div>
         </div>
 
+        <div class="student-search">
+            <div class="student-search-head">
+                <label for="studentSearchInput">Tìm võ sinh</label>
+
+                <div id="studentSearchResult" class="student-search-result">
+                    Đang hiển thị {{ rows|length }} võ sinh
+                </div>
+            </div>
+
+            <div class="student-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    type="text"
+                    id="studentSearchInput"
+                    placeholder="Họ tên, mã HV, giới tính hoặc cấp đai"
+                    autocomplete="off"
+                    oninput="filterCoachStudents()"
+                >
+
+                <button
+                    type="button"
+                    id="studentSearchClear"
+                    class="student-search-clear"
+                    onclick="clearCoachStudentSearch()"
+                    aria-label="Xóa nội dung tìm kiếm"
+                >×</button>
+            </div>
+        </div>
+
         <form method="get" class="filter-field" id="timeclassFilterForm">
             <label for="timeclass">Xem theo ca học</label>
             <select name="timeclass" id="timeclass" onchange="this.form.submit()">
@@ -457,6 +582,10 @@
                 <button type="button"
                         class="student-card"
                         data-student='{{ student|tojson|forceescape }}'
+                        data-name="{{ (student.name or '')|lower }}"
+                        data-license="{{ (student.license or '')|lower }}"
+                        data-gender="{{ (student.gender or '')|lower }}"
+                        data-belt="{{ (student.belt or '')|lower }}"
                         onclick="openStudentDetail(this)"
                         aria-label="Xem thông tin chi tiết của {{ student.name }}">
                     {% if student.photo_url %}
@@ -478,10 +607,17 @@
                             <span>Giới tính: <b>{{ student.gender or '—' }}</b></span>
                             <span>Năm sinh: <b>{{ student.birth_year or '—' }}</b></span>
                             <span>Cấp đai: <b>{{ student.belt or '—' }}</b></span>
+                            <span>Lớp: <b>{{ student.classroom or '—' }}</b></span>
                         </div>
                     </div>
                 </button>
             {% endfor %}
+        </div>
+
+        <div id="studentSearchEmpty" class="empty-state" style="display:none;">
+            <i class="fa-solid fa-magnifying-glass" style="font-size:34px;"></i>
+            <h3>Không tìm thấy võ sinh</h3>
+            <p>Không có võ sinh phù hợp với nội dung tìm kiếm.</p>
         </div>
     {% else %}
         <div class="empty-state">
@@ -524,6 +660,63 @@
 
 {% block extra_js %}
 <script>
+
+function normalizeCoachSearchText(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/\s+/g, " ");
+}
+
+function filterCoachStudents() {
+    const input = document.getElementById("studentSearchInput");
+    const clearBtn = document.getElementById("studentSearchClear");
+    const resultBox = document.getElementById("studentSearchResult");
+    const emptyBox = document.getElementById("studentSearchEmpty");
+    const cards = Array.from(document.querySelectorAll(".student-card"));
+
+    if (!input) return;
+
+    const keyword = normalizeCoachSearchText(input.value);
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const searchableText = normalizeCoachSearchText([
+            card.dataset.name,
+            card.dataset.license,
+            card.dataset.gender,
+            card.dataset.belt
+        ].join(" "));
+
+        const matched = !keyword || searchableText.includes(keyword);
+        card.style.display = matched ? "" : "none";
+        if (matched) visibleCount += 1;
+    });
+
+    if (clearBtn) clearBtn.classList.toggle("show", Boolean(keyword));
+
+    if (resultBox) {
+        resultBox.textContent = keyword
+            ? `Đã tìm thấy ${visibleCount} võ sinh`
+            : `Đang hiển thị ${cards.length} võ sinh`;
+    }
+
+    if (emptyBox) {
+        emptyBox.style.display = keyword && visibleCount === 0 ? "block" : "none";
+    }
+}
+
+function clearCoachStudentSearch() {
+    const input = document.getElementById("studentSearchInput");
+    if (!input) return;
+    input.value = "";
+    filterCoachStudents();
+    input.focus();
+}
+
 function setStudentDetailText(id, value) {
     const element = document.getElementById(id);
     if (element) element.textContent = value || "—";

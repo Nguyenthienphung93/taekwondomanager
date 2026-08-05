@@ -378,10 +378,61 @@
     </div>
 </div>
 
+{% if fee_error_popup %}
+<div id="feeErrorModal" class="fee-error-modal">
+    <div class="fee-error-dialog" role="alertdialog" aria-modal="true">
+        <div class="fee-error-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+
+        <div class="fee-error-title">
+            Không thể lưu học phí
+        </div>
+
+        <div
+            id="feeErrorMessage"
+            class="fee-error-message"
+        >{{ fee_error_popup }}</div>
+
+        <button
+            type="button"
+            class="fee-error-close-btn"
+            onclick="closeFeeErrorModal()"
+            autofocus
+        >
+            Đã hiểu
+        </button>
+    </div>
+</div>
+{% endif %}
+
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
 <script>
+function closeFeeErrorModal() {
+    const modal = document.getElementById("feeErrorModal");
+
+    if (!modal) return;
+
+    modal.classList.add("fee-error-closing");
+
+    window.setTimeout(() => {
+        modal.remove();
+    }, 180);
+}
+
+document.addEventListener("keydown", function (event) {
+    const modal = document.getElementById("feeErrorModal");
+
+    if (!modal) return;
+
+    if (event.key === "Enter" || event.key === "Escape") {
+        event.preventDefault();
+        closeFeeErrorModal();
+    }
+});
+
 const currentMonth = {{ current_month }};
 const currentYear = {{ current_year }};
 const EXAM_FEE = {{ exam_fee|int }};
@@ -2194,6 +2245,135 @@ document.addEventListener("DOMContentLoaded", function () {
     .fees-list-table td {
         padding: 8px 7px;
         font-size: 12px;
+    }
+}
+
+/* =========================
+   POPUP LỖI TRÙNG HỌC PHÍ
+========================= */
+.fee-error-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(3px);
+    animation: feeErrorFadeIn 0.18s ease;
+}
+
+.fee-error-dialog {
+    width: min(470px, 100%);
+    border-radius: 22px;
+    padding: 26px 26px 22px;
+    background: #ffffff;
+    border: 2px solid #fecaca;
+    box-shadow:
+        0 24px 70px rgba(15, 23, 42, 0.32),
+        0 0 0 6px rgba(239, 68, 68, 0.08);
+    text-align: center;
+    animation: feeErrorDialogIn 0.22s ease;
+}
+
+.fee-error-icon {
+    width: 68px;
+    height: 68px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 32px;
+}
+
+.fee-error-title {
+    color: #991b1b;
+    font-size: 22px;
+    font-weight: 950;
+    line-height: 1.25;
+}
+
+.fee-error-message {
+    margin-top: 14px;
+    padding: 15px 16px;
+    border-radius: 14px;
+    background: #fff7f7;
+    border: 1px solid #fecaca;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 750;
+    line-height: 1.65;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.fee-error-close-btn {
+    width: 100%;
+    height: 46px;
+    margin-top: 18px;
+    border: 0;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(220, 38, 38, 0.24);
+    transition: 0.18s ease;
+}
+
+.fee-error-close-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+}
+
+.fee-error-close-btn:focus {
+    outline: 4px solid rgba(239, 68, 68, 0.20);
+}
+
+.fee-error-modal.fee-error-closing {
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+@keyframes feeErrorFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes feeErrorDialogIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 600px) {
+    .fee-error-dialog {
+        padding: 22px 18px 18px;
+        border-radius: 18px;
+    }
+
+    .fee-error-title {
+        font-size: 19px;
+    }
+
+    .fee-error-message {
+        font-size: 13px;
     }
 }
 </style>
