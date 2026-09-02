@@ -42,6 +42,7 @@ SUPABASE_URL = os.environ.get(
 STUDENT_PHOTO_BUCKET = "student-photos"
 CLUB_ASSET_BUCKET = "system-assets"
 BELT_IMAGE_BUCKET = "belt"
+ADMIN_USER_TABLE = "admin_users"
 
 
 def get_belt_image_url_web(belt_name):
@@ -462,7 +463,14 @@ def normalize_admin_login_name(value):
 
 def verify_admin_login_web(login_name, password):
     """
-    Xác thực Admin bằng username hoặc email thông qua RPC Supabase.
+    Đăng nhập Admin bằng username hoặc email.
+
+    Hỗ trợ:
+    1. Werkzeug password hash.
+    2. Plaintext cũ.
+
+    Nếu plaintext đúng:
+    tự chuyển sang Werkzeug hash.
     """
 
     login_name = normalize_admin_login_name(
@@ -477,12 +485,15 @@ def verify_admin_login_web(login_name, password):
         return None
 
     try:
+        # ==========================================
+        # LẤY ADMIN QUA RPC
+        # Không đọc trực tiếp admin_users vì RLS
+        # ==========================================
         response = (
             supabase.rpc(
-                "verify_admin_login",
+                "get_admin_login_user",
                 {
-                    "login_name": login_name,
-                    "login_password": password,
+                    "login_name": login_name
                 }
             )
             .execute()
@@ -490,13 +501,98 @@ def verify_admin_login_web(login_name, password):
 
         rows = response.data or []
 
-        return rows[0] if rows else None
+
+
+        if not rows:
+            return None
+
+        admin_user = rows[0]
+
+        stored_password = str(
+            admin_user.get("password_hash")
+            or ""
+        )
+
+        if not stored_password:
+
+            return None
+
+        password_ok = False
+        password_is_plaintext = False
+
+        # ==========================================
+        # CÁCH 1
+        # THỬ HASH WERKZEUG
+        # ==========================================
+        try:
+            password_ok = check_password_hash(
+                stored_password,
+                password
+            )
+
+        except Exception:
+            password_ok = False
+
+        # ==========================================
+        # CÁCH 2
+        # PASSWORD PLAINTEXT CŨ
+        # ==========================================
+        if not password_ok:
+
+            if stored_password == password:
+                password_ok = True
+                password_is_plaintext = True
+
+
+
+        if not password_ok:
+            return None
+
+        # ==========================================
+        # PLAINTEXT ĐÚNG
+        # -> TỰ CHUYỂN SANG HASH
+        # ==========================================
+        if password_is_plaintext:
+
+            try:
+                new_password_hash = (
+                    generate_password_hash(
+                        password
+                    )
+                )
+
+                (
+                    supabase.rpc(
+                        "update_admin_password_hash",
+                        {
+                            "admin_user_id":
+                                admin_user.get("id"),
+
+                            "new_password_hash":
+                                new_password_hash,
+                        }
+                    )
+                    .execute()
+                )
+
+                print(
+                    "[ADMIN PASSWORD MIGRATED TO HASH]",
+                    admin_user.get("username")
+                    or admin_user.get("email")
+                )
+
+            except Exception as migrate_error:
+
+                # Không chặn login nếu chỉ lỗi migrate
+                print(
+                    "[ADMIN PASSWORD MIGRATION ERROR]",
+                    repr(migrate_error)
+                )
+
+        return admin_user
 
     except Exception as e:
-        print(
-            "[VERIFY ADMIN LOGIN ERROR]",
-            repr(e)
-        )
+
         return None
 
 
