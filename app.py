@@ -6350,63 +6350,371 @@ def students():
         new_license=new_license
     )
 
+
+# =========================================================
+# KIỂM TRA HỘI VIÊN TRÙNG THÔNG TIN
+# Họ tên + Ngày sinh + Giới tính
+# =========================================================
+
+def normalize_student_duplicate_text_web(value):
+    """
+    Chuẩn hóa để so sánh dữ liệu trùng:
+    - Không phân biệt hoa/thường
+    - Không phân biệt dấu tiếng Việt
+    - Xóa khoảng trắng dư
+    """
+    text = remove_accents(str(value or ""))
+    text = re.sub(r"\s+", " ", text)
+    return text.strip().lower()
+
+
+def find_student_identity_duplicates_web(
+    name,
+    birthdate,
+    gender,
+    exclude_license=""
+):
+    """
+    Tìm hội viên có cùng:
+    - Họ tên
+    - Ngày sinh
+    - Giới tính
+
+    exclude_license:
+    dùng khi sửa hội viên để không so với chính hội viên đó.
+    """
+
+    name = normalize_student_duplicate_text_web(name)
+    gender = normalize_student_duplicate_text_web(gender)
+    birthdate = normalize_birthdate_web(birthdate)
+    exclude_license = str(exclude_license or "").strip()
+
+    if not name or not birthdate or not gender:
+        return []
+
+    try:
+        rows = (
+            supabase.table(STUDENT_TABLE)
+            .select("license,name,birthdate,gender")
+            .eq("birthdate", birthdate)
+            .execute()
+            .data
+            or []
+        )
+
+    except Exception as e:
+        print("[CHECK STUDENT DUPLICATE ERROR]", repr(e))
+        return []
+
+    duplicated = []
+
+    for row in rows:
+        license_code = str(
+            row.get("license") or ""
+        ).strip()
+
+        # Khi sửa: không so sánh với chính hội viên đang sửa
+        if (
+            exclude_license
+            and license_code == exclude_license
+        ):
+            continue
+
+        row_name = normalize_student_duplicate_text_web(
+            row.get("name")
+        )
+
+        row_gender = normalize_student_duplicate_text_web(
+            row.get("gender")
+        )
+
+        if (
+            row_name == name
+            and row_gender == gender
+        ):
+            duplicated.append({
+                "license": license_code,
+                "name": row.get("name") or "",
+                "birthdate": row.get("birthdate") or "",
+                "gender": row.get("gender") or "",
+            })
+
+    return duplicated
+
+
+@app.post("/api/student-duplicate-check")
+def student_duplicate_check():
+    data = request.get_json(silent=True) or {}
+
+    name = str(
+        data.get("name") or ""
+    ).strip()
+
+    birthdate = str(
+        data.get("birthdate") or ""
+    ).strip()
+
+    gender = str(
+        data.get("gender") or ""
+    ).strip()
+
+    current_license = str(
+        data.get("current_license") or ""
+    ).strip()
+
+    normalized_birthdate = normalize_birthdate_web(
+        birthdate
+    )
+
+    if not normalized_birthdate:
+        return jsonify({
+            "ok": False,
+            "message": "Ngày sinh không hợp lệ."
+        }), 400
+
+    rows = find_student_identity_duplicates_web(
+        name=name,
+        birthdate=normalized_birthdate,
+        gender=gender,
+        exclude_license=current_license,
+    )
+
+    return jsonify({
+        "ok": True,
+        "duplicated": bool(rows),
+        "rows": rows,
+    })
+
+
+def make_unique_student_license_web(base_license):
+    """
+    Khi Ken vẫn chọn YES để thêm hội viên trùng thông tin,
+    Mã HV cũ có thể đã tồn tại.
+
+    Ví dụ:
+    HV_phungnt_030493
+    -> HV_phungnt_030493_2
+    -> HV_phungnt_030493_3
+    """
+
+    base_license = str(
+        base_license or ""
+    ).strip()
+
+    if not base_license:
+        return ""
+
+    existing = (
+        supabase.table(STUDENT_TABLE)
+        .select("license")
+        .eq("license", base_license)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+
+    if not existing:
+        return base_license
+
+    number = 2
+
+    while number <= 999:
+        candidate = f"{base_license}_{number}"
+
+        found = (
+            supabase.table(STUDENT_TABLE)
+            .select("license")
+            .eq("license", candidate)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+
+        if not found:
+            return candidate
+
+        number += 1
+
+    return f"{base_license}_{uuid.uuid4().hex[:6]}"
+
 @app.post('/students/add')
 def students_add():
     form = request.form
 
-    birthdate = normalize_birthdate_web(form.get("birthdate", ""))
+    birthdate = normalize_birthdate_web(
+        form.get("birthdate", "")
+    )
 
     if not birthdate:
         flash("Ngày sinh không hợp lệ")
         return redirect(url_for("students"))
 
-    license_code = form.get("license", "").strip()
+    name = form.get(
+        "name",
+        ""
+    ).strip()
+
+    gender = form.get(
+        "gender",
+        ""
+    ).strip()
+
+    force_duplicate = (
+        form.get("force_duplicate") == "1"
+    )
+
+    license_code = form.get(
+        "license",
+        ""
+    ).strip()
 
     if not license_code:
-        license_code = auto_hv_code_web(form.get("name", ""), birthdate)
+        license_code = auto_hv_code_web(
+            name,
+            birthdate
+        )
 
     if not license_code:
-        flash("Không tạo được Mã HV. Ken kiểm tra lại Họ tên và Ngày sinh.")
-        return redirect(url_for("students"))
-
-    # =========================
-    # CHẶN TRÙNG MÃ HỘI VIÊN
-    # =========================
-    duplicated = supabase.table(STUDENT_TABLE) \
-        .select("license,name,birthdate") \
-        .eq("license", license_code) \
-        .limit(1) \
-        .execute().data or []
-
-    if duplicated:
-        old = duplicated[0]
         flash(
-            f"Mã HV {license_code} đã tồn tại cho học viên "
-            f"{old.get('name', '')} - {old.get('birthdate', '')}. "
-            f"Ken không thể thêm trùng mã."
+            "Không tạo được Mã HV. "
+            "Ken kiểm tra lại Họ tên và Ngày sinh."
         )
         return redirect(url_for("students"))
+
+    # =========================================
+    # KIỂM TRA TRÙNG 3 THÔNG TIN
+    # =========================================
+    identity_duplicates = (
+        find_student_identity_duplicates_web(
+            name=name,
+            birthdate=birthdate,
+            gender=gender,
+        )
+    )
+
+    # Bình thường JS đã hỏi Ken trước.
+    # Nếu vì lý do nào đó request gửi thẳng lên server,
+    # vẫn không cho tự động tạo trùng.
+    if identity_duplicates and not force_duplicate:
+        flash(
+            "Đã có hội viên trùng Họ tên, "
+            "Ngày sinh và Giới tính. "
+            "Vui lòng kiểm tra lại.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("students")
+        )
+
+    # =========================================
+    # KIỂM TRA MÃ HV
+    # =========================================
+    duplicated_license = (
+        supabase.table(STUDENT_TABLE)
+        .select("license,name,birthdate")
+        .eq("license", license_code)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+
+    if duplicated_license:
+        # Nếu Ken đã chọn YES tại popup,
+        # cho phép thêm nhưng tạo Mã HV mới.
+        if force_duplicate:
+            license_code = (
+                make_unique_student_license_web(
+                    license_code
+                )
+            )
+
+        else:
+            old = duplicated_license[0]
+
+            flash(
+                f"Mã HV {license_code} đã tồn tại cho học viên "
+                f"{old.get('name', '')} - "
+                f"{old.get('birthdate', '')}. "
+                f"Ken không thể thêm trùng mã."
+            )
+
+            return redirect(
+                url_for("students")
+            )
+
     payload = {
         'license': license_code,
-        'name': form.get('name','').strip(),
+        'name': name,
         'birthdate': birthdate,
-        'gender': form.get('gender','').strip(),
+        'gender': gender,
+
         'classroom': normalize_student_classroom_web(
             form.get('classroom', '')
         ),
-        'timeclass': form.get('timeclass','').strip(),
-        'clup': form.get('clup','').strip(),
-        'phonenumber': form.get('phonenumber','').strip(),
-        'address': form.get('address', '').strip(),
-        'belt': form.get('belt','Cấp 10').strip() or 'Cấp 10',
-        'family': form.get('family','Không'),
-        'active': form.get('active','Có'),
-        'telegram_id': form.get('telegram_id','').strip(),
-    }
-    supabase.table(STUDENT_TABLE).insert(payload).execute()
-    flash(f'Đã thêm học viên: {license_code}')
 
-    return redirect(url_for('students', new=license_code))
+        'timeclass': form.get(
+            'timeclass',
+            ''
+        ).strip(),
+
+        'clup': form.get(
+            'clup',
+            ''
+        ).strip(),
+
+        'phonenumber': form.get(
+            'phonenumber',
+            ''
+        ).strip(),
+
+        'address': form.get(
+            'address',
+            ''
+        ).strip(),
+
+        'belt': (
+            form.get(
+                'belt',
+                'Cấp 10'
+            ).strip()
+            or 'Cấp 10'
+        ),
+
+        'family': form.get(
+            'family',
+            'Không'
+        ),
+
+        'active': form.get(
+            'active',
+            'Có'
+        ),
+
+        'telegram_id': form.get(
+            'telegram_id',
+            ''
+        ).strip(),
+    }
+
+    supabase.table(STUDENT_TABLE) \
+        .insert(payload) \
+        .execute()
+
+    flash(
+        f'Đã thêm học viên: {license_code}',
+        "success"
+    )
+
+    return redirect(
+        url_for(
+            'students',
+            new=license_code
+        )
+    )
 
 @app.post('/students/<license_code>/delete')
 def students_delete(license_code):
@@ -6418,28 +6726,126 @@ def students_delete(license_code):
 def students_update(license_code):
     form = request.form
 
-    birthdate = normalize_birthdate_web(form.get("birthdate", ""))
+    birthdate = normalize_birthdate_web(
+        form.get("birthdate", "")
+    )
+
+    if not birthdate:
+        flash(
+            "Ngày sinh không hợp lệ",
+            "warning"
+        )
+        return back_to_current_page(
+            "students"
+        )
+
+    name = form.get(
+        'name',
+        ''
+    ).strip()
+
+    gender = form.get(
+        'gender',
+        ''
+    ).strip()
+
+    force_duplicate = (
+        form.get("force_duplicate") == "1"
+    )
+
+    # =========================================
+    # KIỂM TRA TRÙNG VỚI HỘI VIÊN KHÁC
+    # Không tính chính license đang sửa
+    # =========================================
+    identity_duplicates = (
+        find_student_identity_duplicates_web(
+            name=name,
+            birthdate=birthdate,
+            gender=gender,
+            exclude_license=license_code,
+        )
+    )
+
+    if (
+        identity_duplicates
+        and not force_duplicate
+    ):
+        flash(
+            "Đã có hội viên khác trùng "
+            "Họ tên, Ngày sinh và Giới tính.",
+            "warning"
+        )
+
+        return back_to_current_page(
+            "students"
+        )
 
     payload = {
-        'name': form.get('name', '').strip(),
+        'name': name,
         'birthdate': birthdate,
-        'gender': form.get('gender', '').strip(),
+        'gender': gender,
+
         'classroom': normalize_student_classroom_web(
             form.get('classroom', '')
         ),
-        'timeclass': form.get('timeclass', '').strip(),
-        'clup': form.get('clup', '').strip(),
-        'phonenumber': form.get('phonenumber', '').strip(),
-        'address': form.get('address', '').strip(),
-        'belt': form.get('belt', 'Cấp 10').strip(),
-        'family': form.get('family', 'Không'),
-        'active': form.get('active', 'Có'),
-        'telegram_id': form.get('telegram_id', '').strip(),
+
+        'timeclass': form.get(
+            'timeclass',
+            ''
+        ).strip(),
+
+        'clup': form.get(
+            'clup',
+            ''
+        ).strip(),
+
+        'phonenumber': form.get(
+            'phonenumber',
+            ''
+        ).strip(),
+
+        'address': form.get(
+            'address',
+            ''
+        ).strip(),
+
+        'belt': form.get(
+            'belt',
+            'Cấp 10'
+        ).strip(),
+
+        'family': form.get(
+            'family',
+            'Không'
+        ),
+
+        'active': form.get(
+            'active',
+            'Có'
+        ),
+
+        'telegram_id': form.get(
+            'telegram_id',
+            ''
+        ).strip(),
     }
 
-    supabase.table(STUDENT_TABLE).update(payload).eq('license', license_code).execute()
-    flash(f"Đã cập nhật học viên: {license_code}", "success")
-    return back_to_current_page("students")
+    supabase.table(STUDENT_TABLE) \
+        .update(payload) \
+        .eq(
+            'license',
+            license_code
+        ) \
+        .execute()
+
+    flash(
+        f"Đã cập nhật học viên: {license_code}",
+        "success"
+    )
+
+    return back_to_current_page(
+        "students"
+    )
 
 @app.get('/fees')
 def fees():
@@ -11036,15 +11442,66 @@ def exam_tracking():
                 results_map.setdefault(ma_hv, []).append(result)
 
     # =========================
-    # TÍNH TIỀN THEO PHIẾU THU THỰC TẾ
+    # TÍNH RIÊNG TIỀN THI CẤP / ĐẲNG
+    # KHÔNG CỘNG HỌC PHÍ TRONG tong_tien
     # =========================
     total_count = len(rows)
 
-    total_exam_fee = sum([
-        int(r.get("tong_tien") or 0)
-        for r in rows
-    ])
+    # Lấy mức phí đang cấu hình trong Setup
+    settings = load_app_settings()
+    fees_settings = settings.get("fees", {}) or {}
 
+    exam_fee = money_to_int_web(
+        fees_settings.get("exam_fee", 300000)
+    )
+
+    dan_fees = fees_settings.get("dan_fees", {}) or {}
+
+
+    def get_exam_fee_tracking(row):
+        """
+        Chỉ trả về PHÍ THI của võ sinh.
+        Không sử dụng tong_tien vì tong_tien có thể gồm cả học phí.
+        """
+
+        # =========================
+        # THI CẤP: Q1 / Q2 / Q3 / Q4
+        # =========================
+        if quarter not in dan_quarters:
+            return exam_fee
+
+        # =========================
+        # THI ĐẲNG
+        # Lấy mức phí theo đẳng dự thi
+        # =========================
+        ma_hv = str(row.get("ma_hv") or "").strip()
+        student = students_map.get(ma_hv, {})
+
+        current_belt = normalize_belt_name_web(
+            student.get("belt")
+        )
+
+        exam_belt = get_next_belt_web(current_belt)
+
+        # Cấp 1 thi lên 1 Đẳng
+        if current_belt == "Cấp 1":
+            exam_belt = "1 Đẳng"
+
+        return money_to_int_web(
+            dan_fees.get(exam_belt, 0)
+        )
+
+
+    # Tổng tiền thi thực tế
+    total_exam_fee = sum(
+        get_exam_fee_tracking(r)
+        for r in rows
+    )
+
+
+    # =========================
+    # PHÂN LOẠI TIỀN MẶT / CHUYỂN KHOẢN
+    # =========================
     cash_rows = [
         r for r in rows
         if str(r.get("chuyen_khoan") or "").strip().upper() == "TM"
@@ -11058,15 +11515,17 @@ def exam_tracking():
     cash_count = len(cash_rows)
     bank_count = len(bank_rows)
 
-    cash_total = sum([
-        int(r.get("tong_tien") or 0)
-        for r in cash_rows
-    ])
 
-    bank_total = sum([
-        int(r.get("tong_tien") or 0)
+    # Chỉ cộng PHÍ THI, không cộng học phí
+    cash_total = sum(
+        get_exam_fee_tracking(r)
+        for r in cash_rows
+    )
+
+    bank_total = sum(
+        get_exam_fee_tracking(r)
         for r in bank_rows
-    ])
+    )
 
     # =========================
     # THỐNG KÊ CẤP DỰ THI
