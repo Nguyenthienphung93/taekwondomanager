@@ -4,7 +4,8 @@
 <h1>Thông tin hội viên</h1>
 
 
-<form method="post" action="/students/add" class="card student-add-card">
+<form method="post" action="/students/add" class="card student-add-card" id="studentAddForm">
+    <input type="hidden" name="force_duplicate" id="add_force_duplicate" value="0">
     <div class="student-split-form">
 
         <div class="student-info-panel">
@@ -354,6 +355,7 @@
         <h2>Chỉnh sửa hội viên</h2>
 
         <form id="editForm" method="post">
+            <input type="hidden" name="force_duplicate" id="edit_force_duplicate" value="0">
             <div class="student-form-grid">
                 <div class="field-box">
                     <label>Mã HV</label>
@@ -629,6 +631,33 @@
                 <h3>Hoạt động</h3>
                 <div id="activityHistoryBox" class="history-grid"></div>
             </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- =========================
+     POPUP CẢNH BÁO TRÙNG HỘI VIÊN
+========================= -->
+<div id="duplicateStudentModal" class="duplicate-student-modal">
+    <div class="duplicate-student-box">
+        <div class="duplicate-student-head">
+            <div class="duplicate-warning-icon">⚠️</div>
+            <div>
+                <h2>Phát hiện hội viên trùng thông tin</h2>
+                <p>Hệ thống tìm thấy hội viên có cùng Họ tên, Ngày sinh và Giới tính.</p>
+            </div>
+        </div>
+
+        <div class="duplicate-student-body">
+            <div class="duplicate-title">Đã có võ sinh có thông tin:</div>
+            <div id="duplicateStudentList"></div>
+            <div id="duplicateStudentQuestion" class="duplicate-question"></div>
+        </div>
+
+        <div class="duplicate-student-actions">
+            <button type="button" class="duplicate-no-btn" onclick="cancelDuplicateStudent()">No</button>
+            <button type="button" class="duplicate-yes-btn" onclick="confirmDuplicateStudent()">Yes</button>
         </div>
     </div>
 </div>
@@ -933,6 +962,7 @@ function setEditClassroomValue(classroom) {
 
 function openEditModal(license, name, birthdate, gender, classroom, timeclass, clup, phone, address, belt, family, active, telegramId) {
     document.getElementById("editForm").action = `/students/${license}/update`;
+    document.getElementById("edit_force_duplicate").value = "0";
 
     document.getElementById("edit_license").value = license || "";
     document.getElementById("edit_name").value = name || "";
@@ -1508,64 +1538,177 @@ document.addEventListener("click", function(e) {
     }
 });
 
-document.addEventListener("DOMContentLoaded", function () {
-    const addForm = document.querySelector(
-        'form[action="/students/add"]'
+let duplicatePendingForm = null;
+let duplicatePendingMode = "add";
+
+function escapeStudentDuplicateHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function validateStudentClassroom(mode) {
+    const isEdit = mode === "edit";
+    const classroom = (document.getElementById(
+        isEdit ? "edit_classroom" : "classroomValue"
+    ).value || "").trim();
+
+    if (!classroom) {
+        alert("Ken cần chọn hoặc nhập lớp học.");
+        return false;
+    }
+
+    const preset = document.getElementById(
+        isEdit ? "edit_classroom_preset" : "classroomPreset"
     );
+
+    if (
+        preset.value === "__other__"
+        && classroom.split(" - ").length < 2
+    ) {
+        alert("Lớp Khác cần nhập ít nhất 2 ngày học khác nhau.");
+        return false;
+    }
+
+    return true;
+}
+
+async function checkStudentDuplicate(form, mode) {
+    const formData = new FormData(form);
+
+    const payload = {
+        name: (formData.get("name") || "").trim(),
+        birthdate: (formData.get("birthdate") || "").trim(),
+        gender: (formData.get("gender") || "").trim(),
+        current_license: mode === "edit"
+            ? (document.getElementById("edit_license").value || "").trim()
+            : ""
+    };
+
+    const response = await fetch("/api/student-duplicate-check", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+        throw new Error(data.message || "Không kiểm tra được dữ liệu trùng");
+    }
+
+    return data;
+}
+
+function showDuplicateStudentPopup(rows, mode, form) {
+    duplicatePendingForm = form;
+    duplicatePendingMode = mode;
+
+    const list = document.getElementById("duplicateStudentList");
+    const question = document.getElementById("duplicateStudentQuestion");
+
+    list.innerHTML = (rows || []).map(row => `
+        <div class="duplicate-student-card">
+            <div class="duplicate-student-name">${escapeStudentDuplicateHtml(row.name || "")}</div>
+            <div class="duplicate-student-line">${escapeStudentDuplicateHtml(row.birthdate || "")}</div>
+            <div class="duplicate-student-line">${escapeStudentDuplicateHtml(row.gender || "")}</div>
+            <div class="duplicate-student-license">Mã HV: ${escapeStudentDuplicateHtml(row.license || "")}</div>
+        </div>
+    `).join("");
+
+    question.textContent = mode === "edit"
+        ? "Bạn có muốn tiếp tục chỉnh sửa hội viên này?"
+        : "Bạn có muốn thêm võ sinh mới?";
+
+    document.getElementById("duplicateStudentModal").style.display = "flex";
+}
+
+function cancelDuplicateStudent() {
+    const modal = document.getElementById("duplicateStudentModal");
+    modal.style.display = "none";
+
+    if (duplicatePendingForm) {
+        const forceInput = duplicatePendingForm.querySelector(
+            'input[name="force_duplicate"]'
+        );
+        if (forceInput) forceInput.value = "0";
+    }
+
+    // Không reload, không reset form.
+    // Toàn bộ dữ liệu Ken vừa nhập/sửa vẫn được giữ nguyên.
+    duplicatePendingForm = null;
+}
+
+function confirmDuplicateStudent() {
+    if (!duplicatePendingForm) return;
+
+    const forceInput = duplicatePendingForm.querySelector(
+        'input[name="force_duplicate"]'
+    );
+
+    if (forceInput) {
+        forceInput.value = "1";
+    }
+
+    document.getElementById("duplicateStudentModal").style.display = "none";
+
+    const form = duplicatePendingForm;
+    duplicatePendingForm = null;
+
+    // submit() để không chạy kiểm tra trùng lần thứ hai.
+    form.submit();
+}
+
+async function handleStudentFormSubmit(event, mode) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+
+    if (!validateStudentClassroom(mode)) {
+        return;
+    }
+
+    const forceInput = form.querySelector('input[name="force_duplicate"]');
+
+    if (forceInput && forceInput.value === "1") {
+        form.submit();
+        return;
+    }
+
+    try {
+        const data = await checkStudentDuplicate(form, mode);
+
+        if (data.duplicated) {
+            showDuplicateStudentPopup(data.rows || [], mode, form);
+            return;
+        }
+
+        form.submit();
+
+    } catch (error) {
+        console.error(error);
+        alert("Không kiểm tra được hội viên trùng. Ken thử lại giúp Sam.");
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const addForm = document.getElementById("studentAddForm");
+    const editForm = document.getElementById("editForm");
 
     if (addForm) {
         addForm.addEventListener("submit", function (event) {
-            const classroom = (
-                document.getElementById("classroomValue").value || ""
-            ).trim();
-
-            if (!classroom) {
-                event.preventDefault();
-                alert("Ken cần chọn hoặc nhập lớp học.");
-                return;
-            }
-
-            const preset = document.getElementById("classroomPreset");
-
-            if (
-                preset.value === "__other__"
-                && classroom.split(" - ").length < 2
-            ) {
-                event.preventDefault();
-                alert(
-                    "Lớp Khác cần nhập ít nhất 2 ngày học khác nhau."
-                );
-            }
+            handleStudentFormSubmit(event, "add");
         });
     }
 
-    const editForm = document.getElementById("editForm");
-
     if (editForm) {
         editForm.addEventListener("submit", function (event) {
-            const classroom = (
-                document.getElementById("edit_classroom").value || ""
-            ).trim();
-
-            if (!classroom) {
-                event.preventDefault();
-                alert("Ken cần chọn hoặc nhập lớp học.");
-                return;
-            }
-
-            const preset = document.getElementById(
-                "edit_classroom_preset"
-            );
-
-            if (
-                preset.value === "__other__"
-                && classroom.split(" - ").length < 2
-            ) {
-                event.preventDefault();
-                alert(
-                    "Lớp Khác cần nhập ít nhất 2 ngày học khác nhau."
-                );
-            }
+            handleStudentFormSubmit(event, "edit");
         });
     }
 });
@@ -2260,6 +2403,147 @@ document.addEventListener("DOMContentLoaded", function () {
     font-size: 11px;
     font-weight: 800;
     text-align: center;
+}
+
+
+/* =========================
+   POPUP CẢNH BÁO TRÙNG HỘI VIÊN
+========================= */
+.duplicate-student-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(15, 23, 42, .58);
+    backdrop-filter: blur(3px);
+}
+
+.duplicate-student-box {
+    width: min(500px, 96vw);
+    max-height: 88vh;
+    overflow: auto;
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #fde68a;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .34);
+}
+
+.duplicate-student-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px 20px;
+    background: #fff7d6;
+    border-bottom: 1px solid #fde68a;
+}
+
+.duplicate-warning-icon {
+    font-size: 30px;
+    line-height: 1;
+}
+
+.duplicate-student-head h2 {
+    margin: 0;
+    color: #92400e;
+    font-size: 20px;
+    font-weight: 950;
+}
+
+.duplicate-student-head p {
+    margin: 5px 0 0;
+    color: #78350f;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.duplicate-student-body {
+    padding: 18px 20px;
+}
+
+.duplicate-title {
+    margin-bottom: 10px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.duplicate-student-card {
+    margin-bottom: 10px;
+    padding: 13px 15px;
+    border: 1px solid #fecaca;
+    border-left: 5px solid #ef4444;
+    border-radius: 12px;
+    background: #fff7f7;
+}
+
+.duplicate-student-name {
+    color: #991b1b;
+    font-size: 17px;
+    font-weight: 950;
+}
+
+.duplicate-student-line {
+    margin-top: 3px;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.duplicate-student-license {
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.duplicate-question {
+    margin-top: 16px;
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 950;
+}
+
+.duplicate-student-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px 18px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.duplicate-student-actions button {
+    min-width: 92px;
+    height: 40px;
+    border: 0;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.duplicate-no-btn {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.duplicate-yes-btn {
+    background: #facc15;
+    color: #0f172a;
+}
+
+@media(max-width: 520px) {
+    .duplicate-student-actions {
+        flex-direction: column-reverse;
+    }
+
+    .duplicate-student-actions button {
+        width: 100%;
+    }
 }
 </style>
 
