@@ -95,8 +95,12 @@
     </thead>
     <tbody>
         {% for r in rows %}
-        <tr class="{{ r.fee_row_class }}"
-            oncontextmenu="openUnpaidMenu(event, '{{ r.license }}', '{{ r.fee_status }}')">
+        <tr
+            class="{{ r.fee_row_class }}"
+            data-license="{{ r.license }}"
+            data-status="{{ r.fee_status }}"
+            oncontextmenu="openUnpaidMenu(event, '{{ r.license }}', '{{ r.fee_status }}')"
+        >
             <td>{{ r.license }}</td>
             <td><b>{{ r.name }}</b></td>
             <td>{{ r.birthdate }}</td>
@@ -139,20 +143,25 @@
 let selectedUnpaidLicense = "";
 let selectedUnpaidStatus = "";
 
-function openUnpaidMenu(e, license, status) {
-    e.preventDefault();
-
+function openUnpaidMenuAt(pageX, pageY, license, status) {
     selectedUnpaidLicense = license;
     selectedUnpaidStatus = status || "";
 
-    const menu = document.getElementById("unpaidMenu");
-    const tempLeaveAction = document.getElementById("tempLeaveAction");
+    const menu =
+        document.getElementById("unpaidMenu");
+
+    const tempLeaveAction =
+        document.getElementById("tempLeaveAction");
+
+    if (!menu) return;
 
     if (tempLeaveAction) {
         if (selectedUnpaidStatus === "temp_leave") {
-            tempLeaveAction.innerHTML = "↩️ Hủy tạm nghỉ";
+            tempLeaveAction.innerHTML =
+                "↩️ Hủy tạm nghỉ";
         } else {
-            tempLeaveAction.innerHTML = "🌙 Tạm nghỉ 1 tháng";
+            tempLeaveAction.innerHTML =
+                "🌙 Tạm nghỉ 1 tháng";
         }
     }
 
@@ -161,20 +170,175 @@ function openUnpaidMenu(e, license, status) {
     const menuWidth = 190;
     const menuHeight = 92;
 
-    let left = e.pageX;
-    let top = e.pageY;
+    let left = pageX;
+    let top = pageY;
 
-    if (left + menuWidth > window.innerWidth) {
-        left = window.innerWidth - menuWidth - 12;
+    if (
+        left + menuWidth >
+        window.innerWidth + window.scrollX
+    ) {
+        left =
+            window.innerWidth +
+            window.scrollX -
+            menuWidth -
+            12;
     }
 
-    if (top + menuHeight > window.innerHeight + window.scrollY) {
-        top = window.innerHeight + window.scrollY - menuHeight - 12;
+    if (
+        top + menuHeight >
+        window.innerHeight + window.scrollY
+    ) {
+        top =
+            window.innerHeight +
+            window.scrollY -
+            menuHeight -
+            12;
     }
 
     menu.style.left = left + "px";
     menu.style.top = top + "px";
 }
+
+
+function openUnpaidMenu(e, license, status) {
+    e.preventDefault();
+
+    openUnpaidMenuAt(
+        e.pageX,
+        e.pageY,
+        license,
+        status
+    );
+}
+
+/* =====================================================
+   CHẠM GIỮ TRÊN IPHONE / IPAD / ANDROID
+   Cho danh sách chưa đóng phí
+===================================================== */
+function initUnpaidLongPress() {
+    const rows =
+        document.querySelectorAll(
+            ".unpaid-table tbody tr"
+        );
+
+    rows.forEach(row => {
+        let pressTimer = null;
+
+        let startX = 0;
+        let startY = 0;
+
+        let longPressOpened = false;
+
+        row.addEventListener(
+            "touchstart",
+            function(e) {
+                if (
+                    !e.touches ||
+                    e.touches.length !== 1
+                ) {
+                    return;
+                }
+
+                const touch = e.touches[0];
+
+                startX = touch.clientX;
+                startY = touch.clientY;
+
+                longPressOpened = false;
+
+                clearTimeout(pressTimer);
+
+                pressTimer =
+                    setTimeout(function() {
+                        longPressOpened = true;
+
+                        openUnpaidMenuAt(
+                            touch.pageX,
+                            touch.pageY,
+                            row.dataset.license || "",
+                            row.dataset.status || ""
+                        );
+
+                        if (navigator.vibrate) {
+                            navigator.vibrate(30);
+                        }
+
+                    }, 550);
+            },
+            { passive: true }
+        );
+
+
+        row.addEventListener(
+            "touchmove",
+            function(e) {
+                if (
+                    !e.touches ||
+                    !e.touches.length
+                ) {
+                    return;
+                }
+
+                const touch = e.touches[0];
+
+                const moveX =
+                    Math.abs(
+                        touch.clientX - startX
+                    );
+
+                const moveY =
+                    Math.abs(
+                        touch.clientY - startY
+                    );
+
+                /*
+                    Đang cuộn màn hình:
+                    không mở menu.
+                */
+                if (
+                    moveX > 12 ||
+                    moveY > 12
+                ) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            },
+            { passive: true }
+        );
+
+
+        row.addEventListener(
+            "touchend",
+            function(e) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+
+                if (longPressOpened) {
+                    e.preventDefault();
+                    longPressOpened = false;
+                }
+            },
+            { passive: false }
+        );
+
+
+        row.addEventListener(
+            "touchcancel",
+            function() {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+                longPressOpened = false;
+            },
+            { passive: true }
+        );
+    });
+}
+
+
+document.addEventListener(
+    "DOMContentLoaded",
+    initUnpaidLongPress
+);
 
 function goPayFee() {
     if (!selectedUnpaidLicense) return;
@@ -618,6 +782,15 @@ document.addEventListener("DOMContentLoaded", function () {
 .unpaid-table td:nth-child(2) {
     white-space: normal;
     line-height: 1.35;
+}
+
+
+/* Chặn Safari chọn chữ/callout khi chạm giữ vào võ sinh */
+.unpaid-table tbody tr,
+.unpaid-table tbody td {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 </style>
 {% endblock %}

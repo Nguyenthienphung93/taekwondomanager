@@ -1032,9 +1032,7 @@ document.addEventListener("DOMContentLoaded", function () {
 let currentFeeId = null;
 let currentFeeRow = null;
 
-function openFeeMenu(e, id, rowEl) {
-    e.preventDefault();
-
+function openFeeMenuAt(pageX, pageY, id, rowEl) {
     currentFeeId = id;
     currentFeeRow = rowEl;
 
@@ -1042,9 +1040,143 @@ function openFeeMenu(e, id, rowEl) {
     if (!menu) return;
 
     menu.style.display = "block";
-    menu.style.left = e.pageX + "px";
-    menu.style.top = e.pageY + "px";
+
+    const menuWidth = 190;
+    const menuHeight = 92;
+
+    let left = pageX;
+    let top = pageY;
+
+    if (left + menuWidth > window.innerWidth + window.scrollX) {
+        left = window.innerWidth + window.scrollX - menuWidth - 12;
+    }
+
+    if (top + menuHeight > window.innerHeight + window.scrollY) {
+        top = window.innerHeight + window.scrollY - menuHeight - 12;
+    }
+
+    menu.style.left = left + "px";
+    menu.style.top = top + "px";
 }
+
+function openFeeMenu(e, id, rowEl) {
+    e.preventDefault();
+
+    openFeeMenuAt(
+        e.pageX,
+        e.pageY,
+        id,
+        rowEl
+    );
+}
+
+/* =====================================================
+   CHẠM GIỮ TRÊN IPHONE / IPAD / ANDROID
+   Cho bảng danh sách đã đóng học phí
+===================================================== */
+function initFeeLongPress() {
+    const rows = document.querySelectorAll(
+        ".fees-list-table tbody tr"
+    );
+
+    rows.forEach(row => {
+        let pressTimer = null;
+        let startX = 0;
+        let startY = 0;
+        let longPressOpened = false;
+
+        row.addEventListener(
+            "touchstart",
+            function(e) {
+                if (!e.touches || e.touches.length !== 1) {
+                    return;
+                }
+
+                const touch = e.touches[0];
+
+                startX = touch.clientX;
+                startY = touch.clientY;
+                longPressOpened = false;
+
+                clearTimeout(pressTimer);
+
+                pressTimer = setTimeout(function() {
+                    longPressOpened = true;
+
+                    const id = row.dataset.id || "";
+
+                    openFeeMenuAt(
+                        touch.pageX,
+                        touch.pageY,
+                        id,
+                        row
+                    );
+
+                    if (navigator.vibrate) {
+                        navigator.vibrate(30);
+                    }
+                }, 550);
+            },
+            { passive: true }
+        );
+
+        row.addEventListener(
+            "touchmove",
+            function(e) {
+                if (!e.touches || !e.touches.length) {
+                    return;
+                }
+
+                const touch = e.touches[0];
+
+                const moveX =
+                    Math.abs(touch.clientX - startX);
+
+                const moveY =
+                    Math.abs(touch.clientY - startY);
+
+                /*
+                    Nếu người dùng đang cuộn bảng/trang
+                    thì hủy chạm giữ.
+                */
+                if (moveX > 12 || moveY > 12) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            },
+            { passive: true }
+        );
+
+        row.addEventListener(
+            "touchend",
+            function(e) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+
+                if (longPressOpened) {
+                    e.preventDefault();
+                    longPressOpened = false;
+                }
+            },
+            { passive: false }
+        );
+
+        row.addEventListener(
+            "touchcancel",
+            function() {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+                longPressOpened = false;
+            },
+            { passive: true }
+        );
+    });
+}
+
+document.addEventListener(
+    "DOMContentLoaded",
+    initFeeLongPress
+);
 
 document.addEventListener("click", function () {
     const menu = document.getElementById("feeContextMenu");
@@ -2414,6 +2546,15 @@ document.addEventListener("DOMContentLoaded", function () {
     .fee-error-message {
         font-size: 13px;
     }
+}
+
+
+/* Chặn Safari hiện menu chọn chữ khi chạm giữ */
+.fees-list-table tbody tr,
+.fees-list-table tbody td {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 </style>
 {% endblock %}
