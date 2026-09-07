@@ -347,8 +347,9 @@
                 <div class="receipt-row receipt-note-row">
                     <div class="receipt-label">Ghi chú:</div>
                     <div class="receipt-value" id="rcNote">...</div>
-                    <div class="receipt-paid-stamp">ĐÃ THU TIỀN</div>
                 </div>
+
+                <div class="receipt-paid-stamp">ĐÃ THU TIỀN</div>
             </div>
 
             <div class="receipt-signatures">
@@ -1549,24 +1550,62 @@ document.addEventListener("DOMContentLoaded", function () {
     font-weight: bold;
 }
 
+/* =========================
+   GHI CHÚ HÓA ĐƠN
+   - Dùng toàn bộ chiều rộng
+   - Hết hàng tự xuống dòng
+========================= */
 .receipt-note-row {
-    position: relative;
-    min-height: 58px;
-    padding-right: 190px;
+    min-height: 72px;
+    padding-right: 0;
+    align-items: flex-start;
 }
 
+.receipt-note-row .receipt-label {
+    flex: 0 0 128px;
+}
+
+.receipt-note-row .receipt-value {
+    flex: 1;
+    min-width: 0;
+
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+
+    line-height: 1.45;
+    padding-right: 0;
+}
+
+
+/* =========================
+   DẤU ĐÃ THU TIỀN
+   - Layer độc lập theo toàn hóa đơn
+   - Không chiếm chỗ ghi chú
+========================= */
 .receipt-paid-stamp {
     position: absolute;
-    top: 50%;
-    right: 0;
+
+    right: 52px;
+    top: 430px;
+
     border: 4px solid #e53935;
     color: #e53935;
-    font-size: 25px;
+
+    font-size: 24px;
     font-weight: bold;
-    padding: 10px 15px;
-    transform: translateY(-50%) rotate(-5deg);
-    opacity: 0.9;
+
+    padding: 9px 14px;
+
+    transform: rotate(-5deg);
+
+    opacity: 0.88;
     white-space: nowrap;
+
+    z-index: 20;
+    pointer-events: none;
+
+    background: rgba(255,255,255,0.70);
 }
 
 .receipt-signatures {
