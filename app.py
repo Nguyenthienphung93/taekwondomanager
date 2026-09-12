@@ -7181,28 +7181,75 @@ def fees_add():
     main_note = f.get('note', '').strip()
     auto_fee_note = f.get('auto_fee_note', '').strip()
 
+    # Luôn có phương thức thanh toán
     sub_notes = [payment_method]
 
-    if auto_fee_note:
-        sub_notes.append(auto_fee_note)
+    # =====================================================
+    # CHỈ ÁP DỤNG GIẢM GIÁ KHI PHIẾU CÓ HỌC PHÍ
+    #
+    # Có học phí:
+    #   CK - Gia đình - giảm 10% học phí
+    #
+    # Học phí + thi cấp:
+    #   CK - Gia đình - giảm 10% học phí
+    #
+    # Chỉ thi cấp / thi đẳng:
+    #   CK
+    #   TM
+    # =====================================================
+    has_tuition = bool(month_label)
 
-    # Dự phòng nếu frontend không gửi auto_fee_note
-    if not auto_fee_note:
-        if discount_type == "half_month":
-            sub_notes.append("Đóng nửa tháng - giảm 50% học phí")
+    if has_tuition:
 
-        elif discount_type == "percent" and discount_value > 0:
-            sub_notes.append(f"Giảm giá {discount_value}%")
+        # Ưu tiên ghi chú tự động từ frontend
+        if auto_fee_note:
+            sub_notes.append(auto_fee_note)
 
-        elif discount_type == "money" and discount_value > 0:
-            sub_notes.append(f"Giảm giá {format_money(discount_value)}")
+        # Dự phòng nếu frontend không gửi auto_fee_note
+        else:
+            if discount_type == "half_month":
+                sub_notes.append(
+                    "Đóng nửa tháng - giảm 50% học phí"
+                )
 
-        family_value = str(sv.get("family") or "").strip().lower()
-        family_value = remove_accents(family_value)
+            elif (
+                discount_type == "percent"
+                and discount_value > 0
+            ):
+                sub_notes.append(
+                    f"Giảm giá {discount_value}%"
+                )
 
-        if family_value in ["co", "yes", "true", "1"]:
-            sub_notes.append("Gia đình - giảm 10% học phí")
+            elif (
+                discount_type == "money"
+                and discount_value > 0
+            ):
+                sub_notes.append(
+                    f"Giảm giá {format_money(discount_value)}"
+                )
 
+            # Gia đình chỉ giảm HỌC PHÍ
+            family_value = str(
+                sv.get("family") or ""
+            ).strip().lower()
+
+            family_value = remove_accents(
+                family_value
+            )
+
+            if family_value in [
+                "co",
+                "yes",
+                "true",
+                "1",
+            ]:
+                sub_notes.append(
+                    "Gia đình - giảm 10% học phí"
+                )
+
+    # =========================
+    # GHÉP GHI CHÚ
+    # =========================
     sub_note_text = " - ".join(sub_notes)
 
     if main_note:
