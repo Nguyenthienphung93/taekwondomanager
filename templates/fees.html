@@ -837,7 +837,29 @@ function addMonthRow() {
 
 function updateTotal() {
     const monthCount = document.querySelectorAll(".month-select").length;
-    const tuitionOneMonth = {{ tuition_fee|int }};
+
+    // ==========================================
+    // HỌC PHÍ CƠ BẢN THEO LỚP / CA
+    // ==========================================
+    let tuitionOneMonth = {{ tuition_fee|int }};
+
+    // Chỉ áp dụng riêng cho lớp "Hẹn Hò"
+    if (selectedStudent) {
+        const classroom = normalizeSearchText(selectedStudent.classroom);
+        const timeclass = normalizeSearchText(selectedStudent.timeclass);
+
+        if (classroom === "hen ho") {
+            if (timeclass === "1 buoi") {
+                tuitionOneMonth = 500000;
+            }
+            else if (timeclass === "2 buoi") {
+                tuitionOneMonth = 1000000;
+            }
+            else if (timeclass === "3 buoi") {
+                tuitionOneMonth = 1500000;
+            }
+        }
+    }
 
     const discountTypeEl = document.getElementById("discountType");
     const discountValueEl = document.getElementById("discountValue");
