@@ -6,7 +6,7 @@
     <h1>Danh sách thi cấp</h1>
 
     <div class="exam-title-actions">
-        <button type="button" class="sort-exam-btn" onclick="sortExamListTemp()">
+        <button type="button" class="sort-exam-btn" onclick="openExamSortModal()">
             🔃 Sort danh sách
         </button>
 
@@ -387,6 +387,82 @@
         </div>
     </div>
 </div>
+
+<!-- =========================
+     POPUP SORT DANH SÁCH
+========================= -->
+<div id="examSortModal" class="modal-bg">
+    <div class="modal-box exam-sort-modal-box">
+
+        <div class="exam-sort-head">
+            <div>
+                <h2>🔃 Sort danh sách</h2>
+                <p>Chọn cách sắp xếp danh sách thi cấp.</p>
+            </div>
+
+            <button type="button"
+                    class="detail-close-btn"
+                    onclick="closeExamSortModal()">×</button>
+        </div>
+
+        <div class="sort-mode-box">
+
+            <label class="sort-mode-option">
+                <input type="radio"
+                       name="examSortMode"
+                       value="default"
+                       checked
+                       onchange="toggleExamSortMode()">
+
+                <span>
+                    <b>Sort mặc định</b>
+                    <small>
+                        Cấp dự thi → Nam trước Nữ → nhỏ tuổi trước → họ tên
+                    </small>
+                </span>
+            </label>
+
+            <label class="sort-mode-option">
+                <input type="radio"
+                       name="examSortMode"
+                       value="custom"
+                       onchange="toggleExamSortMode()">
+
+                <span>
+                    <b>Sort tùy chọn</b>
+                    <small>Tự chọn cột và thứ tự ưu tiên.</small>
+                </span>
+            </label>
+
+        </div>
+
+        <div id="customSortArea" class="custom-sort-area" style="display:none;">
+
+            <div class="custom-sort-title">
+                Sort tùy chọn
+            </div>
+
+            <div id="customSortRows"></div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button type="button"
+                    class="cancel-btn"
+                    onclick="closeExamSortModal()">
+                Hủy
+            </button>
+
+            <button type="button"
+                    class="save-btn"
+                    onclick="applyExamSort()">
+                🔃 Sort
+            </button>
+        </div>
+
+    </div>
+</div>
+
 <script>
 
 const SERVER_EXAM_INFO = {{ exam_info|default({})|tojson }};
@@ -861,8 +937,9 @@ function getBeltSortValue(cap) {
 function getGenderSortValue(gender) {
     gender = String(gender || "").trim().toLowerCase();
 
-    if (gender === "nữ" || gender === "nu") return 0;
-    if (gender === "nam") return 1;
+    // Mặc định mới: Nam trước - Nữ sau
+    if (gender === "nam") return 0;
+    if (gender === "nữ" || gender === "nu") return 1;
 
     return 9;
 }
@@ -900,57 +977,395 @@ function autoRenumberExamNumbers() {
     saveExamDraft();
 }
 
-function sortExamListTemp() {
-    saveExamDraft();
+/* =========================================================
+   SORT DANH SÁCH
+========================================================= */
 
-    const tbody = document.querySelector(".exam-list-table tbody");
-    if (!tbody) return;
+const EXAM_SORT_FIELDS = [
+    { value: "cap",     label: "Cấp dự thi" },
+    { value: "gender",  label: "Giới tính" },
+    { value: "birth",   label: "Ngày sinh" },
+    { value: "name",    label: "Họ tên" },
+    { value: "license", label: "Mã HV" },
+    { value: "number",  label: "Số thi" }
+];
 
-    const rows = Array.from(tbody.querySelectorAll("tr"));
+function openExamSortModal() {
+    const modal = document.getElementById("examSortModal");
+    if (!modal) return;
+
+    // Mỗi lần mở popup: mặc định chọn Sort mặc định
+    const defaultRadio = document.querySelector(
+        'input[name="examSortMode"][value="default"]'
+    );
+
+    if (defaultRadio) {
+        defaultRadio.checked = true;
+    }
+
+    toggleExamSortMode();
+
+    modal.style.display = "flex";
+}
+
+function closeExamSortModal() {
+    const modal = document.getElementById("examSortModal");
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+function toggleExamSortMode() {
+    const mode = document.querySelector(
+        'input[name="examSortMode"]:checked'
+    )?.value || "default";
+
+    const area = document.getElementById("customSortArea");
+
+    if (!area) return;
+
+    if (mode === "custom") {
+        area.style.display = "block";
+
+        // Chưa có hàng nào thì tạo hàng 1
+        if (!document.querySelector(".custom-sort-row")) {
+            addCustomSortRow();
+        }
+    } else {
+        area.style.display = "none";
+    }
+}
+
+function buildSortFieldOptions(selectedValue = "") {
+    return EXAM_SORT_FIELDS.map(item => {
+        return `
+            <option value="${item.value}"
+                ${selectedValue === item.value ? "selected" : ""}>
+                ${item.label}
+            </option>
+        `;
+    }).join("");
+}
+
+function addCustomSortRow(afterButton = null) {
+    const box = document.getElementById("customSortRows");
+    if (!box) return;
+
+    const row = document.createElement("div");
+    row.className = "custom-sort-row";
+
+    row.innerHTML = `
+        <div class="sort-row-number"></div>
+
+        <select class="custom-sort-field">
+            ${buildSortFieldOptions()}
+        </select>
+
+        <select class="custom-sort-direction">
+            <option value="asc">A → Z / Tăng dần</option>
+            <option value="desc">Z → A / Giảm dần</option>
+        </select>
+
+        <div class="sort-row-actions">
+            <button type="button"
+                    class="sort-add-btn"
+                    title="Thêm điều kiện"
+                    onclick="addCustomSortRow(this)">
+                +
+            </button>
+
+            <button type="button"
+                    class="sort-remove-btn"
+                    title="Xóa điều kiện"
+                    onclick="removeCustomSortRow(this)">
+                🗑
+            </button>
+        </div>
+    `;
+
+    if (afterButton) {
+        const currentRow = afterButton.closest(".custom-sort-row");
+
+        if (currentRow && currentRow.nextSibling) {
+            box.insertBefore(row, currentRow.nextSibling);
+        } else {
+            box.appendChild(row);
+        }
+    } else {
+        box.appendChild(row);
+    }
+
+    refreshCustomSortRows();
+}
+
+function removeCustomSortRow(button) {
+    const rows = document.querySelectorAll(".custom-sort-row");
+
+    // Hàng đầu tiên không được xóa
+    if (rows.length <= 1) return;
+
+    const row = button.closest(".custom-sort-row");
+
+    if (row) {
+        row.remove();
+    }
+
+    refreshCustomSortRows();
+}
+
+function refreshCustomSortRows() {
+    const rows = document.querySelectorAll(".custom-sort-row");
+
+    rows.forEach((row, index) => {
+
+        const number = row.querySelector(".sort-row-number");
+        const removeBtn = row.querySelector(".sort-remove-btn");
+
+        if (number) {
+            number.textContent = `${index + 1}.`;
+        }
+
+        // Hàng 1: chỉ có nút +
+        // Từ hàng 2: có + và thùng rác
+        if (removeBtn) {
+            removeBtn.style.display =
+                index === 0 ? "none" : "inline-flex";
+        }
+    });
+}
+
+
+/* =========================================================
+   LẤY GIÁ TRỊ CỦA TỪNG CỘT
+========================================================= */
+
+function getCustomSortValue(row, field) {
+
+    switch (field) {
+
+        case "cap":
+            return getBeltSortValue(row.dataset.cap);
+
+        case "gender":
+            return getGenderSortValue(row.dataset.gender);
+
+        case "birth":
+            return getBirthDateSortValue(row.dataset.birth);
+
+        case "name":
+            return row.querySelector(".student-name-cell")
+                ?.textContent.trim() || "";
+
+        case "license":
+            return String(row.dataset.license || "");
+
+        case "number": {
+            const input = row.querySelector(".exam-number-input");
+
+            if (input && input.value !== "") {
+                return parseInt(input.value, 10) || 999999;
+            }
+
+            return getSavedExamNumberSortValue(row);
+        }
+    }
+
+    return "";
+}
+
+
+/* =========================================================
+   SO SÁNH GIÁ TRỊ
+========================================================= */
+
+function compareExamSortValues(a, b, direction) {
+
+    let result = 0;
+
+    if (typeof a === "number" && typeof b === "number") {
+
+        result = a - b;
+
+    } else {
+
+        result = String(a).localeCompare(
+            String(b),
+            "vi",
+            {
+                numeric: true,
+                sensitivity: "base"
+            }
+        );
+    }
+
+    return direction === "desc"
+        ? -result
+        : result;
+}
+
+
+/* =========================================================
+   SORT MẶC ĐỊNH
+========================================================= */
+
+function sortExamListDefault(rows) {
 
     rows.sort((a, b) => {
-        // 1. Cấp dự thi: Cấp 9 -> Cấp 8 -> ... -> Cấp 1 -> 1 Đẳng...
+
+        // 1. Cấp dự thi
         const capA = getBeltSortValue(a.dataset.cap);
         const capB = getBeltSortValue(b.dataset.cap);
 
-        if (capA !== capB) return capA - capB;
+        if (capA !== capB) {
+            return capA - capB;
+        }
 
-        // 2. Giới tính: Nữ trước, Nam sau
+        // 2. Giới tính: NAM TRƯỚC - NỮ SAU
         const genderA = getGenderSortValue(a.dataset.gender);
         const genderB = getGenderSortValue(b.dataset.gender);
 
-        if (genderA !== genderB) return genderA - genderB;
+        if (genderA !== genderB) {
+            return genderA - genderB;
+        }
 
-        // 3. Ngày sinh đầy đủ: nhỏ tuổi hơn trước
-        // VD:
-        // 20/05/2018 đứng trước 08/01/2018
-        // vì sinh sau nên nhỏ tuổi hơn.
+        // 3. Nhỏ tuổi hơn trước
         const birthA = getBirthDateSortValue(a.dataset.birth);
         const birthB = getBirthDateSortValue(b.dataset.birth);
 
-        if (birthA !== birthB) return birthB - birthA;
+        if (birthA !== birthB) {
+            return birthB - birthA;
+        }
 
-        // 4. Nếu trùng cả ngày sinh thì sắp theo họ tên
-        const nameA = a.querySelector(".student-name-cell")?.textContent.trim() || "";
-        const nameB = b.querySelector(".student-name-cell")?.textContent.trim() || "";
+        // 4. Họ tên
+        const nameA = a.querySelector(".student-name-cell")
+            ?.textContent.trim() || "";
 
-        const nameCompare = nameA.localeCompare(nameB, "vi");
-        if (nameCompare !== 0) return nameCompare;
+        const nameB = b.querySelector(".student-name-cell")
+            ?.textContent.trim() || "";
 
-        // 5. Nếu vẫn trùng thì sắp theo mã HV cho ổn định
-        return String(a.dataset.license || "").localeCompare(String(b.dataset.license || ""));
+        const nameCompare = nameA.localeCompare(
+            nameB,
+            "vi",
+            { sensitivity: "base" }
+        );
+
+        if (nameCompare !== 0) {
+            return nameCompare;
+        }
+
+        // 5. Mã HV
+        return String(a.dataset.license || "")
+            .localeCompare(String(b.dataset.license || ""));
+    });
+}
+
+
+/* =========================================================
+   SORT TÙY CHỌN
+========================================================= */
+
+function sortExamListCustom(rows) {
+
+    const conditions = [];
+
+    document.querySelectorAll(".custom-sort-row").forEach(row => {
+
+        const field = row.querySelector(".custom-sort-field")?.value;
+        const direction =
+            row.querySelector(".custom-sort-direction")?.value || "asc";
+
+        if (field) {
+            conditions.push({
+                field,
+                direction
+            });
+        }
     });
 
-    rows.forEach(row => tbody.appendChild(row));
+    if (!conditions.length) return;
 
-    // Lưu thứ tự đã sort
-    const order = rows.map(row => row.dataset.license || "").filter(Boolean);
-    localStorage.setItem(getExamSortKey(), JSON.stringify(order));
+    rows.sort((a, b) => {
 
-    // Chỉ sắp xếp danh sách.
-    // Không tự thay đổi số thi vì số thi do Ken nhập tay
-    // hoặc cập nhật hàng loạt từ Excel.
+        for (const condition of conditions) {
+
+            const valueA =
+                getCustomSortValue(a, condition.field);
+
+            const valueB =
+                getCustomSortValue(b, condition.field);
+
+            const result =
+                compareExamSortValues(
+                    valueA,
+                    valueB,
+                    condition.direction
+                );
+
+            if (result !== 0) {
+                return result;
+            }
+        }
+
+        // Nếu tất cả điều kiện giống nhau
+        // dùng mã HV để thứ tự luôn ổn định
+        return String(a.dataset.license || "")
+            .localeCompare(String(b.dataset.license || ""));
+    });
+}
+
+
+/* =========================================================
+   ÁP DỤNG SORT
+========================================================= */
+
+function applyExamSort() {
+
     saveExamDraft();
+
+    const tbody =
+        document.querySelector(".exam-list-table tbody");
+
+    if (!tbody) return;
+
+    const rows =
+        Array.from(tbody.querySelectorAll("tr"));
+
+    const mode = document.querySelector(
+        'input[name="examSortMode"]:checked'
+    )?.value || "default";
+
+    if (mode === "custom") {
+
+        sortExamListCustom(rows);
+
+    } else {
+
+        sortExamListDefault(rows);
+    }
+
+    rows.forEach(row => {
+        tbody.appendChild(row);
+    });
+
+    // Lưu lại thứ tự hiện tại
+    const order = rows
+        .map(row => row.dataset.license || "")
+        .filter(Boolean);
+
+    localStorage.setItem(
+        getExamSortKey(),
+        JSON.stringify(order)
+    );
+
+    saveExamDraft();
+
+    closeExamSortModal();
+}
+
+
+/* Giữ tương thích nếu chỗ khác vẫn gọi hàm cũ */
+function sortExamListTemp() {
+    openExamSortModal();
 }
 
 function getSavedExamNumberSortValue(row) {
@@ -1759,6 +2174,231 @@ function showImportExamModal(options) {
     }
 }
 
+
+/* =========================================================
+   POPUP SORT DANH SÁCH
+========================================================= */
+
+.exam-sort-modal-box {
+    width: min(720px, calc(100vw - 30px));
+    max-width: 720px;
+}
+
+.exam-sort-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 18px;
+}
+
+.exam-sort-head h2 {
+    margin: 0 0 5px;
+    color: #0f172a;
+}
+
+.exam-sort-head p {
+    margin: 0;
+    color: #64748b;
+    font-weight: 700;
+}
+
+
+/* ===== Chọn chế độ ===== */
+
+.sort-mode-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.sort-mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+
+    padding: 14px;
+
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+
+    background: #f8fafc;
+
+    cursor: pointer;
+    transition: .18s;
+}
+
+.sort-mode-option:hover {
+    border-color: #facc15;
+    background: #fffdf2;
+}
+
+.sort-mode-option:has(input:checked) {
+    border-color: #f4b400;
+    background: #fff8d8;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, .12);
+}
+
+.sort-mode-option input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: #f4b400;
+}
+
+.sort-mode-option span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sort-mode-option b {
+    color: #0f172a;
+    font-size: 15px;
+}
+
+.sort-mode-option small {
+    color: #64748b;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+
+/* ===== Sort tùy chọn ===== */
+
+.custom-sort-area {
+    margin-top: 5px;
+    padding: 14px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+
+    background: #f8fafc;
+}
+
+.custom-sort-title {
+    font-weight: 950;
+    color: #0f172a;
+    margin-bottom: 10px;
+}
+
+.custom-sort-row {
+    display: grid;
+
+    grid-template-columns:
+        30px
+        minmax(160px, 1fr)
+        minmax(170px, 1fr)
+        84px;
+
+    gap: 8px;
+    align-items: center;
+
+    margin-bottom: 9px;
+}
+
+.custom-sort-row:last-child {
+    margin-bottom: 0;
+}
+
+.sort-row-number {
+    text-align: center;
+    font-weight: 950;
+    color: #475569;
+}
+
+.custom-sort-field,
+.custom-sort-direction {
+    width: 100%;
+    height: 40px;
+
+    padding: 0 10px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+
+    background: white;
+
+    color: #0f172a;
+    font-weight: 800;
+
+    outline: none;
+}
+
+.custom-sort-field:focus,
+.custom-sort-direction:focus {
+    border-color: #f4b400;
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, .15);
+}
+
+.sort-row-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.sort-add-btn,
+.sort-remove-btn {
+    width: 38px;
+    height: 38px;
+
+    border: none;
+    border-radius: 10px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    font-weight: 950;
+}
+
+.sort-add-btn {
+    background: #22c55e;
+    color: white;
+    font-size: 22px;
+}
+
+.sort-add-btn:hover {
+    background: #16a34a;
+}
+
+.sort-remove-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 16px;
+}
+
+.sort-remove-btn:hover {
+    background: #fecaca;
+}
+
+
+/* ===== Mobile ===== */
+
+@media (max-width: 700px) {
+
+    .sort-mode-box {
+        grid-template-columns: 1fr;
+    }
+
+    .custom-sort-row {
+        grid-template-columns: 25px 1fr 72px;
+    }
+
+    .custom-sort-field {
+        grid-column: 2 / 4;
+    }
+
+    .custom-sort-direction {
+        grid-column: 2 / 3;
+    }
+
+    .sort-row-actions {
+        grid-column: 3 / 4;
+    }
+}
 </style>
 
 {% endblock %}
