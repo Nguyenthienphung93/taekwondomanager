@@ -7367,11 +7367,16 @@ def inject_student_welcome_popup():
             "welcome_months_count": 0,
         }
 
-def build_tracking_rows_web(year, month):
+def build_tracking_rows_web(year, month, selected_class=""):
     """
     Dùng chung cho:
     - Trang Theo dõi học phí
     - File Excel xuất theo bộ lọc
+
+    Bộ lọc:
+    - Năm
+    - Tháng
+    - Lớp
 
     Quy tắc:
     - Phiếu đóng 1 tháng: hiện tiền ở tháng đó.
@@ -7381,6 +7386,10 @@ def build_tracking_rows_web(year, month):
     """
 
     code = f"{int(month):02d}{year}"
+
+    selected_class = str(
+        selected_class or ""
+    ).strip()
 
     rows_all = (
         supabase.table(HOCPHI_TABLE)
@@ -7395,24 +7404,56 @@ def build_tracking_rows_web(year, month):
     cash = 0
     bank = 0
 
+    # Danh sách lớp thực sự có trong tháng đang xem
+    available_classes = set()
+
     for source_row in rows_all:
         r = dict(source_row)
 
-        ma_thang = str(r.get("ma_thang") or "").strip()
+        ma_thang = str(
+            r.get("ma_thang") or ""
+        ).strip()
 
         # Chỉ lấy phiếu có tháng đang lọc
         if code not in ma_thang:
             continue
 
-        amount = int(r.get("tong_tien") or 0)
+        # =========================
+        # LỚP CỦA HỌC VIÊN
+        # =========================
+        row_class = str(
+            r.get("lop") or ""
+        ).strip()
+
+        if row_class:
+            available_classes.add(row_class)
+
+        # Nếu Ken chọn lớp cụ thể
+        # thì chỉ lấy dữ liệu của lớp đó
+        if (
+            selected_class
+            and row_class != selected_class
+        ):
+            continue
+
+        amount = int(
+            r.get("tong_tien") or 0
+        )
 
         month_codes = [
             x.strip()
-            for x in re.split(r"\s*-\s*", ma_thang)
+            for x in re.split(
+                r"\s*-\s*",
+                ma_thang
+            )
             if x.strip()
         ]
 
-        first_month_code = month_codes[0] if month_codes else ""
+        first_month_code = (
+            month_codes[0]
+            if month_codes
+            else ""
+        )
 
         # =========================
         # TÁCH TIỀN THI CẤP/ĐẲNG
@@ -7420,7 +7461,9 @@ def build_tracking_rows_web(year, month):
         exam_fee = 0
 
         has_exam_fee = bool(
-            str(r.get("ma_quy") or "").strip()
+            str(
+                r.get("ma_quy") or ""
+            ).strip()
         )
 
         if has_exam_fee:
@@ -7465,37 +7508,61 @@ def build_tracking_rows_web(year, month):
         rows.append(r)
 
     rows.sort(
-        key=lambda x: str(x.get("thoi_gian") or ""),
+        key=lambda x: str(
+            x.get("thoi_gian") or ""
+        ),
         reverse=True
     )
 
     total_count = len([
         r for r in rows
-        if int(r.get("display_tong_tien") or 0) > 0
+        if int(
+            r.get("display_tong_tien") or 0
+        ) > 0
     ])
 
     cash_count = len([
         r for r in rows
-        if int(r.get("display_tong_tien") or 0) > 0
-        and str(r.get("chuyen_khoan") or "").strip().upper() == "TM"
+        if int(
+            r.get("display_tong_tien") or 0
+        ) > 0
+        and str(
+            r.get("chuyen_khoan") or ""
+        ).strip().upper() == "TM"
     ])
 
     bank_count = len([
         r for r in rows
-        if int(r.get("display_tong_tien") or 0) > 0
-        and str(r.get("chuyen_khoan") or "").strip().upper() == "CK"
+        if int(
+            r.get("display_tong_tien") or 0
+        ) > 0
+        and str(
+            r.get("chuyen_khoan") or ""
+        ).strip().upper() == "CK"
     ])
+
+    class_options = sorted(
+        available_classes,
+        key=lambda value: (
+            remove_accents(
+                str(value or "")
+            ).lower()
+        )
+    )
 
     return {
         "rows": rows,
+
         "total": total,
         "cash": cash,
         "bank": bank,
+
         "total_count": total_count,
         "cash_count": cash_count,
         "bank_count": bank_count,
-    }
 
+        "class_options": class_options,
+    }
 
 def build_tracking_export_note_web(row):
     """
@@ -7636,16 +7703,22 @@ def tracking():
     year = request.args.get(
         "year",
         str(now.year)
-    )
+    ).strip()
 
     month = request.args.get(
         "month",
         str(now.month)
-    )
+    ).strip()
+
+    selected_class = request.args.get(
+        "classroom",
+        ""
+    ).strip()
 
     tracking_data = build_tracking_rows_web(
         year,
-        month
+        month,
+        selected_class
     )
 
     return render_template(
@@ -7657,13 +7730,24 @@ def tracking():
         month=month,
         current_year=now.year,
 
+        selected_class=selected_class,
+        class_options=tracking_data[
+            "class_options"
+        ],
+
         total=tracking_data["total"],
         cash=tracking_data["cash"],
         bank=tracking_data["bank"],
 
-        total_count=tracking_data["total_count"],
-        cash_count=tracking_data["cash_count"],
-        bank_count=tracking_data["bank_count"],
+        total_count=tracking_data[
+            "total_count"
+        ],
+        cash_count=tracking_data[
+            "cash_count"
+        ],
+        bank_count=tracking_data[
+            "bank_count"
+        ],
     )
 
 
@@ -7682,6 +7766,11 @@ def tracking_export():
         str(now.month)
     ).strip()
 
+    selected_class = request.args.get(
+        "classroom",
+        ""
+    ).strip()
+
     try:
         month_int = int(month)
         year_int = int(year)
@@ -7695,7 +7784,8 @@ def tracking_export():
 
     tracking_data = build_tracking_rows_web(
         year,
-        month
+        month,
+        selected_class
     )
 
     # =========================
@@ -7820,8 +7910,8 @@ def tracking_export():
             ),
 
             "classroom": (
-                student.get("classroom")
-                or r.get("lop")
+                r.get("lop")
+                or student.get("classroom")
                 or ""
             ),
 
@@ -7929,9 +8019,15 @@ def tracking_export():
     # =========================
     ws.merge_cells("A2:G2")
 
+    class_filter_text = (
+        selected_class
+        if selected_class
+        else "Tất cả lớp"
+    )
+
     ws["A2"] = (
-        f"Bộ lọc: Tháng "
-        f"{month_int:02d}/{year_int}"
+        f"Bộ lọc: {class_filter_text}"
+        f" | Tháng {month_int:02d}/{year_int}"
         f" | Số học viên: "
         f"{len(export_rows)}"
     )
