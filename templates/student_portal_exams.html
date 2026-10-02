@@ -387,33 +387,7 @@
     text-align: center;
 }
 
-.mini-expand-btn {
-    position: absolute;
-    right: 11px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 31px;
-    height: 31px;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(255,255,255,.86);
-    color: #0f172a;
-    font-size: 14px;
-    font-weight: 1000;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-}
 
-.exam-mini-card:not(.is-expanded) .mini-expand-btn::before {
-    content: "⌄⌄";
-}
-
-.exam-mini-card.is-expanded .mini-expand-btn::before {
-    content: "⌃⌃";
-}
 
 .exam-mini-card:not(.is-expanded) .exam-mini-info {
     display: none;
@@ -427,9 +401,6 @@
     grid-column: span 2;
 }
 
-.exam-mini-card.is-expanded .mini-expand-btn {
-    transform: translateY(-50%) rotate(90deg);
-}
 
 @media(max-width: 900px) {
     .exam-mini-card.is-expanded {
@@ -439,7 +410,23 @@
 
 .exam-result-band {
     min-height: 72px;
-    padding: 10px 48px 10px 16px;
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: filter .2s ease;
+}
+
+.exam-result-band:hover {
+    filter: brightness(.98);
+}
+
+.exam-result-band:active {
+    filter: brightness(.95);
+}
+
+.exam-result-band:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: -3px;
 }
 
 .result-band-main {
@@ -535,14 +522,20 @@
                 {% set card_class = 'result-pass' if r.ket_qua == 'Đạt' else ('result-fail' if r.ket_qua == 'Không đạt' else 'result-absent') %}
                 {% set result_text = r.ket_qua or '—' %}
 
-                <div class="exam-mini-card {{ card_class }} {{ 'is-expanded' if loop.first else '' }}" onclick="toggleExamMiniCard(this)">
-                    <div class="exam-result-band {{ card_class }}">
+                <div class="exam-mini-card {{ card_class }} {{ 'is-expanded' if loop.first else '' }}">
+                    <div class="exam-result-band {{ card_class }}"
+                         role="button"
+                         tabindex="0"
+                         aria-expanded="{{ 'true' if loop.first else 'false' }}"
+                         onclick="toggleExamMiniCard(this.closest('.exam-mini-card'))"
+                         onkeydown="if(event.key === 'Enter' || event.key === ' '){
+                             event.preventDefault();
+                             toggleExamMiniCard(this.closest('.exam-mini-card'));
+                         }">
                         <div class="result-band-main">
                             <div class="result-status-text">{{ result_text }}</div>
                             <div class="result-belt-text">{{ r.cap_dai_thi }}</div>
                         </div>
-
-                        <button type="button" class="mini-expand-btn" onclick="toggleExamMiniCard(this.closest('.exam-mini-card'), event)"></button>
                     </div>
 
                     <div class="exam-mini-info">
@@ -600,11 +593,21 @@ function handleNextExamCardClick(event) {
     }
 }
 
-function toggleExamMiniCard(card, event) {
-    if (event) event.stopPropagation();
+function toggleExamMiniCard(card) {
     if (!card) return;
 
+    // Chuyển đổi trạng thái mở / đóng
     card.classList.toggle("is-expanded");
+
+    // Đồng bộ trạng thái tiêu đề
+    const header = card.querySelector(".exam-result-band");
+
+    if (header) {
+        header.setAttribute(
+            "aria-expanded",
+            String(card.classList.contains("is-expanded"))
+        );
+    }
 }
 
 </script>
