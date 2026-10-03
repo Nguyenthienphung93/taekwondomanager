@@ -26,6 +26,12 @@
             ℹ️ Thông tin kỳ thi
         </button>
 
+        <button type="button"
+                class="exam-report-btn"
+                onclick="openExamDetailReport()">
+            📊 Báo cáo chi tiết
+        </button>
+
         <button
             type="button"
             id="finalizeBtn"
@@ -42,16 +48,57 @@
     </div>
 </div>
 
-<form method="get" class="exam-filter">
-    <input name="year" value="{{ year }}">
-    <select name="quarter">
-        <option value="Q1" {{ 'selected' if quarter=='Q1' }}>Q1</option>
-        <option value="Q2" {{ 'selected' if quarter=='Q2' }}>Q2</option>
-        <option value="Q3" {{ 'selected' if quarter=='Q3' }}>Q3</option>
-        <option value="Q4" {{ 'selected' if quarter=='Q4' }}>Q4</option>
-    </select>
-    <button>Lọc</button>
-</form>
+<div class="exam-filter-search-row">
+
+    <form method="get" class="exam-filter">
+        <input name="year" value="{{ year }}">
+
+        <select name="quarter">
+            <option value="Q1" {{ 'selected' if quarter=='Q1' }}>Q1</option>
+            <option value="Q2" {{ 'selected' if quarter=='Q2' }}>Q2</option>
+            <option value="Q3" {{ 'selected' if quarter=='Q3' }}>Q3</option>
+            <option value="Q4" {{ 'selected' if quarter=='Q4' }}>Q4</option>
+        </select>
+
+        <button type="submit">Lọc</button>
+    </form>
+
+    <div class="exam-search-group">
+
+        <div class="exam-search-box">
+            <span class="exam-search-icon">🔎</span>
+
+            <input
+                type="text"
+                id="examSearchInput"
+                placeholder="Tìm Mã HV, Họ tên, Cấp, Số thi..."
+                onkeydown="if(event.key === 'Enter'){ event.preventDefault(); filterExamList(); }"
+            >
+
+            <button
+                type="button"
+                id="clearExamSearchBtn"
+                class="clear-exam-search"
+                onclick="clearExamSearch()"
+                title="Xóa tìm kiếm"
+            >
+                ×
+            </button>
+        </div>
+
+        <button
+            type="button"
+            class="exam-search-btn"
+            onclick="filterExamList()"
+        >
+            🔍 Tìm
+        </button>
+
+    </div>
+
+    <div class="exam-search-count" id="examSearchCount"></div>
+
+</div>
 
 <form method="post" action="/exam-list/finalize" id="finalizeExamForm">
     <input type="hidden" name="year" value="{{ year }}">
@@ -86,9 +133,13 @@
             {% for r in rows %}
             <tr
                 data-license="{{ r.license }}"
+                data-name="{{ r.name }}"
                 data-cap="{{ r.cap_du_thi }}"
                 data-gender="{{ r.gender }}"
                 data-birth="{{ r.birthdate }}"
+                data-belt="{{ r.belt }}"
+                data-result-saved="{{ '1' if r.result_saved else '0' }}"
+                data-saved-result="{{ r.saved_ket_qua or '' }}"
             >
                 <td>{{ quarter }}-{{ year }}</td>
 
@@ -463,7 +514,144 @@
     </div>
 </div>
 
+
+<!-- =====================================================
+     POPUP BÁO CÁO CHI TIẾT
+===================================================== -->
+<div id="examDetailReportModal" class="modal-bg">
+    <div class="modal-box exam-report-modal-box">
+
+        <div class="exam-report-head">
+            <div>
+                <h2>📊 Báo cáo chi tiết</h2>
+                <p>
+                    Kỳ thi:
+                    <b>{{ quarter }}-{{ year }}</b>
+                </p>
+            </div>
+
+            <button type="button"
+                    class="detail-close-btn"
+                    onclick="closeExamDetailReport()">
+                ×
+            </button>
+        </div>
+
+        <div class="exam-report-note" id="examReportNote"></div>
+
+        <div class="exam-report-table-wrap">
+            <table class="exam-report-table">
+                <thead>
+                    <tr>
+                        <th>Cấp dự thi</th>
+                        <th>Số lượng</th>
+                        <th>Vắng</th>
+                        <th>Không đạt</th>
+                        <th>Đạt</th>
+                    </tr>
+                </thead>
+
+                <tbody id="examReportBody"></tbody>
+
+                <tfoot>
+                    <tr>
+                        <th>Tổng số</th>
+                        <th id="reportTotalCount">0</th>
+                        <th id="reportTotalAbsent">—</th>
+                        <th id="reportTotalFail">—</th>
+                        <th id="reportTotalPass">—</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="exam-report-help">
+            💡 Bấm vào <b>Mã HV</b> ở cột Vắng hoặc Không đạt để xem thông tin võ sinh.
+        </div>
+
+        <div class="modal-actions">
+            <button type="button"
+                    class="cancel-btn"
+                    onclick="closeExamDetailReport()">
+                Đóng
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- =====================================================
+     POPUP THÔNG TIN VÕ SINH TỪ BÁO CÁO
+===================================================== -->
+<div id="examStudentQuickModal" class="modal-bg">
+    <div class="modal-box exam-student-quick-box">
+
+        <div class="exam-report-head">
+            <div>
+                <h2>👤 Thông tin võ sinh</h2>
+                <p id="quickStudentLicense"></p>
+            </div>
+
+            <button type="button"
+                    class="detail-close-btn"
+                    onclick="closeExamStudentQuickModal()">
+                ×
+            </button>
+        </div>
+
+        <div class="quick-student-grid">
+
+            <div>
+                <span>Họ và tên</span>
+                <b id="quickStudentName">—</b>
+            </div>
+
+            <div>
+                <span>Mã hội viên</span>
+                <b id="quickStudentCode">—</b>
+            </div>
+
+            <div>
+                <span>Ngày sinh</span>
+                <b id="quickStudentBirth">—</b>
+            </div>
+
+            <div>
+                <span>Giới tính</span>
+                <b id="quickStudentGender">—</b>
+            </div>
+
+            <div>
+                <span>Cấp hiện tại</span>
+                <b id="quickStudentBelt">—</b>
+            </div>
+
+            <div>
+                <span>Cấp dự thi</span>
+                <b id="quickStudentExamBelt">—</b>
+            </div>
+
+            <div>
+                <span>Kết quả</span>
+                <b id="quickStudentResult">—</b>
+            </div>
+
+        </div>
+
+        <div class="modal-actions">
+            <button type="button"
+                    class="cancel-btn"
+                    onclick="closeExamStudentQuickModal()">
+                Đóng
+            </button>
+        </div>
+
+    </div>
+</div>
+
 <script>
+
 
 const SERVER_EXAM_INFO = {{ exam_info|default({})|tojson }};
 let supervisorActive = "on";
@@ -1580,6 +1768,8 @@ document.addEventListener("DOMContentLoaded", function () {
     loadExamDraft();
     loadExamSortOrder();
 
+    filterExamList();
+
     document.querySelectorAll(".exam-number-input").forEach(input => {
         input.addEventListener("blur", saveExamDraft);
         input.addEventListener("change", saveExamDraft);
@@ -1652,6 +1842,508 @@ function showImportExamModal(options) {
     }
 
     modal.style.display = "flex";
+}
+
+/* =========================================================
+   TÌM KIẾM DANH SÁCH THI CẤP
+========================================================= */
+
+function normalizeExamSearchText(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .toLowerCase()
+        .trim();
+}
+
+
+function filterExamList() {
+    const input = document.getElementById("examSearchInput");
+    const countBox = document.getElementById("examSearchCount");
+
+    if (!input) return;
+
+    const keyword = normalizeExamSearchText(input.value);
+
+    const rows = Array.from(
+        document.querySelectorAll(".exam-list-table tbody tr")
+    );
+
+    let visible = 0;
+
+    rows.forEach(row => {
+
+        /*
+         * Tìm toàn bộ nội dung đang hiển thị của hàng.
+         * Như vậy Ken có thể tìm:
+         * Mã HV
+         * Họ tên
+         * Ngày sinh
+         * Giới tính
+         * Cấp
+         * Số thi
+         * HLV
+         * Kết quả
+         */
+        const rowText = normalizeExamSearchText(row.innerText);
+
+        const matched =
+            !keyword ||
+            rowText.includes(keyword);
+
+        row.style.display = matched ? "" : "none";
+
+        if (matched) visible++;
+    });
+
+    if (countBox) {
+        if (keyword) {
+            countBox.innerHTML =
+                `Tìm thấy <b>${visible}</b> / ${rows.length} võ sinh`;
+        } else {
+            countBox.innerHTML =
+                `Tổng <b>${rows.length}</b> võ sinh`;
+        }
+    }
+
+    const clearBtn = document.getElementById("clearExamSearchBtn");
+
+    if (clearBtn) {
+        clearBtn.style.display =
+            input.value.trim() ? "inline-flex" : "none";
+    }
+}
+
+
+function clearExamSearch() {
+    const input = document.getElementById("examSearchInput");
+
+    if (!input) return;
+
+    input.value = "";
+
+    filterExamList();
+
+    input.focus();
+}
+
+
+/* =========================================================
+   BÁO CÁO CHI TIẾT
+========================================================= */
+
+function getReportCapNumber(capText) {
+
+    const match =
+        String(capText || "").match(/Cấp\s*(\d+)/i);
+
+    return match
+        ? parseInt(match[1], 10)
+        : 999;
+}
+
+
+function createReportStudentLink(row) {
+
+    const license =
+        row.dataset.license || "";
+
+    return `
+        <button type="button"
+                class="report-student-link"
+                onclick="openExamStudentQuickModal('${license}')">
+            ${license}
+        </button>
+    `;
+}
+
+
+function openExamDetailReport() {
+
+    const modal =
+        document.getElementById("examDetailReportModal");
+
+    const body =
+        document.getElementById("examReportBody");
+
+    const note =
+        document.getElementById("examReportNote");
+
+    if (!modal || !body) return;
+
+
+    /*
+     * Báo cáo lấy TOÀN BỘ danh sách của quý/năm,
+     * không phụ thuộc ô tìm kiếm hiện tại.
+     */
+    const rows = Array.from(
+        document.querySelectorAll(
+            ".exam-list-table tbody tr"
+        )
+    );
+
+
+    /*
+     * Tạo đủ Cấp 9 → Cấp 1
+     */
+    const report = {};
+
+    for (let cap = 9; cap >= 1; cap--) {
+
+        report[`Cấp ${cap}`] = {
+            count: 0,
+            pass: [],
+            fail: [],
+            absent: []
+        };
+    }
+
+
+    /*
+     * Chỉ xem là "đã có kết quả" khi
+     * có ít nhất một record đã lưu kết quả.
+     */
+    const hasSavedResults =
+        rows.some(row =>
+            row.dataset.resultSaved === "1"
+        );
+
+
+    rows.forEach(row => {
+
+        const cap =
+            String(row.dataset.cap || "").trim();
+
+        if (!report[cap]) {
+            report[cap] = {
+                count: 0,
+                pass: [],
+                fail: [],
+                absent: []
+            };
+        }
+
+        report[cap].count++;
+
+
+        /*
+         * CHƯA LƯU KẾT QUẢ:
+         * không lấy combobox Đạt mặc định.
+         */
+        if (row.dataset.resultSaved !== "1") {
+            return;
+        }
+
+
+        const result =
+            String(
+                row.dataset.savedResult || ""
+            ).trim();
+
+
+        if (result === "Đạt") {
+
+            report[cap].pass.push(row);
+
+        } else if (result === "Không đạt") {
+
+            report[cap].fail.push(row);
+
+        } else if (result === "Vắng") {
+
+            report[cap].absent.push(row);
+        }
+
+    });
+
+
+    /*
+     * Sắp xếp Cấp 9 → Cấp 1.
+     * Nếu sau này có cấp khác vẫn xử lý được.
+     */
+    const caps =
+        Object.keys(report).sort(
+            (a, b) =>
+                getReportCapNumber(b) -
+                getReportCapNumber(a)
+        );
+
+
+    let html = "";
+
+    let totalCount = 0;
+    let totalPass = 0;
+    let totalFail = 0;
+    let totalAbsent = 0;
+
+
+    caps.forEach(cap => {
+
+        const item = report[cap];
+
+        totalCount += item.count;
+
+
+        if (hasSavedResults) {
+            totalPass += item.pass.length;
+            totalFail += item.fail.length;
+            totalAbsent += item.absent.length;
+        }
+
+
+        const absentHtml =
+            hasSavedResults
+                ? (
+                    item.absent.length
+                        ? `
+                            <div class="report-result-number absent">
+                                ${item.absent.length}
+                            </div>
+
+                            <div class="report-license-list">
+                                ${item.absent
+                                    .map(createReportStudentLink)
+                                    .join("")}
+                            </div>
+                          `
+                        : `<span class="report-zero">0</span>`
+                  )
+                : `<span class="report-not-saved">—</span>`;
+
+
+        const failHtml =
+            hasSavedResults
+                ? (
+                    item.fail.length
+                        ? `
+                            <div class="report-result-number fail">
+                                ${item.fail.length}
+                            </div>
+
+                            <div class="report-license-list">
+                                ${item.fail
+                                    .map(createReportStudentLink)
+                                    .join("")}
+                            </div>
+                          `
+                        : `<span class="report-zero">0</span>`
+                  )
+                : `<span class="report-not-saved">—</span>`;
+
+
+        const passHtml =
+            hasSavedResults
+                ? `
+                    <span class="report-pass-count">
+                        ${item.pass.length}
+                    </span>
+                  `
+                : `<span class="report-not-saved">—</span>`;
+
+
+        html += `
+            <tr>
+                <td class="report-cap">
+                    ${cap}
+                </td>
+
+                <td class="report-count">
+                    ${item.count}
+                </td>
+
+                <td>
+                    ${absentHtml}
+                </td>
+
+                <td>
+                    ${failHtml}
+                </td>
+
+                <td>
+                    ${passHtml}
+                </td>
+            </tr>
+        `;
+    });
+
+
+    body.innerHTML = html;
+
+
+    document.getElementById(
+        "reportTotalCount"
+    ).textContent = totalCount;
+
+
+    document.getElementById(
+        "reportTotalAbsent"
+    ).textContent =
+        hasSavedResults
+            ? totalAbsent
+            : "—";
+
+
+    document.getElementById(
+        "reportTotalFail"
+    ).textContent =
+        hasSavedResults
+            ? totalFail
+            : "—";
+
+
+    document.getElementById(
+        "reportTotalPass"
+    ).textContent =
+        hasSavedResults
+            ? totalPass
+            : "—";
+
+
+    /*
+     * Thông báo trạng thái
+     */
+    if (note) {
+
+        if (hasSavedResults) {
+
+            note.className =
+                "exam-report-note is-saved";
+
+            note.innerHTML =
+                `✅ Kết quả kỳ thi <b>{{ quarter }}-{{ year }}</b> đã được lưu.`;
+
+        } else {
+
+            note.className =
+                "exam-report-note is-waiting";
+
+            note.innerHTML =
+                `⏳ Kỳ thi <b>{{ quarter }}-{{ year }}</b> chưa lưu kết quả. 
+                 Các cột Vắng, Không đạt và Đạt sẽ được cập nhật sau khi chốt kết quả.`;
+        }
+    }
+
+
+    modal.style.display = "flex";
+}
+
+
+function closeExamDetailReport() {
+
+    const modal =
+        document.getElementById(
+            "examDetailReportModal"
+        );
+
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+
+/* =========================================================
+   POPUP THÔNG TIN VÕ SINH
+========================================================= */
+
+function openExamStudentQuickModal(license) {
+
+    const rows = Array.from(
+        document.querySelectorAll(
+            ".exam-list-table tbody tr"
+        )
+    );
+
+    const row =
+        rows.find(
+            r =>
+                String(r.dataset.license || "") ===
+                String(license || "")
+        );
+
+    if (!row) {
+        alert("Không tìm thấy thông tin võ sinh.");
+        return;
+    }
+
+
+    const resultSaved =
+        row.dataset.resultSaved === "1";
+
+    const result =
+        resultSaved
+            ? (row.dataset.savedResult || "—")
+            : "Chưa có kết quả";
+
+
+    document.getElementById(
+        "quickStudentLicense"
+    ).textContent = license;
+
+
+    document.getElementById(
+        "quickStudentCode"
+    ).textContent =
+        row.dataset.license || "—";
+
+
+    document.getElementById(
+        "quickStudentName"
+    ).textContent =
+        row.dataset.name || "—";
+
+
+    document.getElementById(
+        "quickStudentBirth"
+    ).textContent =
+        row.dataset.birth || "—";
+
+
+    document.getElementById(
+        "quickStudentGender"
+    ).textContent =
+        row.dataset.gender || "—";
+
+
+    document.getElementById(
+        "quickStudentBelt"
+    ).textContent =
+        row.dataset.belt || "—";
+
+
+    document.getElementById(
+        "quickStudentExamBelt"
+    ).textContent =
+        row.dataset.cap || "—";
+
+
+    document.getElementById(
+        "quickStudentResult"
+    ).textContent = result;
+
+
+    const modal =
+        document.getElementById(
+            "examStudentQuickModal"
+        );
+
+    if (modal) {
+        modal.style.display = "flex";
+    }
+}
+
+
+function closeExamStudentQuickModal() {
+
+    const modal =
+        document.getElementById(
+            "examStudentQuickModal"
+        );
+
+    if (modal) {
+        modal.style.display = "none";
+    }
 }
 </script>
 
@@ -2397,6 +3089,380 @@ function showImportExamModal(options) {
 
     .sort-row-actions {
         grid-column: 3 / 4;
+    }
+}
+
+
+/* =========================================================
+   TÌM KIẾM
+========================================================= */
+
+.exam-filter-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.exam-filter-search-row .exam-filter {
+    margin: 0;
+}
+
+.exam-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: min(420px, 100%);
+}
+
+.exam-search-box input {
+    width: 100%;
+    height: 38px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0 40px 0 38px;
+    outline: none;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.exam-search-box input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+.exam-search-icon {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+}
+
+.clear-exam-search {
+    position: absolute;
+    right: 7px;
+    width: 27px;
+    height: 27px;
+    border: none;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 19px;
+    font-weight: 900;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.exam-search-count {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.exam-search-count b {
+    color: #16a34a;
+}
+
+
+/* =========================================================
+   NÚT BÁO CÁO
+========================================================= */
+
+.exam-report-btn {
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: white;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(109, 40, 217, .22);
+}
+
+
+/* =========================================================
+   POPUP BÁO CÁO
+========================================================= */
+
+.exam-report-modal-box {
+    width: min(1050px, calc(100vw - 30px));
+    max-width: 1050px;
+}
+
+.exam-report-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.exam-report-head h2 {
+    margin: 0 0 5px;
+    color: #0f172a;
+}
+
+.exam-report-head p {
+    margin: 0;
+    color: #64748b;
+    font-weight: 800;
+}
+
+.exam-report-note {
+    padding: 11px 14px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    font-weight: 850;
+}
+
+.exam-report-note.is-saved {
+    background: #ecfdf5;
+    border: 1px solid #86efac;
+    color: #166534;
+}
+
+.exam-report-note.is-waiting {
+    background: #fff7d6;
+    border: 1px solid #facc15;
+    color: #92400e;
+}
+
+.exam-report-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.exam-report-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+
+.exam-report-table th,
+.exam-report-table td {
+    border: 1px solid #dbe3ee;
+    padding: 11px 12px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.exam-report-table thead th {
+    background: #0f2a4a;
+    color: white;
+    font-weight: 950;
+}
+
+.exam-report-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.exam-report-table tfoot th {
+    background: #fff7d6;
+    color: #0f172a;
+    font-weight: 950;
+}
+
+.report-cap {
+    font-weight: 950;
+    color: #0f2a4a;
+}
+
+.report-count {
+    font-size: 17px;
+    font-weight: 950;
+}
+
+.report-license-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 5px;
+}
+
+.report-student-link {
+    border: 1px solid #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 7px;
+    padding: 4px 7px;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.report-student-link:hover {
+    background: #2563eb;
+    color: white;
+}
+
+.report-result-number {
+    display: inline-flex;
+    min-width: 27px;
+    height: 27px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 950;
+}
+
+.report-result-number.absent {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.report-result-number.fail {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.report-pass-count {
+    display: inline-flex;
+    min-width: 34px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-weight: 950;
+}
+
+.report-zero {
+    color: #94a3b8;
+    font-weight: 900;
+}
+
+.report-not-saved {
+    color: #94a3b8;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.exam-report-help {
+    margin-top: 12px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+
+/* =========================================================
+   POPUP THÔNG TIN VÕ SINH
+========================================================= */
+
+.exam-student-quick-box {
+    width: min(650px, calc(100vw - 30px));
+    max-width: 650px;
+}
+
+.quick-student-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.quick-student-grid > div {
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.quick-student-grid span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.quick-student-grid b {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 760px) {
+
+    .exam-filter-search-row {
+        align-items: stretch;
+    }
+
+    .exam-search-box {
+        width: 100%;
+    }
+
+    .exam-search-count {
+        width: 100%;
+    }
+
+    .quick-student-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .exam-report-modal-box {
+        width: calc(100vw - 20px);
+    }
+}
+
+
+.exam-search-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1;
+    max-width: 570px;
+}
+
+.exam-search-group .exam-search-box {
+    flex: 1;
+    width: auto;
+}
+
+.exam-search-btn {
+    height: 38px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    font-weight: 900;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(22, 163, 74, .20);
+}
+
+.exam-search-btn:hover {
+    filter: brightness(.96);
+}
+
+.exam-search-btn:active {
+    transform: translateY(1px);
+}
+
+@media (max-width: 760px) {
+    .exam-search-group {
+        width: 100%;
+        max-width: none;
+    }
+
+    .exam-search-group .exam-search-box {
+        min-width: 0;
+    }
+
+    .exam-search-btn {
+        flex: 0 0 auto;
     }
 }
 </style>

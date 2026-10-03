@@ -9,6 +9,60 @@
     </button>
 </div>
 
+<div class="activity-filter-bar">
+
+    <div class="activity-search-wrap">
+        <span class="activity-search-icon">🔎</span>
+
+        <input
+            type="text"
+            id="activitySearchInput"
+            placeholder="Tìm Mã HV, Họ tên, Hoạt động, Nội dung, Kết quả..."
+            autocomplete="off"
+            onkeydown="if(event.key === 'Enter'){ event.preventDefault(); filterActivityTable(); }"
+        >
+    </div>
+
+    <select id="activityMonthFilter">
+        <option value="">Tất cả tháng</option>
+        <option value="01">Tháng 1</option>
+        <option value="02">Tháng 2</option>
+        <option value="03">Tháng 3</option>
+        <option value="04">Tháng 4</option>
+        <option value="05">Tháng 5</option>
+        <option value="06">Tháng 6</option>
+        <option value="07">Tháng 7</option>
+        <option value="08">Tháng 8</option>
+        <option value="09">Tháng 9</option>
+        <option value="10">Tháng 10</option>
+        <option value="11">Tháng 11</option>
+        <option value="12">Tháng 12</option>
+    </select>
+
+    <select id="activityYearFilter">
+        <option value="">Tất cả năm</option>
+    </select>
+
+    <button
+        type="button"
+        class="activity-filter-btn"
+        onclick="filterActivityTable()"
+    >
+        🔍 Tìm
+    </button>
+
+    <button
+        type="button"
+        class="activity-reset-btn"
+        onclick="resetActivityFilter()"
+    >
+        ↻ Đặt lại
+    </button>
+
+</div>
+
+<div id="activityFilterCount" class="activity-filter-count"></div>
+
 <table>
     <thead>
         <tr>
@@ -95,6 +149,7 @@
     }{{ "," if not loop.last }}
     {% endfor %}
 ]
+
 </script>
 
 <div id="activityModal" class="activity-modal">
@@ -1059,6 +1114,72 @@ async function saveBulkActivities() {
     }
 }
 
+/* =========================================================
+   SẮP XẾP HOẠT ĐỘNG: SỰ KIỆN GẦN NHẤT LÊN ĐẦU
+========================================================= */
+
+function getActivitySortDate(timeText) {
+    const text = String(timeText || "").trim();
+
+    // Tìm tất cả ngày có dạng dd/mm/yyyy
+    const matches = [
+        ...text.matchAll(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g)
+    ];
+
+    if (!matches.length) {
+        return 0;
+    }
+
+    // Lấy ngày cuối cùng có đầy đủ dd/mm/yyyy
+    // VD:
+    // 14/06 - 17/07/2026 -> lấy 17/07/2026
+    // 19 - 25/06/2026    -> lấy 25/06/2026
+    // 27/06/2026         -> lấy 27/06/2026
+
+    const last = matches[matches.length - 1];
+
+    const day = parseInt(last[1], 10);
+    const month = parseInt(last[2], 10);
+    const year = parseInt(last[3], 10);
+
+    return new Date(year, month - 1, day).getTime();
+}
+
+
+function sortActivitiesNewestFirst() {
+
+    const tbody = document.querySelector("table tbody");
+
+    if (!tbody) return;
+
+    const rows = Array.from(
+        tbody.querySelectorAll(".activity-row")
+    );
+
+    rows.sort((a, b) => {
+
+        const aCells = a.querySelectorAll("td");
+        const bCells = b.querySelectorAll("td");
+
+        const aTime =
+            aCells.length >= 4
+                ? getActivitySortDate(aCells[3].textContent)
+                : 0;
+
+        const bTime =
+            bCells.length >= 4
+                ? getActivitySortDate(bCells[3].textContent)
+                : 0;
+
+        // Mới nhất -> cũ nhất
+        return bTime - aTime;
+    });
+
+    rows.forEach(row => {
+        tbody.appendChild(row);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     initActivityEventSelect();
 });
@@ -1113,6 +1234,309 @@ document.addEventListener("click", function(e) {
             }
         }
     });
+});
+
+/* =========================================================
+   TÌM KIẾM + LỌC HOẠT ĐỘNG THEO THÁNG / NĂM
+========================================================= */
+
+function normalizeActivityFilterText(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .toLowerCase()
+        .trim();
+}
+
+
+/* Lấy tất cả tháng/năm xuất hiện trong chuỗi thời gian.
+   Hỗ trợ:
+   06 - 10/11/2024
+   19 - 25/06/2026
+   27/06/2026
+   14/06 - 17/07/2026
+*/
+function getActivityDatesFromText(value) {
+
+    const text = String(value || "").trim();
+
+    const dates = [];
+
+    // Tìm tất cả dạng dd/mm/yyyy
+    const fullDates = [
+        ...text.matchAll(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g)
+    ];
+
+    fullDates.forEach(match => {
+        dates.push({
+            month: String(match[2]).padStart(2, "0"),
+            year: String(match[3])
+        });
+    });
+
+
+    // Trường hợp: 14/06 - 17/07/2026
+    // Ngày đầu không có năm -> dùng năm của ngày cuối
+    const rangeMatch = text.match(
+        /(\d{1,2})\/(\d{1,2})\s*-\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/
+    );
+
+    if (rangeMatch) {
+
+        dates.push({
+            month: String(rangeMatch[2]).padStart(2, "0"),
+            year: String(rangeMatch[5])
+        });
+
+        dates.push({
+            month: String(rangeMatch[4]).padStart(2, "0"),
+            year: String(rangeMatch[5])
+        });
+    }
+
+    return dates;
+}
+
+
+function filterActivityTable() {
+
+    const searchInput =
+        document.getElementById("activitySearchInput");
+
+    const monthSelect =
+        document.getElementById("activityMonthFilter");
+
+    const yearSelect =
+        document.getElementById("activityYearFilter");
+
+    const countBox =
+        document.getElementById("activityFilterCount");
+
+
+    const keyword =
+        normalizeActivityFilterText(
+            searchInput ? searchInput.value : ""
+        );
+
+    const month =
+        monthSelect ? monthSelect.value : "";
+
+    const year =
+        yearSelect ? yearSelect.value : "";
+
+
+    const rows = Array.from(
+        document.querySelectorAll(".activity-row")
+    );
+
+    let visible = 0;
+
+
+    rows.forEach(row => {
+
+        const cells = row.querySelectorAll("td");
+
+        if (cells.length < 7) return;
+
+
+        /* -------------------------
+           TÌM KIẾM TOÀN BỘ NỘI DUNG
+        ------------------------- */
+
+        const rowText =
+            normalizeActivityFilterText(
+                [
+                    cells[0].textContent, // Mã HV
+                    cells[1].textContent, // Họ tên
+                    cells[2].textContent, // Hoạt động
+                    cells[4].textContent, // Địa điểm
+                    cells[5].textContent, // Nội dung
+                    cells[6].textContent  // Kết quả
+                ].join(" ")
+            );
+
+        const searchMatched =
+            !keyword ||
+            rowText.includes(keyword);
+
+
+        /* -------------------------
+           THỜI GIAN
+        ------------------------- */
+
+        const timeText =
+            cells[3].textContent.trim();
+
+        const dates =
+            getActivityDatesFromText(timeText);
+
+
+        const monthMatched =
+            !month ||
+            dates.some(d => d.month === month);
+
+
+        const yearMatched =
+            !year ||
+            dates.some(d => d.year === year);
+
+
+        const matched =
+            searchMatched &&
+            monthMatched &&
+            yearMatched;
+
+
+        row.style.display =
+            matched ? "" : "none";
+
+
+        if (matched) {
+            visible++;
+        }
+
+    });
+
+
+    if (countBox) {
+
+        countBox.innerHTML =
+            `Tìm thấy <b>${visible}</b> / ${rows.length} hoạt động`;
+
+    }
+}
+
+
+function resetActivityFilter() {
+
+    const searchInput =
+        document.getElementById("activitySearchInput");
+
+    const monthSelect =
+        document.getElementById("activityMonthFilter");
+
+    const yearSelect =
+        document.getElementById("activityYearFilter");
+
+
+    if (searchInput) {
+        searchInput.value = "";
+    }
+
+    if (monthSelect) {
+        monthSelect.value = "";
+    }
+
+    if (yearSelect) {
+        yearSelect.value = "";
+    }
+
+
+    filterActivityTable();
+
+    if (searchInput) {
+        searchInput.focus();
+    }
+}
+
+
+/* =========================================================
+   TỰ TẠO DANH SÁCH NĂM
+========================================================= */
+
+function initActivityYearFilter() {
+
+    const yearSelect =
+        document.getElementById("activityYearFilter");
+
+    if (!yearSelect) return;
+
+
+    const years = new Set();
+
+
+    document
+        .querySelectorAll(".activity-row")
+        .forEach(row => {
+
+            const cells =
+                row.querySelectorAll("td");
+
+            if (cells.length < 4) return;
+
+
+            const timeText =
+                cells[3].textContent.trim();
+
+
+            const matches =
+                timeText.match(/\b(19|20)\d{2}\b/g);
+
+
+            if (matches) {
+
+                matches.forEach(year => {
+                    years.add(year);
+                });
+
+            }
+
+        });
+
+
+    Array.from(years)
+        .sort((a, b) => Number(b) - Number(a))
+        .forEach(year => {
+
+            const option =
+                document.createElement("option");
+
+            option.value = year;
+            option.textContent = `Năm ${year}`;
+
+            yearSelect.appendChild(option);
+
+        });
+}
+
+
+/* =========================================================
+   KHỞI TẠO
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    // 1. Sắp xếp sự kiện mới nhất lên đầu
+    sortActivitiesNewestFirst();
+
+    // 2. Tạo bộ lọc năm
+    initActivityYearFilter();
+
+    // 3. Hiển thị danh sách
+    filterActivityTable();
+
+    const monthSelect =
+        document.getElementById("activityMonthFilter");
+
+    const yearSelect =
+        document.getElementById("activityYearFilter");
+
+    if (monthSelect) {
+        monthSelect.addEventListener(
+            "change",
+            filterActivityTable
+        );
+    }
+
+    if (yearSelect) {
+        yearSelect.addEventListener(
+            "change",
+            filterActivityTable
+        );
+    }
+
 });
 </script>
 
@@ -1911,6 +2335,126 @@ document.addEventListener("click", function(e) {
     color: #64748b;
     font-weight: 850;
     text-align: center;
+}
+
+/* =========================================================
+   BỘ TÌM KIẾM + LỌC HOẠT ĐỘNG
+========================================================= */
+
+.activity-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 7px;
+    flex-wrap: wrap;
+}
+
+.activity-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+    max-width: 560px;
+}
+
+.activity-search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.activity-search-wrap input {
+    width: 100%;
+    height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0 13px 0 40px;
+    background: #fff;
+    outline: none;
+    font-weight: 700;
+}
+
+.activity-search-wrap input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+#activityMonthFilter,
+#activityYearFilter {
+    height: 40px;
+    min-width: 130px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    outline: none;
+}
+
+.activity-filter-btn,
+.activity-reset-btn {
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.activity-filter-btn {
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+    color: #fff;
+}
+
+.activity-reset-btn {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.activity-filter-btn:hover,
+.activity-reset-btn:hover {
+    filter: brightness(.97);
+}
+
+.activity-filter-count {
+    min-height: 22px;
+    margin: 0 0 8px 2px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.activity-filter-count b {
+    color: #16a34a;
+}
+
+
+@media (max-width: 800px) {
+
+    .activity-filter-bar {
+        align-items: stretch;
+    }
+
+    .activity-search-wrap {
+        flex-basis: 100%;
+        max-width: none;
+        min-width: 0;
+    }
+
+    #activityMonthFilter,
+    #activityYearFilter {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .activity-filter-btn,
+    .activity-reset-btn {
+        flex: 1;
+    }
 }
 </style>
 
