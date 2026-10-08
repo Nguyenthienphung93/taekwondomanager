@@ -224,6 +224,45 @@
     font-weight: 850;
 }
 
+/* =========================
+   KẾT QUẢ THI
+========================= */
+.result-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.result-badge.pending {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+.result-badge.pass {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.result-badge.fail {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.result-badge.absent {
+    background: #fff7d6;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
 @media(max-width: 760px) {
     .filter-card {
         align-items: stretch;
@@ -319,6 +358,7 @@
                     <th>HLV kiểm tra</th>
                     <th>Ghi chú</th>
                     <th>Đã kiểm tra</th>
+                    <th>Kết quả</th>
                 </tr>
             </thead>
 
@@ -381,6 +421,31 @@
                             <span>{{ r.coach_checked_at|datetime_vn }}</span>
                         {% else %}
                             —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% set exam_result = (r.saved_ket_qua or '')|trim %}
+
+                        {% if exam_result == 'Đạt' %}
+                            <span class="result-badge pass">
+                                <i class="fa-solid fa-check"></i>&nbsp; Đạt
+                            </span>
+
+                        {% elif exam_result == 'Không đạt' %}
+                            <span class="result-badge fail">
+                                <i class="fa-solid fa-xmark"></i>&nbsp; Không đạt
+                            </span>
+
+                        {% elif exam_result == 'Vắng' %}
+                            <span class="result-badge absent">
+                                <i class="fa-solid fa-user-slash"></i>&nbsp; Vắng
+                            </span>
+
+                        {% else %}
+                            <span class="result-badge pending">
+                                Chưa thi
+                            </span>
                         {% endif %}
                     </td>
                 </tr>
