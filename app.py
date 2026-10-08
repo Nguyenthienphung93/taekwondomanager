@@ -16164,7 +16164,6 @@ def student_portal_fees():
         title = str(f.get("thang_dong_phi") or "").strip()
 
         if title:
-            # VD: Thi cấp quý 2-2026
             return title.replace("Thi cấp quý ", "Q").replace("-2026", "/2026")
 
         if ma_quy:
@@ -16173,9 +16172,21 @@ def student_portal_fees():
         return "Chưa có"
 
 
+    # ==========================================
+    # PHÂN LOẠI HỌC PHÍ
+    # Hóa đơn Học phí + Thi cấp vẫn tính học phí
+    # ==========================================
+    def is_tuition_fee_row(f):
+        title = str(
+            f.get("thang_dong_phi") or ""
+        ).lower()
+
+        return "học phí" in title
+
+
     tuition_fees = [
         f for f in fees
-        if not is_exam_fee_row(f)
+        if is_tuition_fee_row(f)
     ]
 
     exam_fees = [
@@ -16183,19 +16194,96 @@ def student_portal_fees():
         if is_exam_fee_row(f)
     ]
 
+
     latest_tuition_text = "Chưa có"
-    latest_exam_text = "Chưa có"
+
+    # ==========================================
+    # KỲ THI GẦN NHẤT
+    # LẤY TỪ BẢNG KẾT QUẢ, KHÔNG LẤY TỪ HỌC PHÍ
+    # ==========================================
+    latest_exam_text = "Chưa thi"
 
     if tuition_fees:
         latest_tuition_text = format_month_code_for_portal(
-            tuition_fees[0].get("ma_thang") or tuition_fees[0].get("thang_dong_phi")
+            tuition_fees[0].get("ma_thang")
+            or tuition_fees[0].get("thang_dong_phi")
         )
 
-    if exam_fees:
-        latest_exam_text = format_exam_code_for_portal(exam_fees[0])
+
+    # ==========================================
+    # LẤY TOÀN BỘ KẾT QUẢ CỦA ĐÚNG MÃ HỘI VIÊN
+    # ==========================================
+    student_results = safe_rows(
+        KETQUA_TABLE,
+        "*",
+        ma_hv=license_code
+    )
+
+
+    # ==========================================
+    # CHỈ LẤY KẾT QUẢ THI CẤP Q1-Q4
+    # Không lấy thi đẳng L1/L2/MN/MT/MB/QG
+    # ==========================================
+    cap_results = []
+
+    for result in student_results:
+
+        ky_thi = str(
+            result.get("ky_thi") or ""
+        ).strip()
+
+        year_result, period_result = (
+            parse_result_ky_thi_web(ky_thi)
+        )
+
+        if period_result in [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+        ]:
+            cap_results.append(result)
+
+
+    # ==========================================
+    # SẮP XẾP KỲ MỚI NHẤT LÊN ĐẦU
+    # ==========================================
+    cap_results.sort(
+        key=result_sort_key_web,
+        reverse=True
+    )
+
+
+    # ==========================================
+    # CÓ KẾT QUẢ = ĐÃ THI
+    # Kể cả Đạt / Không đạt / Vắng
+    # ==========================================
+    if cap_results:
+
+        latest_result = cap_results[0]
+
+        latest_ky_thi = str(
+            latest_result.get("ky_thi") or ""
+        ).strip()
+
+        latest_year, latest_period = (
+            parse_result_ky_thi_web(
+                latest_ky_thi
+            )
+        )
+
+        if latest_year and latest_period:
+            latest_exam_text = (
+                f"{latest_period}/{latest_year}"
+            )
+
 
     tuition_count = len(tuition_fees)
-    exam_count = len(exam_fees)
+
+    # Số lần thi thật sự cũng lấy từ bảng kết quả
+    exam_count = len(cap_results)
+
+    
     # =========================
     # NHẮC HẠN ĐÓNG HỌC PHÍ
     # Quy tắc:
