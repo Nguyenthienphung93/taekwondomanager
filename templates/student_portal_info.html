@@ -54,8 +54,8 @@
 .no-belt-image{color:#64748b;font-size:14px;font-weight:850;line-height:1.5;text-align:center}
 .portal-grid-2{align-items:stretch}
 .detail-card{padding:0!important;overflow:hidden}
-.detail-card-head{min-height:66px;padding:17px 16px;display:flex;align-items:center;border-bottom:1px solid #dbe7f5;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}
-.detail-card-head h2{margin:0;font-size:20px;line-height:1.25;font-weight:950;color:#0f172a}
+.detail-card-head{min-height:50px;padding:17px 16px;display:flex;align-items:center;border-bottom:1px solid #dbe7f5;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}
+.detail-card-head h2{margin:0;font-size:17px;line-height:1.25;font-weight:950;color:#0f172a}
 .detail-card-body{padding:14px}
 .info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .info-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:13px}
@@ -209,6 +209,277 @@
     z-index: 5;
 }
 
+
+/* =========================
+   FALLBACK AVATAR TAEKWONDO
+   BẢN LÀM LẠI
+========================= */
+
+.no-photo-wrap{
+    position:relative;
+    width:210px;
+    height:280px;
+    max-width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.tkd-avatar-fallback{
+    width:210px;
+    height:280px;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding-top:20px;
+    background:#f8fafc;
+    border-radius:16px;
+}
+
+.tkd-avatar-head {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    border: 5px solid #ffffff;
+    box-shadow: 0 12px 28px rgba(15, 42, 74, .18), 0 0 0 1px #dbe7f5;
+    color: #ffffff;
+    font-size: 100px;
+    line-height: 1;
+    font-weight: 900;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 5;
+}
+
+.tkd-avatar-body{
+    position:relative;
+    width:170px;
+    height:140px;
+    margin-top:-2px;
+}
+
+/* Thân áo chính */
+.dobok-base {
+    position: absolute;
+    left: 50%;
+    top: 15px;
+    transform: translateX(-50%);
+    width: 180px;
+    height: 120px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #dbe7f5;
+    border-radius: 24px 24px 18px 18px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+    z-index: 1;
+}
+
+
+
+
+/* Cổ */
+.dobok-neck {
+    position: absolute;
+    left: 50%;
+    top: -1px;
+    transform: translateX(-50%);
+    width: 47px;
+    height: 78px;
+    background: #e4b88f;
+    border-radius: 0 0 12px 12px;
+    z-index: 4;
+}
+
+/* Cổ áo chữ V màu đen */
+.dobok-left, .dobok-right {
+    position: absolute;
+    top: 14px;
+    width: 20px;
+    height: 100px;
+    border-radius: 10px;
+    z-index: 5;
+}
+
+.dobok-left {
+    left: 39px;
+    transform: rotate(-22deg);
+    transform-origin: top center;
+}
+
+.dobok-right {
+    right: 39px;
+    transform: rotate(22deg);
+    transform-origin: top center;
+}
+
+/* =========================
+   MÀU CỔ ÁO THEO CẤP ĐAI
+========================= */
+
+/* Từ Cấp 10 -> Cấp 1:
+   cổ trắng, có viền xám nhẹ */
+.tkd-avatar-fallback.dobok-rank-cap .dobok-left,
+.tkd-avatar-fallback.dobok-rank-cap .dobok-right{
+    background:#ffffff;
+    border:2px solid #cbd5e1;
+    box-shadow:0 1px 2px rgba(15,23,42,.08);
+}
+
+/* Từ 1 đẳng -> 10 đẳng:
+   cổ đen như hiện tại */
+.tkd-avatar-fallback.dobok-rank-dang .dobok-left,
+.tkd-avatar-fallback.dobok-rank-dang .dobok-right{
+    background:#111827;
+    border:1px solid #111827;
+}
+
+/* =========================================================
+   ACCORDION TRANG THÔNG TIN HỌC VIÊN
+========================================================= */
+
+.info-layout{
+    display:block !important;
+    width:100%;
+}
+
+.student-visual-grid,
+.portal-grid-2{
+    display:flex !important;
+    flex-direction:column;
+    gap:12px;
+    width:100%;
+}
+
+.student-info-accordion{
+    width:100%;
+    overflow:hidden;
+    padding:0 !important;
+}
+
+/* Thanh tiêu đề */
+.student-info-accordion-head{
+    min-height:58px;
+    padding:14px 18px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:12px;
+
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    border-bottom:1px solid #dbe7f5;
+
+    cursor:pointer;
+    user-select:none;
+}
+
+.student-info-accordion-head:hover{
+    background:#f1f5f9;
+}
+
+.student-info-accordion-head h2{
+    margin:0;
+    color:#0f172a;
+    font-size:20px;
+    font-weight:950;
+}
+
+/* =========================
+   THẺ ĐANG MỞ
+========================= */
+.student-info-accordion.is-open
+.student-info-accordion-head{
+    background:linear-gradient(
+        135deg,
+        #dbeafe 0%,
+        #eff6ff 100%
+    );
+
+    border-bottom-color:#93c5fd;
+}
+
+.student-info-accordion.is-open
+.student-info-accordion-head h2{
+    color:#1d4ed8;
+}
+
+.student-info-accordion-head:hover{
+    background:#f8fafc;
+}
+
+.student-info-accordion-head h2{
+    margin:0;
+    color:#0f172a;
+    font-size:20px;
+    font-weight:950;
+}
+
+/* Mũi tên nhỏ */
+.student-info-accordion-arrow{
+    font-size:18px;
+    font-weight:1000;
+    color:#64748b;
+    transition:transform .22s ease;
+}
+
+.student-info-accordion.is-open
+.student-info-accordion-arrow{
+    transform:rotate(180deg);
+}
+
+/* Nội dung */
+.student-info-accordion-body{
+    display:none;
+    padding:14px;
+}
+
+.student-info-accordion.is-open
+.student-info-accordion-body{
+    display:block;
+}
+
+/* Phần ảnh khi mở */
+.student-info-accordion-body .visual-image-panel{
+    margin:0 auto;
+    min-height:265px;
+}
+
+.student-info-accordion-body .visual-info-panel{
+    margin:14px 0 0;
+}
+
+/* Phần thông tin */
+.student-info-accordion-body .detail-card-body{
+    padding:0;
+}
+
+/* Mobile */
+@media(max-width:680px){
+    .student-info-accordion-head{
+        min-height:54px;
+        padding:13px 15px;
+    }
+
+    .student-info-accordion-head h2{
+        font-size:18px;
+    }
+
+    .student-info-accordion-body{
+        padding:12px;
+    }
+
+    .info-grid{
+        grid-template-columns:1fr;
+    }
+}
+
 </style>
 {% endblock %}
 
@@ -221,12 +492,26 @@
 </div>
 
 <div class="info-layout">
-    <div class="student-visual-grid">
-        <section class="portal-card visual-card">
-            <div class="visual-card-head"><h2>Ảnh đại diện</h2></div>
+
+    <!-- =====================================================
+         1. ẢNH ĐẠI DIỆN - MỞ SẴN
+    ====================================================== -->
+    <section class="portal-card student-info-accordion is-open">
+
+        <div class="student-info-accordion-head"
+             onclick="toggleStudentInfoAccordion(this)">
+            <h2>Ảnh đại diện</h2>
+            <span class="student-info-accordion-arrow">⌄</span>
+        </div>
+
+        <div class="student-info-accordion-body">
+
             <div class="visual-image-panel">
+
                 {% if photo_url %}
+
                     <div class="student-photo-wrap">
+
                         <div
                             id="studentPhotoFallback"
                             class="student-photo-fallback"
@@ -236,30 +521,28 @@
                             </div>
                         </div>
 
-                        {% if photo_url %}
-                            <img
-                                id="studentPhotoSource"
-                                class="student-photo"
-                                src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
-                                alt=""
-                                decoding="async"
-                                onerror="
-                                    this.style.display='none';
-                                    const canvas = document.getElementById('studentPhotoCanvas');
-                                    if (canvas) canvas.style.display='none';
-                                    const fallback = document.getElementById('studentPhotoFallback');
-                                    if (fallback) fallback.style.display='flex';
-                                "
-                            >
+                        <img
+                            id="studentPhotoSource"
+                            class="student-photo"
+                            src="{{ photo_url }}{% if '?' in photo_url %}&{% else %}?{% endif %}v={{ photo_cache_v|default(student.id)|default(student.license) }}"
+                            alt=""
+                            decoding="async"
+                            onerror="
+                                this.style.display='none';
+                                const canvas = document.getElementById('studentPhotoCanvas');
+                                if (canvas) canvas.style.display='none';
+                                const fallback = document.getElementById('studentPhotoFallback');
+                                if (fallback) fallback.style.display='flex';
+                            "
+                        >
 
-                            <canvas
-                                id="studentPhotoCanvas"
-                                class="student-photo-canvas"
-                                width="210"
-                                height="280"
-                                aria-hidden="true"
-                            ></canvas>
-                        {% endif %}
+                        <canvas
+                            id="studentPhotoCanvas"
+                            class="student-photo-canvas"
+                            width="210"
+                            height="280"
+                            aria-hidden="true"
+                        ></canvas>
 
                         <button
                             type="button"
@@ -270,82 +553,253 @@
                         >
                             <i class="fa-solid fa-pen"></i>
                         </button>
+
                     </div>
+
                 {% else %}
+
                     <div class="no-photo-wrap">
-                        <div class="no-photo">
-                            <div class="no-photo-avatar" aria-label="Avatar chữ cái">
+
+                        {% set belt_text = (student.belt or '')|lower|trim %}
+                        {% set dobok_rank_class =
+                            'dobok-rank-dang'
+                            if ('đẳng' in belt_text or 'dang' in belt_text or 'dan' in belt_text)
+                            else 'dobok-rank-cap'
+                        %}
+
+                        <div class="tkd-avatar-fallback {{ dobok_rank_class }}">
+
+                            <div class="tkd-avatar-head">
                                 {{ ((student.name or 'HV')|trim).split()[-1][:1]|upper }}
                             </div>
+
+                            <div class="tkd-avatar-body">
+                                <div class="dobok-base"></div>
+                                <div class="dobok-neck"></div>
+                                <div class="dobok-left"></div>
+                                <div class="dobok-right"></div>
+                                <div class="dobok-belt"></div>
+                            </div>
+
                         </div>
 
-                        <button type="button"
-                                class="avatar-edit-btn"
-                                id="openAvatarModalBtn"
-                                title="Cập nhật ảnh đại diện">
+                        <button
+                            type="button"
+                            class="avatar-edit-btn"
+                            id="openAvatarModalBtn"
+                            title="Cập nhật ảnh đại diện"
+                        >
                             <i class="fa-solid fa-pen"></i>
                         </button>
+
                     </div>
+
                 {% endif %}
+
             </div>
+
 
             {% if pending_avatar_request %}
                 <div class="avatar-pending-note">
                     <i class="fa-solid fa-clock"></i>
-                    Ảnh mới đang chờ Admin phê duyệt. Học viên chưa thể gửi ảnh khác.
+                    Ảnh mới đang chờ Admin phê duyệt.
+                    Học viên chưa thể gửi ảnh khác.
                 </div>
             {% endif %}
-            <div class="visual-info-panel">
-                <div class="visual-info-main">{{ student.name }}</div>
-                <div class="visual-info-sub">{{ student.license }}</div>
-            </div>
-        </section>
 
-        <section class="portal-card visual-card">
-            <div class="visual-card-head"><h2>Ảnh đai đại diện</h2></div>
+
+            <div class="visual-info-panel">
+
+                <div class="visual-info-main">
+                    {{ student.name }}
+                </div>
+
+                <div class="visual-info-sub">
+                    {{ student.license }}
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         2. ẢNH ĐAI ĐẠI DIỆN
+    ====================================================== -->
+    <section class="portal-card student-info-accordion">
+
+        <div class="student-info-accordion-head"
+             onclick="toggleStudentInfoAccordion(this)">
+            <h2>Ảnh đai đại diện</h2>
+            <span class="student-info-accordion-arrow">⌄</span>
+        </div>
+
+        <div class="student-info-accordion-body">
+
             <div class="visual-image-panel">
+
                 {% if belt_image_url %}
-                    <img class="belt-image" src="{{ belt_image_url }}?v={{ belt_cache_v|default(student.belt)|urlencode }}" alt="Hình {{ student.belt or 'cấp đai hiện tại' }}" loading="eager" decoding="async">
+
+                    <img
+                        class="belt-image"
+                        src="{{ belt_image_url }}?v={{ belt_cache_v|default(student.belt)|urlencode }}"
+                        alt="Hình {{ student.belt or 'cấp đai hiện tại' }}"
+                        loading="eager"
+                        decoding="async"
+                    >
+
                 {% else %}
-                    <div class="no-belt-image">Chưa có hình phù hợp<br>với cấp đai hiện tại.</div>
+
+                    <div class="no-belt-image">
+                        Chưa có hình phù hợp<br>
+                        với cấp đai hiện tại.
+                    </div>
+
                 {% endif %}
+
             </div>
+
+
             <div class="visual-info-panel">
-                <div class="visual-info-label">Cấp đai hiện tại</div>
-                <div class="visual-info-main">{{ student.belt or '—' }}</div>
-            </div>
-        </section>
-    </div>
 
-    <div class="portal-grid-2">
-        <section class="portal-card detail-card">
-            <div class="detail-card-head"><h2>Thông tin cá nhân</h2></div>
-            <div class="detail-card-body">
-                <div class="info-grid">
-                    <div class="info-item"><span>Họ tên</span><b class="info-personal-name">{{ student.name or '—' }}</b></div>
-                    <div class="info-item"><span>Ngày sinh</span><b>{{ student.birthdate or '—' }}</b></div>
-                    <div class="info-item"><span>Giới tính</span><b>{{ student.gender or '—' }}</b></div>
-                    <div class="info-item"><span>Số điện thoại</span><b>{{ student.phonenumber or '—' }}</b></div>
-                    <div class="info-item"><span>Địa chỉ</span><b>{{ student.address or '—' }}</b></div>
-                    <div class="info-item"><span>Telegram ID</span><b>{{ student.telegram_id or '—' }}</b></div>
+                <div class="visual-info-label">
+                    Cấp đai hiện tại
                 </div>
-            </div>
-        </section>
 
-        <section class="portal-card detail-card">
-            <div class="detail-card-head"><h2>Thông tin lớp học</h2></div>
-            <div class="detail-card-body">
-                <div class="info-grid">
-                    <div class="info-item"><span>Mã HV</span><b>{{ student.license or '—' }}</b></div>
-                    <div class="info-item"><span>Lớp</span><b>{{ student.classroom or '—' }}</b></div>
-                    <div class="info-item"><span>Ca</span><b>{{ student.timeclass or '—' }}</b></div>
-                    <div class="info-item"><span>CLB</span><b>{{ student.clup or '—' }}</b></div>
-                    <div class="info-item"><span>Gia đình tập chung</span><b>{% if student.family|string|lower in ['có','1','true','yes'] %}Có{% else %}Không{% endif %}</b></div>
-                    <div class="info-item"><span>Tình trạng</span>{% if student.active|string|lower in ['có','1','true','yes'] %}<b class="status-text status-active">Đang hoạt động</b>{% else %}<b class="status-text status-paused">Tạm ngưng</b>{% endif %}</div>
+                <div class="visual-info-main">
+                    {{ student.belt or '—' }}
                 </div>
+
             </div>
-        </section>
-    </div>
+
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         3. THÔNG TIN CÁ NHÂN
+    ====================================================== -->
+    <section class="portal-card student-info-accordion">
+
+        <div class="student-info-accordion-head"
+             onclick="toggleStudentInfoAccordion(this)">
+            <h2>Thông tin cá nhân</h2>
+            <span class="student-info-accordion-arrow">⌄</span>
+        </div>
+
+        <div class="student-info-accordion-body">
+
+            <div class="info-grid">
+
+                <div class="info-item">
+                    <span>Họ tên</span>
+                    <b class="info-personal-name">
+                        {{ student.name or '—' }}
+                    </b>
+                </div>
+
+                <div class="info-item">
+                    <span>Ngày sinh</span>
+                    <b>{{ student.birthdate or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Giới tính</span>
+                    <b>{{ student.gender or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Số điện thoại</span>
+                    <b>{{ student.phonenumber or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Địa chỉ</span>
+                    <b>{{ student.address or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Telegram ID</span>
+                    <b>{{ student.telegram_id or '—' }}</b>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         4. THÔNG TIN LỚP HỌC
+    ====================================================== -->
+    <section class="portal-card student-info-accordion">
+
+        <div class="student-info-accordion-head"
+             onclick="toggleStudentInfoAccordion(this)">
+            <h2>Thông tin lớp học</h2>
+            <span class="student-info-accordion-arrow">⌄</span>
+        </div>
+
+        <div class="student-info-accordion-body">
+
+            <div class="info-grid">
+
+                <div class="info-item">
+                    <span>Mã HV</span>
+                    <b>{{ student.license or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Lớp</span>
+                    <b>{{ student.classroom or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Ca</span>
+                    <b>{{ student.timeclass or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>CLB</span>
+                    <b>{{ student.clup or '—' }}</b>
+                </div>
+
+                <div class="info-item">
+                    <span>Gia đình tập chung</span>
+
+                    <b>
+                        {% if student.family|string|lower in ['có','1','true','yes'] %}
+                            Có
+                        {% else %}
+                            Không
+                        {% endif %}
+                    </b>
+                </div>
+
+                <div class="info-item">
+                    <span>Tình trạng</span>
+
+                    {% if student.active|string|lower in ['có','1','true','yes'] %}
+
+                        <b class="status-text status-active">
+                            Đang hoạt động
+                        </b>
+
+                    {% else %}
+
+                        <b class="status-text status-paused">
+                            Tạm ngưng
+                        </b>
+
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
 </div>
 
 <div class="avatar-modal-overlay" id="avatarModalOverlay" aria-hidden="true">
@@ -393,6 +847,27 @@
 </div>
 
 <script>
+function toggleStudentInfoAccordion(head) {
+
+    const currentCard = head.closest(".student-info-accordion");
+
+    if (!currentCard) return;
+
+    const isOpen = currentCard.classList.contains("is-open");
+
+    // Đóng tất cả thẻ khác
+    document
+        .querySelectorAll(".student-info-accordion")
+        .forEach(card => {
+            card.classList.remove("is-open");
+        });
+
+    // Nếu thẻ hiện tại đang đóng thì mở nó
+    if (!isOpen) {
+        currentCard.classList.add("is-open");
+    }
+}
+    
 (function () {
     function renderStudentPhotoHighQuality() {
         const img = document.getElementById("studentPhotoSource");

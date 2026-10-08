@@ -389,13 +389,6 @@
                             <option value="Sai" {{ 'selected' if status == 'Sai' }}>Sai</option>
                             <option value="Ktra lại" {{ 'selected' if status == 'Ktra lại' }}>Ktra lại</option>
                         </select>
-                        <span class="save-state" id="state_{{ r.hocphi_id }}">
-                            {% if r.coach_checked_by_name %}
-                                {{ r.coach_checked_by_name }}
-                            {% else %}
-                                Chờ HLV KTra
-                            {% endif %}
-                        </span>
                         {% else %}
                             —
                         {% endif %}

@@ -468,6 +468,35 @@
 .exam-mini-card:not(.is-expanded) .exam-result-band {
     border-radius: 0;
 }
+
+/* =========================
+   NHẤN MẠNH THÔNG TIN KỲ THI
+========================= */
+
+.exam-meta-important span {
+    font-weight: 1000;
+    color: #334155;
+}
+
+.exam-meta-important b {
+    font-weight: 1000;
+    color: #0f172a;
+}
+
+
+/* SỐ THI NỔI BẬT HƠN */
+.exam-meta-number span {
+    font-weight: 1000;
+    color: #334155;
+}
+
+.exam-meta-number b {
+    font-size: 24px;
+    font-weight: 1000;
+    color: #0f2a4a;
+    line-height: 1.1;
+}
+
 </style>
 {% endblock %}
 
@@ -498,13 +527,42 @@
             </div>
 
             <div class="exam-meta-grid">
-                <div class="exam-meta"><span>Quý thi</span><b>{{ next_exam.quarter }}</b></div>
-                <div class="exam-meta"><span>Ngày thi</span><b>{{ next_exam.exam_date }}</b></div>
-                <div class="exam-meta"><span>Giờ thi</span><b>{{ next_exam.exam_time }}</b></div>
-                <div class="exam-meta"><span>Tại</span><b>{{ next_exam.venue }}</b></div>
-                <div class="exam-meta"><span>Giám sát</span><b>{{ next_exam.supervisor }}</b></div>
-                <div class="exam-meta"><span>Giám khảo</span><b>{{ next_exam.judges }}</b></div>
-                <div class="exam-meta"><span>Trạng thái</span><b>{{ next_exam.status }}</b></div>
+
+                <div class="exam-meta">
+                    <span>Quý thi</span>
+                    <b>{{ next_exam.quarter }}</b>
+                </div>
+
+                <div class="exam-meta">
+                    <span>Tại</span>
+                    <b>{{ next_exam.venue }}</b>
+                </div>
+
+                <div class="exam-meta">
+                    <span>Ngày thi</span>
+                    <b>{{ next_exam.exam_date }}</b>
+                </div>
+
+                <div class="exam-meta">
+                    <span>Giờ thi</span>
+                    <b>{{ next_exam.exam_time }}</b>
+                </div>
+
+                <div class="exam-meta">
+                    <span>Giám sát</span>
+                    <b>{{ next_exam.supervisor }}</b>
+                </div>
+
+                <div class="exam-meta">
+                    <span>Giám khảo</span>
+                    <b>{{ next_exam.judges }}</b>
+                </div>
+
+                <div class="exam-meta">
+                    <span>Trạng thái</span>
+                    <b>{{ next_exam.status }}</b>
+                </div>
+
             </div>
         </div>
     </section>
@@ -544,14 +602,47 @@
                         </div>
 
                         <div class="exam-meta-grid">
-                            <div class="exam-meta"><span>Kỳ thi</span><b>{{ r.ky_thi or '—' }}</b></div>
-                            <div class="exam-meta"><span>Số thi</span><b>{{ r.so_thi or '—' }}</b></div>
-                            <div class="exam-meta"><span>Ngày thi</span><b>{{ r.exam_date_text or 'Sẽ bổ sung' }}</b></div>
-                            <div class="exam-meta"><span>Giờ thi</span><b>{{ r.exam_time_text or 'Sẽ bổ sung' }}</b></div>
-                            <div class="exam-meta"><span>Tại</span><b>{{ r.venue_text or 'Sẽ bổ sung' }}</b></div>
-                            <div class="exam-meta"><span>Ghi chú</span><b>{{ r.ghi_chu or '—' }}</b></div>
-                            <div class="exam-meta"><span>Giám sát</span><b>{{ r.supervisor_text or 'Sẽ bổ sung' }}</b></div>
-                            <div class="exam-meta"><span>Giám khảo</span><b>{{ r.judges_text or 'Sẽ bổ sung' }}</b></div>
+
+                            <div class="exam-meta">
+                                <span>Kỳ thi</span>
+                                <b>{{ r.ky_thi or '—' }}</b>
+                            </div>
+
+                            <div class="exam-meta">
+                                <span>Tại</span>
+                                <b>{{ r.venue_text or 'Sẽ bổ sung' }}</b>
+                            </div>
+
+                            <div class="exam-meta">
+                                <span>Ngày thi</span>
+                                <b>{{ r.exam_date_text or 'Sẽ bổ sung' }}</b>
+                            </div>
+
+                            <div class="exam-meta">
+                                <span>Giờ thi</span>
+                                <b>{{ r.exam_time_text or 'Sẽ bổ sung' }}</b>
+                            </div>
+
+                            <div class="exam-meta exam-meta-important">
+                                <span>Giám sát</span>
+                                <b>{{ r.supervisor_text or 'Sẽ bổ sung' }}</b>
+                            </div>
+
+                            <div class="exam-meta exam-meta-important">
+                                <span>Giám khảo</span>
+                                <b>{{ r.judges_text or 'Sẽ bổ sung' }}</b>
+                            </div>
+
+                            <div class="exam-meta exam-meta-number">
+                                <span>Số thi</span>
+                                <b>{{ r.so_thi or '—' }}</b>
+                            </div>
+
+                            <div class="exam-meta">
+                                <span>Ghi chú</span>
+                                <b>{{ r.ghi_chu or '—' }}</b>
+                            </div>
+
                         </div>
                     </div>
                 </div>
