@@ -9817,12 +9817,14 @@ def upload_club_asset_to_supabase(file_storage, folder="club-info"):
 
 def get_avatar_face_cascade_web():
     """
-    Nạp bộ nhận diện khuôn mặt frontal face có sẵn trong OpenCV.
+    Bộ nhận diện khuôn mặt dùng cho ảnh đại diện.
+    alt2 ổn định hơn với ảnh thẻ/chân dung chính diện,
+    giảm nhận nhầm tóc, mắt hoặc cổ áo thành khuôn mặt.
     """
 
     cascade_path = (
         cv2.data.haarcascades
-        + "haarcascade_frontalface_default.xml"
+        + "haarcascade_frontalface_alt2.xml"
     )
 
     face_cascade = cv2.CascadeClassifier(
