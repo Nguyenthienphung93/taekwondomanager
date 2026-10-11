@@ -9841,19 +9841,15 @@ def get_avatar_face_cascade_web():
 
 def validate_student_avatar_bytes_web(image_bytes):
     """
-    Kiểm tra ảnh đại diện trước khi upload.
+    Kiểm tra ảnh đại diện học viên.
 
-    Chỉ từ chối khi:
-    - Không đọc được file ảnh.
-    - Không phát hiện khuôn mặt.
-    - Phát hiện từ 2 khuôn mặt trở lên.
-
-    Không kiểm tra:
-    - Ảnh ngang hay dọc.
-    - Ảnh mờ.
-    - Độ phân giải thấp.
-    - Khuôn mặt nhỏ.
-    - Khuôn mặt sát mép.
+    Quy tắc:
+    - Phải đọc được ảnh.
+    - Phải phát hiện ít nhất 1 khuôn mặt thật.
+    - Bỏ qua các vùng nhỏ bị OpenCV nhận nhầm
+      như logo, huy chương, tay, cổ áo...
+    - Chỉ báo nhiều người khi có từ 2 khuôn mặt
+      đủ lớn và tách biệt rõ ràng.
     """
 
     if not image_bytes:
@@ -9864,7 +9860,6 @@ def validate_student_avatar_bytes_web(image_bytes):
         }
 
     try:
-        # Đọc bằng PIL để xử lý đúng hướng xoay EXIF.
         pil_image = Image.open(
             BytesIO(image_bytes)
         )
@@ -9875,7 +9870,6 @@ def validate_student_avatar_bytes_web(image_bytes):
 
         pil_image = pil_image.convert("RGB")
 
-        # Chuyển ảnh PIL sang định dạng OpenCV.
         image = cv2.cvtColor(
             np.array(pil_image),
             cv2.COLOR_RGB2BGR
@@ -9905,50 +9899,146 @@ def validate_student_avatar_bytes_web(image_bytes):
         gray
     )
 
-    face_cascade = get_avatar_face_cascade_web()
+    # ==========================================
+    # 1. Dùng frontalface_alt trước
+    #    Ít false-positive hơn default
+    # ==========================================
+    cascade_alt = cv2.CascadeClassifier(
+        cv2.data.haarcascades
+        + "haarcascade_frontalface_alt.xml"
+    )
 
-    # Nới nhỏ kích thước tối thiểu để nhận mặt xa hoặc ảnh chưa nét.
+    # Khuôn mặt phải có kích thước ít nhất
+    # khoảng 10% cạnh ngắn của ảnh.
     min_face_size = max(
-        24,
+        40,
         int(
             min(
                 image_width,
                 image_height
-            ) * 0.04
+            ) * 0.10
         )
     )
 
-    faces = face_cascade.detectMultiScale(
+    faces = cascade_alt.detectMultiScale(
         detection_gray,
-
-        # Quét kỹ hơn để giảm bỏ sót khuôn mặt.
-        scaleFactor=1.04,
-
-        # Nới nhẹ nhận diện.
-        minNeighbors=3,
-
+        scaleFactor=1.05,
+        minNeighbors=4,
         minSize=(
             min_face_size,
             min_face_size
         ),
-
         flags=cv2.CASCADE_SCALE_IMAGE,
     )
 
-    face_count = len(faces)
+    valid_faces = []
 
-    if face_count == 0:
+    for x, y, w, h in faces:
+
+        # Bỏ box quá nhỏ
+        if w < min_face_size or h < min_face_size:
+            continue
+
+        # Tỷ lệ khuôn mặt phải tương đối vuông
+        ratio = w / float(h)
+
+        if ratio < 0.70 or ratio > 1.35:
+            continue
+
+        valid_faces.append(
+            (int(x), int(y), int(w), int(h))
+        )
+
+    # ==========================================
+    # 2. Nếu ALT không tìm thấy,
+    #    fallback sang DEFAULT
+    # ==========================================
+    if not valid_faces:
+
+        cascade_default = cv2.CascadeClassifier(
+            cv2.data.haarcascades
+            + "haarcascade_frontalface_default.xml"
+        )
+
+        fallback_faces = cascade_default.detectMultiScale(
+            detection_gray,
+            scaleFactor=1.05,
+            minNeighbors=5,
+            minSize=(
+                min_face_size,
+                min_face_size
+            ),
+            flags=cv2.CASCADE_SCALE_IMAGE,
+        )
+
+        for x, y, w, h in fallback_faces:
+
+            if w < min_face_size or h < min_face_size:
+                continue
+
+            ratio = w / float(h)
+
+            if ratio < 0.70 or ratio > 1.35:
+                continue
+
+            # Bỏ những vùng sát mép trên bất thường.
+            center_y = y + h / 2
+
+            if center_y < image_height * 0.10:
+                continue
+
+            valid_faces.append(
+                (int(x), int(y), int(w), int(h))
+            )
+
+    # ==========================================
+    # 3. Không phát hiện được mặt
+    # ==========================================
+    if not valid_faces:
         return {
             "ok": False,
             "message": (
-                "Không phát hiện được người trong ảnh. "
-                "Vui lòng chọn ảnh có khuôn mặt học viên."
+                "Không phát hiện rõ khuôn mặt học viên. "
+                "Vui lòng chọn ảnh thấy rõ khuôn mặt."
             ),
             "face_count": 0,
             "image_width": image_width,
             "image_height": image_height,
         }
 
+    # ==========================================
+    # 4. Sắp theo kích thước khuôn mặt
+    # ==========================================
+    valid_faces.sort(
+        key=lambda f: f[2] * f[3],
+        reverse=True
+    )
+
+    main_face = valid_faces[0]
+
+    main_area = (
+        main_face[2]
+        * main_face[3]
+    )
+
+    real_faces = [
+        main_face
+    ]
+
+    # Chỉ tính khuôn mặt thứ 2 nếu đủ lớn
+    # so với khuôn mặt chính.
+    for face in valid_faces[1:]:
+
+        area = face[2] * face[3]
+
+        if area >= main_area * 0.45:
+            real_faces.append(face)
+
+    face_count = len(real_faces)
+
+    # ==========================================
+    # 5. Có nhiều người thật sự
+    # ==========================================
     if face_count > 1:
         return {
             "ok": False,
@@ -9967,6 +10057,7 @@ def validate_student_avatar_bytes_web(image_bytes):
         "face_count": 1,
         "image_width": image_width,
         "image_height": image_height,
+        "face_box": main_face,
     }
 
 def prepare_student_photo_for_upload(
