@@ -517,6 +517,192 @@ body .portal-page-head h1::first-letter {
     }
 }
 
+/* =========================
+   HOẠT ĐỘNG - ACCORDION
+========================= */
+
+.student-activity-list,
+.activity-list{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:12px !important;
+    width:100% !important;
+}
+
+/* Card khi thu gọn */
+.activity-card{
+    width:100% !important;
+    max-width:100% !important;
+    min-height:0 !important;
+
+    border-radius:16px !important;
+    overflow:hidden !important;
+
+    transition:
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+/* Không nhấc card lên khi hover */
+.activity-card:hover{
+    transform:none !important;
+}
+
+/* =========================
+   THANH TIÊU ĐỀ
+========================= */
+
+.activity-accordion-head{
+    position:relative;
+    z-index:5;
+
+    width:100%;
+    min-height:68px;
+
+    display:flex;
+    align-items:center;
+    gap:14px;
+
+    padding:12px 18px;
+    box-sizing:border-box;
+
+    cursor:pointer;
+    user-select:none;
+
+    background:rgba(255,255,255,.60);
+}
+
+/* Khi đang mở */
+.activity-card.is-open .activity-accordion-head{
+    background:rgba(255,255,255,.90);
+    border-bottom:1px solid rgba(148,163,184,.25);
+}
+
+/* Icon huy chương/cúp */
+.activity-accordion-icon{
+    width:46px;
+    height:46px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex-shrink:0;
+
+    border-radius:14px;
+
+    font-size:27px;
+
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(148,163,184,.20);
+
+    box-shadow:0 5px 12px rgba(15,23,42,.06);
+}
+
+.activity-accordion-title{
+    min-width:0;
+    flex:1;
+}
+
+.activity-accordion-title h2{
+    margin:0;
+
+    font-size:18px;
+    line-height:1.3;
+    font-weight:1000;
+
+    color:#0f172a;
+}
+
+.activity-accordion-label{
+    margin-top:3px;
+
+    font-size:12px;
+    font-weight:900;
+
+    color:#64748b;
+}
+
+/* =========================
+   NỘI DUNG THU GỌN
+========================= */
+
+.activity-accordion-body{
+    display:none;
+}
+
+.activity-card.is-open .activity-accordion-body{
+    display:block;
+}
+
+/* Nội dung bên trong */
+.activity-card.is-open .activity-card-content{
+    padding:16px !important;
+}
+
+/* Vì icon + tên giải đã nằm trên title bar */
+.activity-card .activity-ribbon,
+.activity-card .activity-head{
+    display:none !important;
+}
+
+/* Watermark chỉ hiện khi mở */
+.activity-watermark{
+    display:none !important;
+}
+
+.activity-card.is-open .activity-watermark{
+    display:block !important;
+}
+
+/* =========================
+   MÀU TITLE THEO THÀNH TÍCH
+========================= */
+
+.activity-card.theme-gold .activity-accordion-head{
+    background:linear-gradient(135deg,#fff7cc,#fffdf2);
+}
+
+.activity-card.theme-silver .activity-accordion-head{
+    background:linear-gradient(135deg,#f1f5f9,#ffffff);
+}
+
+.activity-card.theme-bronze .activity-accordion-head{
+    background:linear-gradient(135deg,#fff0e4,#fffaf6);
+}
+
+.activity-card.theme-honor .activity-accordion-head{
+    background:linear-gradient(135deg,#fef9c3,#fffceb);
+}
+
+.activity-card.theme-normal .activity-accordion-head{
+    background:linear-gradient(135deg,#eff6ff,#ffffff);
+}
+
+@media(max-width:520px){
+
+    .activity-accordion-head{
+        min-height:60px;
+        padding:10px 13px;
+        gap:10px;
+    }
+
+    .activity-accordion-icon{
+        width:40px;
+        height:40px;
+        font-size:23px;
+        border-radius:12px;
+    }
+
+    .activity-accordion-title h2{
+        font-size:15px;
+    }
+
+    .activity-accordion-label{
+        font-size:11px;
+    }
+}
+
 </style>
 {% endblock %}
 
@@ -561,49 +747,206 @@ body .portal-page-head h1::first-letter {
             {% set award_label = 'Bảng vàng' %}
         {% endif %}
 
-        <section class="portal-card activity-card {{ theme_class }}">
+        <section
+            class="portal-card activity-card {{ theme_class }}"
+            data-activity-time="{{ a.thoi_gian or '' }}"
+        >
+
             <div class="activity-watermark">{{ award_icon }}</div>
 
-            <div class="activity-card-content">
-                <div class="activity-ribbon">
-                    <span class="activity-ribbon-icon">{{ award_icon }}</span>
-                    <span>{{ award_label }}</span>
+            <!-- THANH TIÊU ĐỀ -->
+            <div
+                class="activity-accordion-head"
+                onclick="toggleActivityAccordion(this)"
+            >
+                <div class="activity-accordion-icon">
+                    {{ award_icon }}
                 </div>
 
-                <div class="activity-head">
-                    <div class="activity-big-icon">{{ award_icon }}</div>
+                <div class="activity-accordion-title">
+                    <h2>
+                        {{ a.hoat_dong or 'Hoạt động' }}
+                    </h2>
 
-                    <div class="activity-title-wrap">
-                        <h2 class="activity-title">{{ a.hoat_dong or 'Hoạt động' }}</h2>
-                    </div>
-                </div>
-
-                <div class="activity-info">
-                    <div class="activity-line">
-                        <span>📅 Thời gian</span>
-                        <b>{{ a.thoi_gian or '—' }}</b>
-                    </div>
-
-                    <div class="activity-line">
-                        <span>📍 Địa điểm</span>
-                        <b>{{ a.dia_diem or '—' }}</b>
-                    </div>
-
-                    <div class="activity-line is-wide">
-                        <span>📝 Nội dung</span>
-                        <b>{{ a.noi_dung or '—' }}</b>
-                    </div>
-
-                    <div class="activity-line is-wide">
-                        <span>🏅 Kết quả</span>
-                        <b>{{ a.ket_qua or '—' }}</b>
+                    <div class="activity-accordion-label">
+                        {{ award_label }}
                     </div>
                 </div>
             </div>
+
+
+            <!-- PHẦN CHI TIẾT -->
+            <div class="activity-accordion-body">
+
+                <div class="activity-card-content">
+
+                    <div class="activity-info">
+
+                        <div class="activity-line">
+                            <span>📅 Thời gian</span>
+                            <b>{{ a.thoi_gian or '—' }}</b>
+                        </div>
+
+                        <div class="activity-line">
+                            <span>📍 Địa điểm</span>
+                            <b>{{ a.dia_diem or '—' }}</b>
+                        </div>
+
+                        <div class="activity-line is-wide">
+                            <span>📝 Nội dung</span>
+                            <b>{{ a.noi_dung or '—' }}</b>
+                        </div>
+
+                        <div class="activity-line is-wide">
+                            <span>🏅 Kết quả</span>
+                            <b>{{ a.ket_qua or '—' }}</b>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </section>
     {% endfor %}
 </div>
 {% else %}
 <div class="portal-empty activity-empty">Chưa có hoạt động nào.</div>
 {% endif %}
+
+<script>
+
+/* =========================
+   MỞ / ĐÓNG SỰ KIỆN
+========================= */
+
+function toggleActivityAccordion(head){
+
+    const currentCard = head.closest(".activity-card");
+
+    if (!currentCard) return;
+
+    const wasOpen =
+        currentCard.classList.contains("is-open");
+
+    /* Đóng toàn bộ */
+    document
+        .querySelectorAll(".activity-card")
+        .forEach(card => {
+            card.classList.remove("is-open");
+        });
+
+    /* Nếu card đang đóng → mở */
+    if (!wasOpen){
+        currentCard.classList.add("is-open");
+    }
+}
+
+
+/* =========================
+   ĐỌC NGÀY SỰ KIỆN
+========================= */
+
+function parseActivityDate(value){
+
+    value = String(value || "").trim();
+
+    /*
+       Hỗ trợ:
+       21/09/2026
+       12 - 21/09/2026
+       12/09/2026 - 21/09/2026
+
+       Nếu là khoảng ngày:
+       lấy ngày cuối cùng để sort.
+    */
+
+    const matches = [
+        ...value.matchAll(
+            /(\d{1,2})\/(\d{1,2})\/(\d{4})/g
+        )
+    ];
+
+    if (!matches.length){
+        return 0;
+    }
+
+    const last = matches[matches.length - 1];
+
+    const day   = parseInt(last[1], 10);
+    const month = parseInt(last[2], 10);
+    const year  = parseInt(last[3], 10);
+
+    return new Date(
+        year,
+        month - 1,
+        day
+    ).getTime();
+}
+
+
+/* =========================
+   SORT SỰ KIỆN
+   MỚI NHẤT → CŨ NHẤT
+========================= */
+
+function sortStudentActivities(){
+
+    const list =
+        document.querySelector(
+            ".student-activity-list"
+        );
+
+    if (!list) return;
+
+    const cards = Array.from(
+        list.querySelectorAll(".activity-card")
+    );
+
+    cards.sort((a, b) => {
+
+        const dateA = parseActivityDate(
+            a.dataset.activityTime
+        );
+
+        const dateB = parseActivityDate(
+            b.dataset.activityTime
+        );
+
+        return dateB - dateA;
+    });
+
+    /* Đưa card về đúng thứ tự mới */
+    cards.forEach(card => {
+        list.appendChild(card);
+    });
+
+    /* Đóng hết */
+    cards.forEach(card => {
+        card.classList.remove("is-open");
+    });
+
+    /* Tự mở sự kiện đầu tiên */
+    if (cards.length){
+        cards[0].classList.add("is-open");
+    }
+}
+
+
+/* =========================
+   KHỞI TẠO
+========================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        sortStudentActivities();
+
+    }
+);
+
+</script>
+
 {% endblock %}
